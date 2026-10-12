@@ -1,0 +1,9 @@
+pre-commit:
+  commands:
+    biome:
+      glob: "*.{js,ts,json,jsonc,css,html}"
+      run: bunx biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+commit-msg:
+  commands:
+    commitlint:
+      run: bunx commitlint --edit {1}
