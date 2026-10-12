@@ -1,0 +1,19 @@
+{
+  "name": "@app/fake-helper",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Test double of Apple's password helper, in-process or as a native-messaging host",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "fake-apple-helper": "./src/main.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@app/protocol": "workspace:*"
+  }
+}

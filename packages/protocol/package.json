@@ -1,0 +1,16 @@
+{
+  "name": "@app/protocol",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Client for the native-messaging protocol spoken by Apple's PasswordManagerBrowserExtensionHelper",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@app/fake-helper": "workspace:*"
+  }
+}
