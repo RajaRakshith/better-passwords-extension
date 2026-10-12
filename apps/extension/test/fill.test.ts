@@ -75,4 +75,15 @@ describe("fillCredentials", () => {
     fillCredentials(origin, "", "pw");
     expect(seen).toEqual(["pw"]);
   });
+
+  it("fills around the field the menu was opened on", () => {
+    page(`<form id="a"><input id="user-a" type="email"><input id="pass-a" type="password"></form>
+      <form id="b"><input id="user-b" type="email"><input id="pass-b" type="password"></form>`);
+    const anchor = document.querySelector("#user-b") as HTMLInputElement;
+    expect(fillCredentials(origin, "frank", "pw", anchor)).toBe("filled");
+    expect(value("#user-b")).toBe("frank");
+    expect(value("#pass-b")).toBe("pw");
+    expect(value("#user-a")).toBe("");
+    expect(value("#pass-a")).toBe("");
+  });
 });

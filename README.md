@@ -14,10 +14,9 @@ It talks to the same Apple helper that ships with macOS, through the same encryp
 
 ## Status
 
-Early development. Working today: pairing, keeping the session alive, and listing and filling logins from the toolbar popup.
+Early development. Working today: pairing, keeping the session alive, an inline menu on login fields, and filling from the toolbar popup.
 
 Planned:
-- an inline autofill menu on login fields
 - Firefox polish
 - a Touch ID companion app that enters the code for you
 - store listings

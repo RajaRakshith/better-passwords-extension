@@ -35,6 +35,9 @@ export const STORE_EXTENSION_ID = "kmkmelgjmhnfhhbgagdaejamhodddfmh";
 export const APPLE_EXTENSION_ID = "pejdijmoenmkgeppbflobdenhhabjlaj";
 export const FIREFOX_EXTENSION_ID = "apple-passwords-plus@applepasswordsplus.org";
 
+/** Pages where the inline menu runs and passwords may be filled (see src/url-policy.ts). */
+export const FILL_MATCHES = ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"];
+
 export function nativeHostFor(variant: Variant): string {
   return variant === "github" ? APPLE_HOST : STORE_HOST;
 }

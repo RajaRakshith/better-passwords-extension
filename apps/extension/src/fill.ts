@@ -1,10 +1,16 @@
-// Runs inside the page (via scripting.executeScript), so it must not reference anything outside
-// its own body. It refuses to fill if the page navigated to another origin since the user chose
-// the login, and it only touches visible fields.
+// Runs inside the page: injected by scripting.executeScript (popup) or called by the autofill content
+// script (inline menu). It must not reference anything outside its own body. It refuses to fill if
+// the page navigated to another origin since the user chose the login, and only touches visible fields.
 
 export type FillResult = "filled" | "origin-mismatch" | "no-fields";
 
-export function fillCredentials(expectedOrigin: string, username: string, password: string): FillResult {
+export function fillCredentials(
+  expectedOrigin: string,
+  username: string,
+  password: string,
+  /** The field the inline menu was opened on; otherwise the focused field is used. */
+  anchor?: HTMLInputElement,
+): FillResult {
   if (window.location.origin !== expectedOrigin) return "origin-mismatch";
 
   const isVisible = (el: HTMLInputElement) => {
@@ -30,10 +36,12 @@ export function fillCredentials(expectedOrigin: string, username: string, passwo
     ["text", "email", "tel", ""].includes(el.type) &&
     !/one-time-code|new-password|current-password/.test(el.autocomplete);
 
-  const active = document.activeElement instanceof HTMLInputElement ? document.activeElement : undefined;
+  const active = anchor ?? (document.activeElement instanceof HTMLInputElement ? document.activeElement : undefined);
+  // a field inside a form only pairs with fields of that same form
+  const activeForm = active?.form;
   const passwordField =
     (active?.type === "password" && isVisible(active) ? active : undefined) ??
-    inputs.find((el) => el.type === "password");
+    inputs.find((el) => el.type === "password" && (!activeForm || el.form === activeForm));
 
   // the username field belongs to the same form as the password field, before it
   const scope = passwordField?.form ?? active?.form ?? document;

@@ -160,3 +160,10 @@ label.toggle {
   display: grid;
   gap: 6px;
 }
+
+.settings {
+  display: grid;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--separator);
+}

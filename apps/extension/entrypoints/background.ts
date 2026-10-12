@@ -1,6 +1,15 @@
 import { nativeHostFor } from "@/src/config.ts";
 import { fillCredentials } from "@/src/fill.ts";
-import { DEFAULT_SETTINGS, type Envelope, type Request, type Settings, type Status } from "@/src/messages.ts";
+import {
+  type AutofillStatus,
+  CONTENT_SCRIPT_REQUESTS,
+  type ContentMessage,
+  DEFAULT_SETTINGS,
+  type Envelope,
+  type Request,
+  type Settings,
+  type Status,
+} from "@/src/messages.ts";
 import { PortTransport } from "@/src/native/port-transport.ts";
 import { Session } from "@/src/session/session.ts";
 import { fillableUrl } from "@/src/url-policy.ts";
@@ -28,7 +37,39 @@ export default defineBackground(() => {
 
   const status = (): Status => ({ ...session.status, variant: __VARIANT__ });
 
-  async function handle(request: Request): Promise<unknown> {
+  /**
+   * Who sent a request. Extension pages may ask anything; when they live inside a tab (the inline
+   * menu iframe), every tab-scoped request is bound to that tab, whatever `tabId` they pass.
+   */
+  type Caller = { kind: "page"; tabId?: number } | { kind: "content-script"; tabId: number; url: string };
+
+  function tabOf(caller: Caller, requested?: number): number {
+    const tabId = caller.tabId ?? requested;
+    if (tabId === undefined) throw new Error("no tab to act on");
+    return tabId;
+  }
+
+  function relay(tabId: number, message: ContentMessage) {
+    return browser.tabs.sendMessage(tabId, message, { frameId: 0 });
+  }
+
+  async function autofillStatus(caller: Caller & { kind: "content-script" }): Promise<AutofillStatus> {
+    const url = fillableUrl(caller.url);
+    if (!url || !(await getSettings()).inlineMenu) return { show: "none" };
+    if (session.status.state === "disconnected" || session.status.state === "closed") {
+      await session.connect().catch(() => {});
+    }
+    if (!session.isUnlocked) return { show: session.status.state === "no-helper" ? "none" : "locked" };
+    const client = await session.unlockedClient();
+    const logins = await client.getLogins(url.hostname, { tabId: caller.tabId });
+    return { show: logins.length > 0 ? "logins" : "none" };
+  }
+
+  async function handle(request: Request, caller: Caller): Promise<unknown> {
+    if (caller.kind === "content-script") {
+      if (request.type !== "autofill-status") throw new Error("not allowed");
+      return autofillStatus(caller);
+    }
     switch (request.type) {
       case "get-status":
         if (session.status.state === "disconnected") await session.connect().catch(() => {});
@@ -43,25 +84,39 @@ export default defineBackground(() => {
         session.lock();
         return status();
       case "list-logins": {
-        const url = await tabUrl(request.tabId);
+        const tabId = tabOf(caller, request.tabId);
+        const url = await tabUrl(tabId);
         if (!url) return { logins: [] };
         const client = await session.unlockedClient();
-        const logins = await client.getLogins(url.hostname, { tabId: request.tabId });
+        const logins = await client.getLogins(url.hostname, { tabId });
         return { hostname: url.hostname, logins: logins.map(({ username }) => ({ username })) };
       }
       case "fill": {
-        const url = await tabUrl(request.tabId);
-        if (!url) throw new Error("this page can't be filled");
-        const client = await session.unlockedClient();
-        const credential = await client.getPassword(url.hostname, request.username, { tabId: request.tabId });
-        if (!credential) throw new Error("that login is no longer saved");
+        const tabId = tabOf(caller, request.tabId);
+        const { url, credential } = await credentialFor(tabId, request.username);
         const [injection] = await browser.scripting.executeScript({
-          target: { tabId: request.tabId, frameIds: [0] },
+          target: { tabId, frameIds: [0] },
           func: fillCredentials,
           args: [url.origin, credential.username, credential.password],
         });
         return { result: String(injection?.result ?? "no-fields") };
       }
+      case "fill-from-menu": {
+        const tabId = tabOf(caller);
+        const { url, credential } = await credentialFor(tabId, request.username);
+        const reply = (await relay(tabId, {
+          type: "menu-fill",
+          nonce: request.nonce,
+          origin: url.origin,
+          username: credential.username,
+          password: credential.password,
+        })) as { result: string } | undefined;
+        return { result: reply?.result ?? "menu-hidden" };
+      }
+      case "menu-resize":
+      case "menu-close":
+        await relay(tabOf(caller), request).catch(() => {});
+        return null;
       case "get-settings":
         return getSettings();
       case "set-settings": {
@@ -69,15 +124,36 @@ export default defineBackground(() => {
         await browser.storage.local.set({ settings });
         return settings;
       }
+      case "autofill-status":
+        throw new Error("content scripts only");
     }
   }
 
+  async function credentialFor(tabId: number, username: string) {
+    const url = await tabUrl(tabId);
+    if (!url) throw new Error("this page can't be filled");
+    const client = await session.unlockedClient();
+    const credential = await client.getPassword(url.hostname, username, { tabId });
+    if (!credential) throw new Error("that login is no longer saved");
+    return { url, credential };
+  }
+
   browser.runtime.onMessage.addListener((request: Request, sender, sendResponse) => {
-    // only our own extension pages (popup, or the popup opened as a tab). Content scripts report
-    // the web page's URL and other extensions a different id, so both are refused.
-    const ownPage = sender.id === browser.runtime.id && sender.url?.startsWith(browser.runtime.getURL("/")) === true;
-    if (!ownPage) return false;
-    handle(request).then(
+    if (sender.id !== browser.runtime.id) return false;
+    let caller: Caller;
+    if (sender.url?.startsWith(browser.runtime.getURL("/"))) {
+      caller = sender.tab?.id === undefined ? { kind: "page" } : { kind: "page", tabId: sender.tab.id };
+    } else if (
+      sender.tab?.id !== undefined &&
+      sender.frameId === 0 &&
+      sender.url &&
+      CONTENT_SCRIPT_REQUESTS.has(request.type)
+    ) {
+      caller = { kind: "content-script", tabId: sender.tab.id, url: sender.url };
+    } else {
+      return false;
+    }
+    handle(request, caller).then(
       (value) => sendResponse({ ok: true, value } satisfies Envelope<unknown>),
       (error: unknown) =>
         sendResponse({

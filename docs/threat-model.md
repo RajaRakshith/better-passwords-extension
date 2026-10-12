@@ -23,12 +23,20 @@ What we protect: the user's passwords in Apple Passwords, and the session that c
 | Risk | Mitigation |
 |---|---|
 | A page tricks a fill into a hidden field, or onto another origin | Fills only on a click in our UI, only into the active tab's top frame, only if the origin still matches. Hidden, zero-size and transparent fields are skipped. |
+| Clickjacking the inline menu (making it transparent or covering it, then luring a click) | Layered checks:<br>(1) Chromium: the menu tracks its own visibility with IntersectionObserver v2 and ignores clicks unless it has been really visible for 300 ms.<br>(2) Before filling, the content script checks that the menu is open in the top layer, that no other top-layer element was opened after it, that it and its ancestors are fully opaque with no filters or blend modes, and that hit-testing at its centre and corners lands on it. |
+| The page frames its own copy of `menu.html` | Each menu has a random nonce held in a closed shadow root; fills for any other nonce are refused. |
+| The page reads usernames or the typed code | The menu is a cross-origin extension iframe inside a closed shadow root. The content script never receives usernames. |
 | A page or other extension asks the background for passwords | `runtime.onMessage` accepts only our own extension pages (same ID and our extension URL). |
 | Plain-http pages leak a filled password | Only `https:` pages (and `http://localhost` for development) are filled. |
 | A longer-lived session widens the window of exposure | Sessions end on browser quit or "Lock". The optional "lock when my Mac locks" setting covers a walked-away Mac. Sensitive items still trigger macOS's own Touch ID prompt when read. |
 | The setup script is tampered with | It is plain, short shell. It writes only one JSON file per browser, pointing at Apple's signed helper, and needs no admin rights. Read it before running. |
 | The GitHub build borrows Apple's public key | That only decides the extension ID; it grants no access Apple's own design doesn't already give that ID. It is clearly labelled and can't be published to stores. |
 | A future macOS change in Apple's helper | Fail closed: unknown replies and protocol versions are rejected. |
+
+## Known gaps
+
+- On Firefox (no IntersectionObserver v2), an overlay with `pointer-events: none` placed in the page's own *closed* shadow root and in the top layer could evade the content script's checks. Planned mitigation: re-check after a short delay, and require the field to keep focus.
+- Logins in cross-origin iframes are not offered yet.
 
 ## Planned: Touch ID companion
 

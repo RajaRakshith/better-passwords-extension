@@ -1,5 +1,12 @@
 import { defineConfig } from "wxt";
-import { APPLE_PUBLIC_KEY, DISPLAY_NAME, FIREFOX_EXTENSION_ID, STORE_PUBLIC_KEY, type Variant } from "./src/config.ts";
+import {
+  APPLE_PUBLIC_KEY,
+  DISPLAY_NAME,
+  FILL_MATCHES,
+  FIREFOX_EXTENSION_ID,
+  STORE_PUBLIC_KEY,
+  type Variant,
+} from "./src/config.ts";
 
 const variant: Variant = process.env.VARIANT === "github" ? "github" : "store";
 
@@ -15,6 +22,9 @@ export default defineConfig({
       name: variant === "github" ? `${DISPLAY_NAME} (GitHub build)` : DISPLAY_NAME,
       description: "Fill passwords from Apple Passwords, pairing far less often.",
       permissions: ["nativeMessaging", "storage", "alarms", "idle", "activeTab", "scripting"],
+      // the inline menu reads the page's URL and runs on login pages
+      host_permissions: FILL_MATCHES,
+      web_accessible_resources: [{ resources: ["menu.html"], matches: FILL_MATCHES }],
       action: { default_title: DISPLAY_NAME },
       ...(browser === "firefox"
         ? { browser_specific_settings: { gecko: { id: FIREFOX_EXTENSION_ID, strict_min_version: "128.0" } } }

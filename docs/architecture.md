@@ -3,9 +3,9 @@
 Apple Passwords Plus is a browser extension that reads logins from Apple Passwords (iCloud Keychain) on macOS. It doesn't store passwords and doesn't run a server: every request goes to Apple's own helper program, which ships with macOS 14 and later.
 
 ```
-popup (our UI)
-   │ runtime messages (only from our own extension pages)
-   ▼
+popup · inline menu (our extension pages)      autofill content script (on login pages)
+   │ runtime messages                              │ one read-only question: "show a menu here?"
+   ▼                                               ▼
 background worker ─── Session: one connection, kept open for the whole browser session
    │ runtime.connectNative(host)
    ▼
@@ -49,7 +49,22 @@ Apple's helper keeps the pairing key only in its own memory. When the native por
 
 Our background worker keeps the port open. Chrome keeps an extension's worker alive while it has an open native-messaging port (Chrome 105+), and a 30-second `chrome.alarms` fallback is armed while unlocked. The result is one pairing per browser launch. Optionally, the session also ends when the Mac locks (`idle.onStateChanged`).
 
-## Filling
+## The inline menu
+
+When a login field gets focus, the content script asks the background one question: show logins, offer to unlock, or stay out of the way. That answer is all it learns; it never sees usernames or passwords.
+
+To show the menu, the content script opens a top-layer popover holding a closed shadow root with an iframe of our own `menu.html`. The menu page is an extension page, so:
+- the web page can't read the usernames in it
+- the web page can't listen to keys typed into it, which includes the pairing code, typed inline when locked
+
+Every menu gets a random nonce in its URL fragment. The fragment is invisible to the page, because the shadow root is closed. When the user picks a login, the menu asks the background, which fetches the password and relays it to the content script with the nonce. The content script then:
+1. refuses nonces that aren't its current menu's (so a copy of `menu.html` framed by the page is useless),
+2. refuses if the menu is not genuinely visible (see the [threat model](threat-model.md)),
+3. fills around the field the menu was opened on, within that field's form.
+
+The content script runs in the top frame only. Logins inside cross-origin iframes are a later step.
+
+## Filling (popup)
 
 1. The popup asks the background for the active tab's logins.
 2. The background reads the tab URL itself (granted by `activeTab` when the user opens the popup) and refuses anything that is not `https:` (or `http://localhost`).

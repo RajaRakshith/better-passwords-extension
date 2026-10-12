@@ -1,8 +1,10 @@
 import { execSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { type BrowserContext, test as base, chromium } from "@playwright/test";
+import { type BrowserContext, test as base, chromium, type Frame, type Page } from "@playwright/test";
 import { STORE_EXTENSION_ID, STORE_HOST } from "../src/config.ts";
 
 export const PAIRING_CODE = "246810";
@@ -38,7 +40,44 @@ function profileWithFakeHelper(): string {
   return dir;
 }
 
-export const test = base.extend<{ context: BrowserContext; popupUrl: string }>({
+/** The inline menu's frame. It sits in a closed shadow root, so find it among the page's frames. */
+export async function menuFrame(page: Page): Promise<Frame> {
+  for (let i = 0; i < 50; i++) {
+    const frame = page.frames().find((f) => f.url().includes("/menu.html#"));
+    if (frame) {
+      // the menu ignores clicks during its first 300 ms on screen (clickjacking guard); a person
+      // never clicks that fast, so neither does the test
+      await page.waitForTimeout(400);
+      return frame;
+    }
+    await page.waitForTimeout(100);
+  }
+  throw new Error("the inline menu did not open");
+}
+
+export const test = base.extend<{ context: BrowserContext; popupUrl: string }, { siteUrl: string }>({
+  // a tiny static server for the test pages, on http://localhost (which the extension allows)
+  siteUrl: [
+    // biome-ignore lint/correctness/noEmptyPattern: Playwright fixture signature
+    async ({}, use) => {
+      const pages = resolve(import.meta.dirname, "pages");
+      const server = createServer((req, res) => {
+        const name = (req.url ?? "/").split("?")[0]?.replace(/[^a-z0-9.-]/gi, "") || "login.html";
+        let body: Buffer;
+        try {
+          body = readFileSync(join(pages, name));
+        } catch {
+          res.writeHead(404).end();
+          return;
+        }
+        res.writeHead(200, { "content-type": "text/html" }).end(body);
+      });
+      await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+      await use(`http://localhost:${(server.address() as AddressInfo).port}`);
+      server.close();
+    },
+    { scope: "worker" },
+  ],
   // biome-ignore lint/correctness/noEmptyPattern: Playwright fixture signature
   context: async ({}, use) => {
     const dir = profileWithFakeHelper();

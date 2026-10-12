@@ -169,16 +169,24 @@ async function fill(tabId: number, username: string) {
 
 async function footer() {
   const settings: Settings = await send({ type: "get-settings" });
-  const toggle = h("input", { type: "checkbox", checked: settings.lockOnScreenLock });
-  toggle.addEventListener("change", () => {
-    void send({ type: "set-settings", settings: { lockOnScreenLock: toggle.checked } });
-  });
+  const option = (key: keyof Settings, label: string) => {
+    const toggle = h("input", { type: "checkbox", checked: settings[key] });
+    toggle.addEventListener("change", () => {
+      void send({ type: "set-settings", settings: { [key]: toggle.checked } });
+    });
+    return h("label", { class: "toggle" }, toggle, label);
+  };
   const lock = h("button", { class: "secondary", textContent: "Lock" });
   lock.addEventListener("click", async () => {
     await send({ type: "lock" });
     window.close();
   });
-  return h("div", { class: "actions" }, h("label", { class: "toggle" }, toggle, "Lock when my Mac locks"), lock);
+  return h(
+    "div",
+    { class: "settings" },
+    option("inlineMenu", "Suggest logins in login fields"),
+    h("div", { class: "actions" }, option("lockOnScreenLock", "Lock when my Mac locks"), lock),
+  );
 }
 
 function messageOf(error: unknown): string {

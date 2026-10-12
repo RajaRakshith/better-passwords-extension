@@ -1,0 +1,108 @@
+@import "../../src/ui/tokens.css";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+  font: 13px / 1.3 var(--font);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.panel {
+  margin: 0;
+  padding: 5px;
+  border: 1px solid var(--separator);
+  border-radius: 10px;
+  background: var(--surface);
+  display: grid;
+  gap: 1px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.row:hover,
+.row:focus-visible {
+  background: var(--accent);
+  color: var(--accent-text);
+  outline: none;
+}
+
+.row svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.text {
+  display: grid;
+  min-width: 0;
+}
+
+.title,
+.detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title {
+  font-weight: 500;
+}
+
+.detail {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.row:hover .detail,
+.row:focus-visible .detail {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.message {
+  padding: 6px 8px;
+  color: var(--text-secondary);
+}
+
+.message.error {
+  color: var(--danger);
+}
+
+.code {
+  margin: 2px 4px 4px;
+  padding: 6px;
+  border: 1px solid var(--separator);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    600 18px / 1 ui-monospace,
+    "SF Mono",
+    monospace;
+  letter-spacing: 0.35em;
+  text-align: center;
+}
+
+.code:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
