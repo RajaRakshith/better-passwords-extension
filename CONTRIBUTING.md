@@ -37,6 +37,8 @@ open -na "Google Chrome" --args --user-data-dir="$PROFILE" \
   --load-extension="$PWD/apps/extension/.output/store-chrome-mv3"
 ```
 
+Use a **new profile directory after every rebuild**, or reload the extension on its extensions page. Relaunching an existing profile can keep running the previous build's background worker, which talks past the new content scripts and fails silently.
+
 Chrome 137+ ignores `--load-extension`. Either load the folder from `chrome://extensions` (Developer mode → Load unpacked), or use Chromium, Helium or another Chromium build.
 
 **Never** paste real passwords, pairing codes, or screenshots showing them into issues, PRs or logs.
