@@ -4,7 +4,7 @@ Thanks for helping! This page gets you from clone to a tested change.
 
 ## Setup
 
-You need [Bun](https://bun.sh) 1.3 or later. A Mac is only needed for live testing against Apple's helper; everything else runs anywhere.
+You need [Bun](https://bun.sh) 1.3 or later. A Mac is only needed for live testing against Apple's helper and for the companion app (Xcode 16 or later); everything else runs anywhere.
 
 ```sh
 bun install          # also installs the git hooks (lefthook)
@@ -19,7 +19,8 @@ bun run test:e2e     # Playwright: real Chromium + the fake helper (run `bunx pl
 |---|---|
 | `apps/extension` | The WXT extension: `entrypoints/` (background, popup), `src/` (session, fill, config) |
 | `packages/protocol` | The helper protocol: SRP pairing, encrypted channel, queries |
-| `packages/fake-helper` | Test double of Apple's helper |
+| `apps/companion` | The optional Touch ID companion app (Swift; `swift test`, `scripts/bundle.sh`) |
+| `packages/fake-helper` | Test doubles of Apple's helper and of the companion's host |
 | `scripts/setup-mac.sh` | One-time setup for the store build |
 | `docs/` | Architecture, protocol, threat model, releasing |
 

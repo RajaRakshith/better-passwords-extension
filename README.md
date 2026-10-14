@@ -14,11 +14,14 @@ It talks to the same Apple helper that ships with macOS, through the same encryp
 
 ## Status
 
-Early development. Working today: pairing, keeping the session alive, an inline menu on login fields, and filling from the toolbar popup.
+Early development. Working today:
+- pairing, and keeping the session alive
+- an inline menu on login fields
+- filling from the toolbar popup
+- an optional Mac companion app that enters the code for you after Touch ID ([details](docs/companion.md))
 
 Planned:
 - Firefox polish
-- a Touch ID companion app that enters the code for you
 - store listings
 
 ## Setup

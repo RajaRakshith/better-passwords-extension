@@ -38,10 +38,18 @@ What we protect: the user's passwords in Apple Passwords, and the session that c
 - On Firefox (no IntersectionObserver v2), an overlay with `pointer-events: none` placed in the page's own *closed* shadow root and in the top layer could evade the content script's checks. Planned mitigation: re-check after a short delay, and require the field to keep focus.
 - Logins in cross-origin iframes are not offered yet.
 
-## Planned: Touch ID companion
+## Touch ID companion
 
-Reading the code automatically needs Accessibility access. That permission will live in a separate signed companion app, never in the browser. The app will:
-- require Touch ID first
-- verify that the code window belongs to Apple's signed helper (and to the right browser)
-- return only the six digits
-- authenticate its callers by code signature
+Reading the code automatically needs Accessibility access. That permission lives in the separate companion app, never in the browser. The app:
+- requires Touch ID (or the login password) before every read
+- reads only windows of Apple's signed helper that the asking browser launched
+- returns only the six digits
+- accepts XPC connections only from its own signed native host
+
+The full design is in [companion.md](companion.md).
+
+| Risk | Mitigation |
+|---|---|
+| Another program asks the agent for the code | The XPC connection must come from our signed host (team ID in releases, exact cdhash in development builds), and the user must confirm with Touch ID. |
+| A fake window shows a code | Only windows of processes signed by Apple as the helper, and launched by the asking browser, are read. A wrong code would fail the SRP handshake anyway. |
+| The companion is used to read other apps | It reads nothing but the helper's windows, and it returns only a 6-digit code, never other text. |

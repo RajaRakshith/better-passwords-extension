@@ -22,6 +22,7 @@ Apple Passwords / iCloud Keychain
 | `packages/protocol` | Client for the helper's protocol: SRP-6a pairing, the AES-GCM channel, login and password queries. Pure TypeScript with no browser APIs, so it is unit-tested directly. |
 | `packages/fake-helper` | A test double of Apple's helper. Used in-process by unit tests and as a real native-messaging host by the e2e tests. |
 | `apps/extension` | The WXT extension: background worker, popup, the page-fill function, and the build variants. |
+| `apps/companion` | The optional Touch ID companion app (Swift). See [companion.md](companion.md). |
 | `scripts/setup-mac.sh` | One-time setup for the store build (see below). |
 
 ## Two builds, one codebase
@@ -41,7 +42,7 @@ The only differences between the two builds are the manifest `key`, the host nam
 
 ## Why the browser has to launch Apple's helper
 
-The helper's code signature has *parent launch constraints*: macOS kills it unless an approved browser is its parent process. So a helper of ours cannot sit between the browser and Apple's helper. The extension always talks to Apple's helper directly, and any native code of ours (such as the planned Touch ID companion) runs beside it, never in front of it.
+The helper's code signature has *parent launch constraints*: macOS kills it unless an approved browser is its parent process. So a helper of ours cannot sit between the browser and Apple's helper. The extension always talks to Apple's helper directly. Native code of ours, such as the [Touch ID companion](companion.md), runs beside it, never in front of it.
 
 ## Sessions
 
