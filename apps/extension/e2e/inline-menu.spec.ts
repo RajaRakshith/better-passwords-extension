@@ -1,4 +1,4 @@
-import { expect, menuFrame, PAIRING_CODE, test } from "./fixtures.ts";
+import { choose, expect, menuFrame, PAIRING_CODE, test } from "./fixtures.ts";
 
 test("unlocks from the inline menu and fills the form", async ({ context, siteUrl }) => {
   const page = await context.newPage();
@@ -7,10 +7,10 @@ test("unlocks from the inline menu and fills the form", async ({ context, siteUr
 
   // locked: the menu offers to unlock, and the code is typed inside the extension's own frame
   const menu = await menuFrame(page);
-  await menu.getByText("Unlock to fill passwords").click();
+  await choose(menu, "Unlock to fill passwords");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
 
-  await menu.getByText("e2e-user").click();
+  await choose(menu, "e2e-user");
   await expect(page.locator("#user")).toHaveValue("e2e-user");
   await expect(page.locator("#pass")).toHaveValue("e2e-pass");
   await expect(page.locator("#newsletter-email")).toHaveValue("");
@@ -21,7 +21,7 @@ test("moving to the next field opens a fresh menu that still fills", async ({ co
   await page.goto(`${siteUrl}/login.html`);
   await page.locator("#user").click();
   let menu = await menuFrame(page);
-  await menu.getByText("Unlock to fill passwords").click();
+  await choose(menu, "Unlock to fill passwords");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
   await expect(menu.getByText("e2e-user")).toBeVisible();
 
@@ -36,7 +36,7 @@ test("moving to the next field opens a fresh menu that still fills", async ({ co
   const height = await page.locator("app-autofill-menu").evaluate((el) => el.getBoundingClientRect().height);
   expect(height).toBeGreaterThan(70);
 
-  await menu.getByText("e2e-user").click();
+  await choose(menu, "e2e-user");
   await expect(page.locator("#pass")).toHaveValue("e2e-pass");
 });
 
@@ -45,7 +45,7 @@ test("arrow keys move between the field and the menu", async ({ context, siteUrl
   await page.goto(`${siteUrl}/login.html`);
   await page.locator("#pass").click();
   const menu = await menuFrame(page);
-  await menu.getByText("Unlock to fill passwords").click();
+  await choose(menu, "Unlock to fill passwords");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
   await expect(menu.getByText("e2e-user")).toBeVisible();
 
@@ -64,10 +64,10 @@ test("opens the Passwords app for the current site", async ({ context, siteUrl, 
   await page.goto(`${siteUrl}/login.html`);
   await page.locator("#pass").click();
   const menu = await menuFrame(page);
-  await menu.getByText("Unlock to fill passwords").click();
+  await choose(menu, "Unlock to fill passwords");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
 
-  await menu.getByText("Open Passwords…").click();
+  await choose(menu, "Open Passwords…");
   await expect.poll(passwordsAppLaunches).toEqual([siteUrl]);
   await expect.poll(() => page.locator("app-autofill-menu").count()).toBe(0);
 });
@@ -77,7 +77,7 @@ test("Escape closes the menu and keeps it closed until the user asks again", asy
   await page.goto(`${siteUrl}/login.html`);
   await page.locator("#pass").click();
   const menu = await menuFrame(page);
-  await menu.getByText("Unlock to fill passwords").click();
+  await choose(menu, "Unlock to fill passwords");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
   await expect(menu.getByText("e2e-user")).toBeVisible();
 
@@ -106,7 +106,7 @@ test("refuses to fill when the page makes the menu transparent", async ({ contex
   await page.goto(`${siteUrl}/login.html`);
   await page.locator("#pass").click();
   const menu = await menuFrame(page);
-  await menu.getByText("Unlock to fill passwords").click();
+  await choose(menu, "Unlock to fill passwords");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
   await expect(menu.getByText("e2e-user")).toBeVisible();
 
@@ -125,7 +125,7 @@ test("ignores a copy of the menu framed by the page itself", async ({ context, s
   // unlock through the real menu first, so a fill would otherwise succeed
   await page.locator("#pass").click();
   const menu = await menuFrame(page);
-  await menu.getByText("Unlock to fill passwords").click();
+  await choose(menu, "Unlock to fill passwords");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
   await expect(menu.getByText("e2e-user")).toBeVisible();
 

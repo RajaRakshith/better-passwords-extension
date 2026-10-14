@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { type BrowserContext, test as base, chromium, type Frame, type Page } from "@playwright/test";
+import { type BrowserContext, test as base, chromium, expect, type Frame, type Page } from "@playwright/test";
 import { COMPANION_HOST, STORE_EXTENSION_ID, STORE_HOST } from "../src/config.ts";
 
 export const PAIRING_CODE = "246810";
@@ -81,6 +81,18 @@ type Fixtures = {
   /** Search URLs of the requests to open the Passwords app that reached the fake helper. */
   passwordsAppLaunches: () => string[];
 };
+
+/**
+ * Clicks an item in the menu like a person would. The menu ignores clicks until it has been
+ * visibly on screen for 300 ms (clickjacking guard), and that clock restarts when the menu
+ * re-renders, e.g. after unlocking.
+ */
+export async function choose(menu: Frame, text: string): Promise<void> {
+  const item = menu.getByText(text);
+  await expect(item).toBeVisible();
+  await menu.page().waitForTimeout(500);
+  await item.click();
+}
 
 export const test = base.extend<Fixtures, { siteUrl: string }>({
   // a tiny static server for the test pages, on http://localhost (which the extension allows)

@@ -1,4 +1,4 @@
-import { expect, menuFrame, PAIRING_CODE, test } from "./fixtures.ts";
+import { choose, expect, menuFrame, PAIRING_CODE, test } from "./fixtures.ts";
 
 // The Touch ID companion is replaced by a fake native host that answers as the real one does
 // after the user confirmed (or cancelled) Touch ID.
@@ -18,8 +18,8 @@ test.describe("with the companion app", () => {
     await page.goto(`${siteUrl}/login.html`);
     await page.locator("#pass").click();
     const menu = await menuFrame(page);
-    await menu.getByText("Unlock with Touch ID").click();
-    await menu.getByText("e2e-user").click();
+    await choose(menu, "Unlock with Touch ID");
+    await choose(menu, "e2e-user");
     await expect(page.locator("#pass")).toHaveValue("e2e-pass");
   });
 
