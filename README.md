@@ -50,7 +50,7 @@ It can't auto-update. Download new releases yourself.
 
 ## How it works
 
-See [docs/architecture.md](docs/architecture.md), [docs/protocol.md](docs/protocol.md) and [docs/threat-model.md](docs/threat-model.md).
+See [docs/architecture.md](docs/architecture.md), [docs/protocol.md](docs/protocol.md) and [docs/threat-model.md](docs/threat-model.md). Nothing is collected or sent anywhere: see the [privacy policy](PRIVACY.md).
 
 ## Contributing
 
