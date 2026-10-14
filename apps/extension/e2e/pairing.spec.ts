@@ -38,3 +38,12 @@ test("lock ends the session", async ({ context, popupUrl }) => {
   await again.goto(popupUrl);
   await expect(again.getByText("Enter the code shown on your Mac")).toBeVisible();
 });
+
+test("the popup opens the Passwords app", async ({ context, popupUrl, passwordsAppLaunches }) => {
+  const popup = await context.newPage();
+  await popup.goto(popupUrl);
+  await popup.getByLabel("Verification code").fill(PAIRING_CODE);
+  await popup.getByRole("button", { name: "Open Passwords…" }).click();
+  // the popup's own tab is not a website, so no search is passed
+  await expect.poll(passwordsAppLaunches).toEqual([""]);
+});

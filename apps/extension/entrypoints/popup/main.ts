@@ -180,7 +180,19 @@ async function showLogins(status: Status, error?: string) {
     );
   }
 
-  show(h("h1", { textContent: result.hostname ?? DISPLAY_NAME }), body, errorLine(error), await footer(status));
+  const openApp = h("button", { class: "link", textContent: "Open Passwords…" });
+  openApp.addEventListener("click", async () => {
+    await send({ type: "open-passwords-app", ...(tabId === undefined ? {} : { tabId }) }).catch(() => {});
+    window.close();
+  });
+
+  show(
+    h("h1", { textContent: result.hostname ?? DISPLAY_NAME }),
+    body,
+    errorLine(error),
+    h("div", { class: "actions" }, openApp),
+    await footer(status),
+  );
 }
 
 async function fill(tabId: number, username: string) {
