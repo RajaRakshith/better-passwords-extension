@@ -1,0 +1,121 @@
+import AppKit
+import CompanionCore
+import Foundation
+
+/// The background agent: launchd starts the app with --agent when the native host first connects.
+/// It holds the app's Accessibility permission, so the browser never needs it.
+enum Agent {
+    static func run() -> Never {
+        let delegate = ListenerDelegate()
+        let listener = NSXPCListener(machServiceName: Identity.agentService)
+        listener.delegate = delegate
+        listener.resume()
+        IdleExit.shared.touch()
+        withExtendedLifetime((listener, delegate)) { dispatchMain() }
+    }
+
+    /// What the native host must satisfy. Release builds: signed by our team. Development builds
+    /// (ad-hoc): the exact host binary built alongside this app, pinned by cdhash in Info.plist.
+    static func clientRequirement() -> String? {
+        if let team = CodeSigning.ownTeamID() {
+            return CodeSigning.sameTeam(team, identifier: Identity.hostSigningID)
+        }
+        guard let cdhash = Bundle.main.object(forInfoDictionaryKey: Identity.hostCDHashKey) as? String else {
+            return nil
+        }
+        return CodeSigning.pinned(identifier: Identity.hostSigningID, cdhash: cdhash)
+    }
+}
+
+final class ListenerDelegate: NSObject, NSXPCListenerDelegate {
+    private let requirement = Agent.clientRequirement()
+    private let service = PairingCodeService()
+
+    func listener(_: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
+        // fail closed: without a requirement we can't tell our host from anything else
+        guard let requirement else { return false }
+        connection.setCodeSigningRequirement(requirement)
+        connection.exportedInterface = AgentInterface.make()
+        connection.exportedObject = AgentSession(caller: connection.processIdentifier, service: service)
+        connection.resume()
+        IdleExit.shared.touch()
+        return true
+    }
+}
+
+/// One connection's view of the agent. The caller's PID comes from the XPC connection (the kernel),
+/// never from the caller's own words.
+final class AgentSession: NSObject, CompanionAgentProtocol, @unchecked Sendable {
+    private let caller: pid_t
+    private let service: PairingCodeService
+
+    init(caller: pid_t, service: PairingCodeService) {
+        self.caller = caller
+        self.service = service
+    }
+
+    func status(reply: @escaping @Sendable (Bool) -> Void) {
+        IdleExit.shared.touch()
+        reply(AXIsProcessTrusted())
+    }
+
+    func readPairingCode(reply: @escaping @Sendable (String?, String?) -> Void) {
+        IdleExit.shared.touch()
+        let caller = caller
+        let service = service
+        Task {
+            switch await service.read(for: caller) {
+            case .success(let code): reply(code, nil)
+            case .failure(let error): reply(nil, error.rawValue)
+            }
+            IdleExit.shared.touch()
+        }
+    }
+}
+
+/// Reads the code for one browser at a time.
+actor PairingCodeService {
+    private var busy = false
+
+    func read(for caller: pid_t) async -> Result<String, CompanionError> {
+        guard !busy else { return .failure(.busy) }
+        busy = true
+        defer { busy = false }
+
+        // The native host is a child of the browser, and so is the browser's copy of Apple's helper.
+        guard let browser = Processes.parent(of: caller), browser > 1 else { return .failure(.untrustedCaller) }
+        guard !Processes.appleHelpers(launchedBy: browser).isEmpty else { return .failure(.noHelper) }
+        guard AXIsProcessTrusted() else { return .failure(.needsAccessibility) }
+
+        let browserName = NSRunningApplication(processIdentifier: browser)?.localizedName ?? "your browser"
+        guard await UserPresence.confirm(reason: "enter the pairing code in \(browserName)") else {
+            return .failure(.cancelled)
+        }
+
+        // The code window can take a moment to appear after the extension asks for it. Look up the
+        // helpers again each time: they must still be Apple's, and still the browser's children.
+        for _ in 0..<25 {
+            let texts = Processes.appleHelpers(launchedBy: browser).flatMap(WindowReader.texts(of:))
+            if let code = PairingCode.find(in: texts) { return .success(code) }
+            try? await Task.sleep(for: .milliseconds(200))
+        }
+        return .failure(.noCode)
+    }
+}
+
+/// launchd starts the agent on demand, so it quits after a quiet minute.
+final class IdleExit: @unchecked Sendable {
+    static let shared = IdleExit()
+    private let queue = DispatchQueue(label: "idle-exit")
+    private var generation = 0
+
+    func touch() {
+        queue.async {
+            self.generation += 1
+            let mine = self.generation
+            self.queue.asyncAfter(deadline: .now() + 60) {
+                if self.generation == mine { exit(0) }
+            }
+        }
+    }
+}
