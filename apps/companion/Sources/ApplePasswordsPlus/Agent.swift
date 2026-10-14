@@ -60,7 +60,7 @@ final class AgentSession: NSObject, CompanionAgentProtocol, @unchecked Sendable 
     }
 
     func readPairingCode(reply: @escaping @Sendable (String?, String?) -> Void) {
-        IdleExit.shared.touch()
+        IdleExit.shared.begin()
         let caller = caller
         let service = service
         Task {
@@ -68,7 +68,7 @@ final class AgentSession: NSObject, CompanionAgentProtocol, @unchecked Sendable 
             case .success(let code): reply(code, nil)
             case .failure(let error): reply(nil, error.rawValue)
             }
-            IdleExit.shared.touch()
+            IdleExit.shared.end()
         }
     }
 }
@@ -103,19 +103,37 @@ actor PairingCodeService {
     }
 }
 
-/// launchd starts the agent on demand, so it quits after a quiet minute.
+/// launchd starts the agent on demand, so it quits after a quiet minute, never while a request
+/// (which may be waiting for Touch ID) is in progress.
 final class IdleExit: @unchecked Sendable {
     static let shared = IdleExit()
     private let queue = DispatchQueue(label: "idle-exit")
     private var generation = 0
+    private var active = 0
 
     func touch() {
+        queue.async { self.schedule() }
+    }
+
+    func begin() {
         queue.async {
+            self.active += 1
             self.generation += 1
-            let mine = self.generation
-            self.queue.asyncAfter(deadline: .now() + 60) {
-                if self.generation == mine { exit(0) }
-            }
+        }
+    }
+
+    func end() {
+        queue.async {
+            self.active -= 1
+            self.schedule()
+        }
+    }
+
+    private func schedule() {
+        generation += 1
+        let mine = generation
+        queue.asyncAfter(deadline: .now() + 60) {
+            if self.generation == mine && self.active == 0 { exit(0) }
         }
     }
 }
