@@ -49,6 +49,18 @@ body {
   flex: none;
   width: 18px;
   height: 18px;
+  color: var(--text-secondary);
+}
+
+.row:hover svg,
+.row:focus-visible svg {
+  color: inherit;
+}
+
+.separator {
+  margin: 3px 6px;
+  border: 0;
+  border-top: 1px solid var(--separator);
 }
 
 .text {

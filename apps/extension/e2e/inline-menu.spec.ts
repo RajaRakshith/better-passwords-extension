@@ -16,6 +16,83 @@ test("unlocks from the inline menu and fills the form", async ({ context, siteUr
   await expect(page.locator("#newsletter-email")).toHaveValue("");
 });
 
+test("moving to the next field opens a fresh menu that still fills", async ({ context, siteUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
+  await page.locator("#user").click();
+  let menu = await menuFrame(page);
+  await menu.getByText("Unlock to fill passwords").click();
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(menu.getByText("e2e-user")).toBeVisible();
+
+  // Tab to the password field: the old frame is replaced, so the menu gets its full height back
+  // and a new nonce that the content script accepts
+  const first = menu;
+  await page.locator("#user").focus();
+  await page.keyboard.press("Tab");
+  await expect.poll(() => page.frames().some((f) => f.url().includes("/menu.html#") && f !== first)).toBe(true);
+  menu = await menuFrame(page);
+  await expect(menu.getByText("Open Passwords…")).toBeVisible();
+  const height = await page.locator("app-autofill-menu").evaluate((el) => el.getBoundingClientRect().height);
+  expect(height).toBeGreaterThan(70);
+
+  await menu.getByText("e2e-user").click();
+  await expect(page.locator("#pass")).toHaveValue("e2e-pass");
+});
+
+test("arrow keys move between the field and the menu", async ({ context, siteUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
+  await page.locator("#pass").click();
+  const menu = await menuFrame(page);
+  await menu.getByText("Unlock to fill passwords").click();
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(menu.getByText("e2e-user")).toBeVisible();
+
+  await page.locator("#pass").focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(menu.getByRole("option", { name: /e2e-user/ })).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(page.locator("#pass")).toBeFocused();
+  // the menu stays open, and ↓ goes back into it
+  await page.keyboard.press("ArrowDown");
+  await expect(menu.getByRole("option", { name: /e2e-user/ })).toBeFocused();
+});
+
+test("opens the Passwords app for the current site", async ({ context, siteUrl, passwordsAppLaunches }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
+  await page.locator("#pass").click();
+  const menu = await menuFrame(page);
+  await menu.getByText("Unlock to fill passwords").click();
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+
+  await menu.getByText("Open Passwords…").click();
+  await expect.poll(passwordsAppLaunches).toEqual([siteUrl]);
+  await expect.poll(() => page.locator("app-autofill-menu").count()).toBe(0);
+});
+
+test("Escape closes the menu and keeps it closed until the user asks again", async ({ context, siteUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
+  await page.locator("#pass").click();
+  const menu = await menuFrame(page);
+  await menu.getByText("Unlock to fill passwords").click();
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(menu.getByText("e2e-user")).toBeVisible();
+
+  await page.locator("#pass").focus();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#pass")).toBeFocused();
+  await page.waitForTimeout(300);
+  expect(await page.locator("app-autofill-menu").count()).toBe(0);
+
+  // ↓ in the field brings it back
+  await page.keyboard.press("ArrowDown");
+  await expect.poll(() => page.locator("app-autofill-menu").count()).toBe(1);
+});
+
 test("stays away from fields that aren't for logging in", async ({ context, siteUrl }) => {
   const page = await context.newPage();
   await page.goto(`${siteUrl}/login.html`);

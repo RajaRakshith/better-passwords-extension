@@ -21,15 +21,36 @@ const HOST_STYLE: Record<string, string> = {
   opacity: "1",
   "z-index": "2147483647",
   "color-scheme": "light dark",
+  // the shadow sits outside the iframe, which would clip it; the radius matches the menu panel
+  "border-radius": "10px",
+  "box-shadow": "0 8px 28px light-dark(rgb(0 0 0 / 0.18), rgb(0 0 0 / 0.5)), 0 1px 4px rgb(0 0 0 / 0.12)",
 };
 
 function randomNonce(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+function createFrame(src: string): HTMLIFrameElement {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("title", "Apple Passwords Plus");
+  frame.setAttribute("allow", "");
+  for (const [key, value] of Object.entries({
+    border: "0",
+    width: "100%",
+    height: "100%",
+    display: "block",
+    "color-scheme": "light dark",
+  })) {
+    frame.style.setProperty(key, value, "important");
+  }
+  frame.src = src;
+  return frame;
+}
+
 export class MenuHost {
   readonly #host: HTMLElement;
-  readonly #frame: HTMLIFrameElement;
+  readonly #shadow: ShadowRoot;
+  #frame: HTMLIFrameElement | undefined;
   #anchor: HTMLInputElement | undefined;
   #nonce: string | undefined;
   #height = 48;
@@ -37,14 +58,7 @@ export class MenuHost {
   constructor(private readonly menuUrl: string) {
     this.#host = document.createElement("app-autofill-menu");
     this.#host.setAttribute("popover", "manual");
-    this.#frame = document.createElement("iframe");
-    this.#frame.setAttribute("title", "Apple Passwords Plus");
-    this.#frame.setAttribute("allow", "");
-    for (const [key, value] of Object.entries({ border: "0", width: "100%", height: "100%", display: "block" })) {
-      this.#frame.style.setProperty(key, value, "important");
-    }
-    this.#frame.style.setProperty("color-scheme", "light dark", "important");
-    this.#host.attachShadow({ mode: "closed" }).append(this.#frame);
+    this.#shadow = this.#host.attachShadow({ mode: "closed" });
     this.#applyStyle();
   }
 
@@ -68,8 +82,11 @@ export class MenuHost {
     this.#anchor = anchor;
     this.#nonce = randomNonce();
     this.#height = 48;
-    // the nonce ties requests to this menu; a copy of menu.html framed by the page itself has none
-    this.#frame.src = `${this.menuUrl}#${new URLSearchParams({ nonce: this.#nonce, mode })}`;
+    // A new iframe every time: changing only the URL fragment of an existing one would not reload
+    // the menu page, which would keep the previous menu's nonce and size.
+    // The nonce ties requests to this menu; a copy of menu.html framed by the page itself has none.
+    this.#frame = createFrame(`${this.menuUrl}#${new URLSearchParams({ nonce: this.#nonce, mode })}`);
+    this.#shadow.replaceChildren(this.#frame);
     if (!this.#host.isConnected) document.documentElement.append(this.#host);
     // re-entering the top layer puts us above anything the page opened before
     if (this.#host.matches(":popover-open")) this.#host.hidePopover();
@@ -100,14 +117,15 @@ export class MenuHost {
   }
 
   focusMenu(): void {
-    this.#frame.focus();
+    this.#frame?.focus();
   }
 
   close(): void {
     this.#nonce = undefined;
     this.#anchor = undefined;
     if (this.#host.matches(":popover-open")) this.#host.hidePopover();
-    this.#frame.src = "about:blank";
+    this.#frame = undefined;
+    this.#shadow.replaceChildren();
     this.#host.remove();
   }
 

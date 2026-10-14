@@ -113,8 +113,16 @@ export default defineBackground(() => {
         })) as { result: string } | undefined;
         return { result: reply?.result ?? "menu-hidden" };
       }
+      case "open-passwords-app": {
+        const tabId = caller.tabId ?? request.tabId;
+        const url = tabId === undefined ? undefined : await tabUrl(tabId).catch(() => undefined);
+        const client = await session.connect();
+        client.openPasswordsApp(url?.origin);
+        return null;
+      }
       case "menu-resize":
       case "menu-close":
+      case "menu-focus-field":
         await relay(tabOf(caller), request).catch(() => {});
         return null;
       case "get-settings":

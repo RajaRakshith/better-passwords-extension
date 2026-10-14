@@ -17,6 +17,9 @@ export type Request =
   | { type: "fill-from-menu"; nonce: string; username: string }
   | { type: "menu-resize"; nonce: string; height: number }
   | { type: "menu-close"; nonce: string }
+  | { type: "menu-focus-field"; nonce: string }
+  /** Opens Apple's Passwords app, searching for the tab's site when there is one. */
+  | { type: "open-passwords-app"; tabId?: number }
   // content script → background (the only request content scripts may send)
   | { type: "autofill-status" };
 
@@ -57,7 +60,7 @@ export type Response<R extends Request> = R extends { type: "get-status" }
         ? Settings
         : R extends { type: "autofill-status" }
           ? AutofillStatus
-          : R extends { type: "menu-resize" | "menu-close" }
+          : R extends { type: "menu-resize" | "menu-close" | "menu-focus-field" | "open-passwords-app" }
             ? null
             : Status;
 
@@ -65,7 +68,9 @@ export type Response<R extends Request> = R extends { type: "get-status" }
 export type ContentMessage =
   | { type: "menu-fill"; nonce: string; origin: string; username: string; password: string }
   | { type: "menu-resize"; nonce: string; height: number }
-  | { type: "menu-close"; nonce: string };
+  | { type: "menu-close"; nonce: string }
+  /** Moves focus back to the field, keeping the menu open. */
+  | { type: "menu-focus-field"; nonce: string };
 
 /** Wire envelope, so errors cross the message boundary as data instead of being lost. */
 export type Envelope<T> = { ok: true; value: T } | { ok: false; error: string; code?: string };

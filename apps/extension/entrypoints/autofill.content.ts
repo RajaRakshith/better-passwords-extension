@@ -12,9 +12,11 @@ export default defineContentScript({
   main(ctx) {
     const menu = new MenuHost(browser.runtime.getURL("/menu.html"));
     let request = 0;
+    // the field whose menu the user just dismissed; it stays closed there until they ask again
+    let dismissed: HTMLInputElement | undefined;
 
     async function offer(field: HTMLInputElement) {
-      if (menu.anchor === field) return;
+      if (menu.anchor === field || dismissed === field) return;
       const ticket = ++request;
       const { show } = await send({ type: "autofill-status" }).catch(() => ({ show: "none" as const }));
       // the user may have moved on while we asked
@@ -35,6 +37,7 @@ export default defineContentScript({
       "focusin",
       (event) => {
         if (event.target === menu.element) return;
+        if (event.target !== dismissed) dismissed = undefined;
         if (isLoginField(event.target)) void offer(event.target);
         else if (menu.isOpen) menu.close();
       },
@@ -45,6 +48,11 @@ export default defineContentScript({
       "mousedown",
       (event) => {
         if (menu.isOpen && event.target !== menu.element && event.target !== menu.anchor) menu.close();
+        // clicking a field whose menu was dismissed asks for it again
+        if (event.target === dismissed && isLoginField(event.target)) {
+          dismissed = undefined;
+          void offer(event.target);
+        }
       },
       { capture: true },
     );
@@ -52,8 +60,17 @@ export default defineContentScript({
       document,
       "keydown",
       (event) => {
+        if (event.key === "ArrowDown" && !menu.isOpen && event.target === dismissed && isLoginField(event.target)) {
+          event.preventDefault();
+          dismissed = undefined;
+          void offer(event.target);
+          return;
+        }
         if (!menu.isOpen || event.target !== menu.anchor) return;
-        if (event.key === "Escape") menu.close();
+        if (event.key === "Escape") {
+          dismissed = menu.anchor;
+          menu.close();
+        }
         if (event.key === "ArrowDown") {
           event.preventDefault();
           menu.focusMenu();
@@ -74,10 +91,14 @@ export default defineContentScript({
           return false;
         case "menu-close": {
           const anchor = menu.anchor;
+          dismissed = anchor;
           menu.close();
           anchor?.focus();
           return false;
         }
+        case "menu-focus-field":
+          menu.anchor?.focus();
+          return false;
         case "menu-fill": {
           const anchor = menu.anchor;
           if (!anchor || !isMenuGenuinelyVisible(menu.element)) {
@@ -86,6 +107,7 @@ export default defineContentScript({
             return false;
           }
           const result = fillCredentials(message.origin, message.username, message.password, anchor);
+          dismissed = anchor;
           menu.close();
           sendResponse({ result });
           return false;

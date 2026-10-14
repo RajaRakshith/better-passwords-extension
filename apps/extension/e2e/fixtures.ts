@@ -22,7 +22,7 @@ function profileWithFakeHelper(): string {
   const host = join(dir, "fake-helper.sh");
   writeFileSync(
     host,
-    `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}"\nexec "${bun}" "${fakeHelper}"\n`,
+    `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}" FAKE_HELPER_LOG="${join(dir, "helper.log")}"\nexec "${bun}" "${fakeHelper}"\n`,
   );
   chmodSync(host, 0o755);
 
@@ -45,9 +45,10 @@ export async function menuFrame(page: Page): Promise<Frame> {
   for (let i = 0; i < 50; i++) {
     const frame = page.frames().find((f) => f.url().includes("/menu.html#"));
     if (frame) {
-      // the menu ignores clicks during its first 300 ms on screen (clickjacking guard); a person
-      // never clicks that fast, so neither does the test
-      await page.waitForTimeout(400);
+      // The menu ignores clicks during its first 300 ms on screen (clickjacking guard); a person
+      // never clicks that fast, so neither does the test. The clock starts once it has rendered.
+      await frame.waitForSelector("#menu > *");
+      await page.waitForTimeout(500);
       return frame;
     }
     await page.waitForTimeout(100);
@@ -55,7 +56,16 @@ export async function menuFrame(page: Page): Promise<Frame> {
   throw new Error("the inline menu did not open");
 }
 
-export const test = base.extend<{ context: BrowserContext; popupUrl: string }, { siteUrl: string }>({
+const profileDirs = new WeakMap<BrowserContext, string>();
+
+type Fixtures = {
+  context: BrowserContext;
+  popupUrl: string;
+  /** Search URLs of the requests to open the Passwords app that reached the fake helper. */
+  passwordsAppLaunches: () => string[];
+};
+
+export const test = base.extend<Fixtures, { siteUrl: string }>({
   // a tiny static server for the test pages, on http://localhost (which the extension allows)
   siteUrl: [
     // biome-ignore lint/correctness/noEmptyPattern: Playwright fixture signature
@@ -85,9 +95,25 @@ export const test = base.extend<{ context: BrowserContext; popupUrl: string }, {
       channel: "chromium",
       args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
     });
+    profileDirs.set(context, dir);
     await use(context);
     await context.close();
     rmSync(dir, { recursive: true, force: true });
+  },
+  passwordsAppLaunches: async ({ context }, use) => {
+    const log = join(profileDirs.get(context) ?? "", "helper.log");
+    await use(() => {
+      let text = "";
+      try {
+        text = readFileSync(log, "utf8");
+      } catch {
+        // nothing logged yet
+      }
+      return text
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => (JSON.parse(line) as { url: string }).url);
+    });
   },
   popupUrl: async ({ context }, use) => {
     if (context.serviceWorkers().length === 0) await context.waitForEvent("serviceworker");

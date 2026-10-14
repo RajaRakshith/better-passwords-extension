@@ -21,10 +21,13 @@ function icon(path: string): SVGSVGElement {
   svg.append(p);
   return svg;
 }
+// Original glyphs, drawn on a 24-unit grid.
 const KEY =
-  "M7.5 15.5a4 4 0 1 1 3.87-5h9.13a1 1 0 0 1 .7.3l1 1a1 1 0 0 1 0 1.4l-1.5 1.5a1 1 0 0 1-1.4 0l-.8-.8-.8.8a1 1 0 0 1-1.4 0l-.8-.8-.8.8a1 1 0 0 1-.7.3h-1.63a4 4 0 0 1-3.87 2.5Zm-1-4a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z";
+  "M12 1.75a5.25 5.25 0 0 1 1.5 10.28v1.72h1.9a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.9v.75h1.4a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.4v.6a.8.8 0 0 1-.23.56l-.7.7a.8.8 0 0 1-1.14 0l-.7-.7a.8.8 0 0 1-.23-.56v-8.15A5.25 5.25 0 0 1 12 1.75Zm0 2.25a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5Z";
 const LOCK =
-  "M7 10V8a5 5 0 0 1 10 0v2h.5A1.5 1.5 0 0 1 19 11.5v8a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-8A1.5 1.5 0 0 1 6.5 10H7Zm2 0h6V8a3 3 0 0 0-6 0v2Z";
+  "M12 2a5 5 0 0 1 5 5v2.5h.5a2 2 0 0 1 2 2V20a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-8.5a2 2 0 0 1 2-2H7V7a5 5 0 0 1 5-5Zm0 1.75A3.25 3.25 0 0 0 8.75 7v2.5h6.5V7A3.25 3.25 0 0 0 12 3.75Z";
+const OPEN =
+  "M6.5 3.5h11a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3v-11a3 3 0 0 1 3-3Zm0 1.75c-.69 0-1.25.56-1.25 1.25v11c0 .69.56 1.25 1.25 1.25h11c.69 0 1.25-.56 1.25-1.25v-11c0-.69-.56-1.25-1.25-1.25h-11Zm3.25 3.5h5a.75.75 0 0 1 .75.75v5a.75.75 0 0 1-1.5 0v-3.19l-4.47 4.47a.75.75 0 0 1-1.06-1.06l4.47-4.47H9.75a.75.75 0 0 1 0-1.5Z";
 
 // --- clickjacking guard ------------------------------------------------------------------------
 // Where the browser supports IntersectionObserver v2, it reports whether this frame is actually
@@ -72,7 +75,7 @@ function row(svgPath: string, title: string, detail: string, onChoose: () => voi
       "span",
       { class: "text" },
       h("span", { class: "title", textContent: title }),
-      h("span", { class: "detail", textContent: detail }),
+      detail ? h("span", { class: "detail", textContent: detail }) : null,
     ),
   );
   button.addEventListener("click", (event) => {
@@ -93,14 +96,22 @@ async function showLogins(error?: string) {
     return render(message(messageOf(e), true));
   }
   if (result.logins.length === 0) {
-    render(message(`No saved passwords for ${result.hostname ?? "this site"}.`));
-    return setTimeout(close, 1500);
+    return render(message(`No saved passwords for ${result.hostname ?? "this site"}.`), openPasswordsRow(true));
   }
   const hostname = result.hostname ?? "";
   render(
     ...result.logins.map(({ username }) => row(KEY, username || "(no username)", hostname, () => void fill(username))),
     error ? message(error, true) : null,
+    h("hr", { class: "separator" }),
+    openPasswordsRow(false),
   );
+}
+
+function openPasswordsRow(withDetail: boolean) {
+  return row(OPEN, "Open Passwords…", withDetail ? "Look up or add a password" : "", async () => {
+    await send({ type: "open-passwords-app" }).catch(() => {});
+    close();
+  });
 }
 
 async function fill(username: string) {
@@ -165,13 +176,20 @@ function showCodeEntry(error?: string) {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") return close();
   if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-  const rows = Array.from(panel.querySelectorAll<HTMLButtonElement>(".row"));
-  if (rows.length === 0) return;
+  const items = Array.from(panel.querySelectorAll<HTMLElement>(".row, .code"));
+  if (items.length === 0) return;
   event.preventDefault();
-  const index = rows.indexOf(document.activeElement as HTMLButtonElement);
-  const next = event.key === "ArrowDown" ? index + 1 : index - 1;
-  rows[(next + rows.length) % rows.length]?.focus();
+  const index = items.indexOf(document.activeElement as HTMLElement);
+  if (event.key === "ArrowDown") return items[Math.min(index + 1, items.length - 1)]?.focus();
+  // ↑ from the first item goes back to the field on the page, keeping the menu open
+  if (index <= 0) return returnToField();
+  items[index - 1]?.focus();
 });
+
+function returnToField() {
+  (document.activeElement as HTMLElement | null)?.blur();
+  void send({ type: "menu-focus-field", nonce }).catch(() => {});
+}
 
 // focus arrives here when the user presses ↓ in the field
 window.addEventListener("focus", () => {
