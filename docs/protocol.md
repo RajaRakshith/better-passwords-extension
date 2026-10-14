@@ -18,6 +18,19 @@ Chrome native messaging: every message is a 32-bit little-endian length followed
 | 9 / 10 | From the helper: passwords disabled / re-login needed, so drop the session |
 | 0 | End |
 
+### Not used yet
+
+Apple's extension (3.4) also sends these. They're recorded here for later features; their replies haven't been checked against a real helper yet.
+
+| `cmd` | QID | Encrypted body | Purpose |
+|---|---|---|---|
+| 6 | `CmdNewAccount4URL` or `CmdSetPassword4LoginName_URL` | `ACT: 4` (maybe add), `URL`/`USR`/`PWD` empty, `NURL`, `NUSR`, `NPWD` | Save a new or changed password |
+| 16 | `CmdGetOneTimeCodes` | `ACT: 5`, `TYPE: "oneTimeCodes"`, `frameURLs` (the frame and its parents), optional `username` | Verification codes (TOTP) saved in Apple Passwords |
+| 17 | `CmdDidFillOneTimeCode` | `ACT: 2`, `TYPE: "oneTimeCodes"`, `frameURLs`, optional `username` | Report that a TOTP code was filled |
+| 1984 | – (plain `url`) | – | Open a URL in Safari |
+
+Actions (`ACT`): 0 delete, 1 update, 2 search, 3 add new, 4 maybe add, 5 ghost search. The capabilities reply flags which features the helper supports, e.g. `canFillOneTimeCodes` and `canSaveAccountWithEmptyUserName`.
+
 ## Pairing (SRP-6a)
 
 The group is the RFC 5054 3072-bit group (g = 5) with SHA-256. The *username* is a random 16-byte value encoded as text, and the *password* is the 6-digit code macOS shows.

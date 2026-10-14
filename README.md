@@ -36,6 +36,8 @@ Requirements: macOS 14 (Sonoma) or later, signed in to iCloud with Passwords tur
    curl -fsSL https://github.com/fanckush/apple-passwords-plus/raw/main/scripts/setup-mac.sh | sh
    ```
    The script lets the extension reach Apple's built-in password helper. It writes one small file per browser and needs no admin rights. [Read it](scripts/setup-mac.sh) first, and undo it any time with `--uninstall`.
+
+   Or install the [Touch ID companion app](docs/companion.md) instead. Its setup does the same, and it lets you unlock with Touch ID.
 3. Click the toolbar icon, type the code your Mac shows, done.
 
 ### GitHub build (no setup, Chromium browsers only)
