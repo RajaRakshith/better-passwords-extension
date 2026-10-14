@@ -14,7 +14,8 @@
     "zip:all": "VARIANT=store wxt zip && VARIANT=github wxt zip && VARIANT=store wxt zip -b firefox",
     "typecheck": "wxt prepare && tsc --noEmit",
     "test:e2e": "bun run build:store && playwright test",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "lint:firefox": "web-ext lint --source-dir .output/store-firefox-mv2 --warnings-as-errors"
   },
   "dependencies": {
     "@app/protocol": "workspace:*"
@@ -23,6 +24,7 @@
     "@app/fake-helper": "workspace:*",
     "@playwright/test": "^1.64.0",
     "happy-dom": "^21.0.1",
+    "web-ext": "^10.7.0",
     "wxt": "^0.21.4"
   }
 }

@@ -224,7 +224,13 @@ async function footer(status: Status) {
     { class: "settings" },
     option("inlineMenu", "Suggest logins in login fields"),
     status.companion && status.companion !== "not-installed" ? option("touchId", "Unlock with Touch ID") : null,
-    h("div", { class: "actions" }, option("lockOnScreenLock", "Lock when my Mac locks"), lock),
+    // Firefox's idle API never reports "locked", so the option would do nothing there
+    h(
+      "div",
+      { class: "actions" },
+      import.meta.env.FIREFOX ? h("span") : option("lockOnScreenLock", "Lock when my Mac locks"),
+      lock,
+    ),
   );
 }
 

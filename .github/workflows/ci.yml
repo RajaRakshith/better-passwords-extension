@@ -26,6 +26,7 @@ jobs:
       - run: bun run typecheck
       - run: bun run test
       - run: bun run build
+      - run: bun run --filter @app/extension lint:firefox
       - name: Check the setup script
         run: |
           sh -n scripts/setup-mac.sh

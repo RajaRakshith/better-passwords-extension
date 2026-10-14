@@ -27,7 +27,16 @@ export default defineConfig({
       web_accessible_resources: [{ resources: ["menu.html"], matches: FILL_MATCHES }],
       action: { default_title: DISPLAY_NAME },
       ...(browser === "firefox"
-        ? { browser_specific_settings: { gecko: { id: FIREFOX_EXTENSION_ID, strict_min_version: "128.0" } } }
+        ? {
+            browser_specific_settings: {
+              gecko: {
+                id: FIREFOX_EXTENSION_ID,
+                strict_min_version: "142.0",
+                // nothing leaves the Mac: passwords go from Apple's helper to the page, nowhere else
+                data_collection_permissions: { required: ["none"] },
+              },
+            },
+          }
         : { key: variant === "github" ? APPLE_PUBLIC_KEY : STORE_PUBLIC_KEY }),
     };
   },

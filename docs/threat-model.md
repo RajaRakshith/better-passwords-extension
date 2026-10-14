@@ -37,6 +37,7 @@ What we protect: the user's passwords in Apple Passwords, and the session that c
 
 - On Firefox (no IntersectionObserver v2), an overlay with `pointer-events: none` placed in the page's own *closed* shadow root and in the top layer could evade the content script's checks. Planned mitigation: re-check after a short delay, and require the field to keep focus.
 - Logins in cross-origin iframes are not offered yet.
+- Firefox can't tell when the Mac locks (its idle API never reports "locked"), so "Lock when my Mac locks" is Chromium-only. On Firefox the session ends when Firefox quits or you press Lock.
 
 ## Touch ID companion
 
