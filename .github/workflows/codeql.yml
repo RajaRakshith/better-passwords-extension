@@ -12,13 +12,17 @@ permissions:
 
 jobs:
   analyze:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
       security-events: write
     strategy:
       fail-fast: false
       matrix:
-        language: [javascript-typescript, actions]
+        include:
+          - { language: javascript-typescript, runner: ubuntu-latest, build-mode: none }
+          - { language: actions, runner: ubuntu-latest, build-mode: none }
+          # the companion app; Swift has to be compiled for CodeQL to see it
+          - { language: swift, runner: macos-15, build-mode: manual }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -26,4 +30,8 @@ jobs:
       - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - if: matrix.language == 'swift'
+        working-directory: apps/companion
+        run: swift build
       - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
