@@ -14,6 +14,7 @@ Chrome native messaging: every message is a 32-bit little-endian length followed
 | 2 | Handshake: `msg.QID` is `m0` (client hello) or `m2` (client proof) |
 | 4 | List login names for a URL (encrypted) |
 | 5 | Get the password for a login name (encrypted; may trigger Touch ID) |
+| 13 | Open the Passwords app; optional `searchQueryURL` (an http(s) URL) searches for that site. Plain, needs no pairing, no reply |
 | 9 / 10 | From the helper: passwords disabled / re-login needed, so drop the session |
 | 0 | End |
 

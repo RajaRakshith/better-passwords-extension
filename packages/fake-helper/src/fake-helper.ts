@@ -58,6 +58,8 @@ const group = RFC5054_3072;
 
 export class FakeHelper {
   readonly vault: VaultEntry[];
+  /** The search URL of every request to open the Passwords app ("" when none). */
+  readonly passwordsAppLaunches: string[] = [];
   readonly #fixedCode: string | undefined;
   readonly #codec: BinaryCodec;
   readonly #capabilities: Capabilities;
@@ -87,6 +89,9 @@ export class FakeHelper {
       case Command.GetLoginNamesForUrl:
       case Command.GetPasswordForLoginName:
         return [await this.#query(message)];
+      case Command.LaunchPasswordsApp:
+        this.passwordsAppLaunches.push(typeof message.searchQueryURL === "string" ? message.searchQueryURL : "");
+        return [];
       default:
         return [];
     }

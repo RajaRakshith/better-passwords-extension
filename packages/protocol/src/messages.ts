@@ -10,6 +10,7 @@ export const Command = {
   GetPasswordForLoginName: 5,
   PasswordsDisabled: 9,
   ReloginNeeded: 10,
+  LaunchPasswordsApp: 13,
   GetCapabilities: 14,
 } as const;
 export type Command = (typeof Command)[keyof typeof Command];

@@ -3,8 +3,10 @@
 //
 // Env: FAKE_HELPER_CODE  fixed pairing code (default 123456)
 //      FAKE_HELPER_VAULT path to a JSON array of { hostname, username, password }
+//      FAKE_HELPER_LOG   file to append a JSON line to for each request to open the Passwords app
 
-import type { HelperMessage } from "@app/protocol";
+import { appendFileSync } from "node:fs";
+import { Command, type HelperMessage } from "@app/protocol";
 import { FakeHelper, type VaultEntry } from "./fake-helper.ts";
 import { encodeFrame, FrameDecoder } from "./native-messaging.ts";
 
@@ -18,6 +20,10 @@ for (;;) {
   const { done, value } = await reader.read();
   if (done) break;
   for (const message of decoder.push(value)) {
+    const logPath = process.env.FAKE_HELPER_LOG;
+    if (logPath && (message as HelperMessage).cmd === Command.LaunchPasswordsApp) {
+      appendFileSync(logPath, `${JSON.stringify({ url: (message as HelperMessage).searchQueryURL ?? "" })}\n`);
+    }
     for (const reply of await helper.handle(message as HelperMessage)) {
       await Bun.write(Bun.stdout, encodeFrame(reply));
     }

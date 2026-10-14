@@ -1,5 +1,5 @@
 import { FakeHelper, MemoryTransport } from "@app/fake-helper";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ApplePasswordsClient, Command, ProtocolError } from "../src/index.ts";
 
 const vault = [
@@ -77,6 +77,14 @@ describe("ApplePasswordsClient", () => {
   it("refuses queries before pairing", async () => {
     const { client } = await setup();
     await expect(client.getLogins("example.com", tab)).rejects.toBeInstanceOf(ProtocolError);
+  });
+
+  it("opens the Passwords app without pairing, passing only web addresses", async () => {
+    const { helper, client } = await setup();
+    client.openPasswordsApp("https://example.com/login");
+    client.openPasswordsApp("chrome://settings");
+    client.openPasswordsApp();
+    await vi.waitFor(() => expect(helper.passwordsAppLaunches).toEqual(["https://example.com/login", "", ""]));
   });
 
   it("locks when the helper asks to re-login", async () => {
