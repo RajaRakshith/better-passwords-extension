@@ -147,6 +147,11 @@ button.link {
   color: var(--danger);
 }
 
+.hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 label.toggle {
   display: flex;
   align-items: center;

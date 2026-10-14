@@ -1,3 +1,4 @@
+import { Companion } from "@/src/companion.ts";
 import { nativeHostFor } from "@/src/config.ts";
 import { fillCredentials } from "@/src/fill.ts";
 import {
@@ -35,7 +36,16 @@ export default defineBackground(() => {
     if ((await getSettings()).lockOnScreenLock) session.lock();
   });
 
+  const companion = new Companion();
   const status = (): Status => ({ ...session.status, variant: __VARIANT__ });
+
+  /** Status plus whether the companion app can unlock with Touch ID. */
+  async function fullStatus(): Promise<Status> {
+    const base = status();
+    if (base.state === "no-helper") return base;
+    const state = await companion.state();
+    return { ...base, companion: state, touchId: state === "ready" && (await getSettings()).touchId };
+  }
 
   /**
    * Who sent a request. Extension pages may ask anything; when they live inside a tab (the inline
@@ -73,7 +83,19 @@ export default defineBackground(() => {
     switch (request.type) {
       case "get-status":
         if (session.status.state === "disconnected") await session.connect().catch(() => {});
+        return fullStatus();
+      case "unlock-with-touch-id": {
+        await session.requestCode();
+        const code = await companion.readCode();
+        try {
+          await session.verifyCode(code);
+        } catch (error) {
+          // a wrong code burns the challenge; put a fresh one on screen for typing instead
+          await session.requestNewCode().catch(() => {});
+          throw error;
+        }
         return status();
+      }
       case "request-code":
         await (request.fresh ? session.requestNewCode() : session.requestCode());
         return status();

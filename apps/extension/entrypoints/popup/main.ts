@@ -30,17 +30,32 @@ async function refresh(error?: string) {
     case "no-helper":
       return showSetup(status);
     case "unlocked":
-      return showLogins(error);
+      return showLogins(status, error);
     case "awaiting-code":
-      return showCodeEntry(error ?? status.error);
+      return showCodeEntry(status, error ?? status.error);
     default:
-      // locked or disconnected: ask the Mac for a code right away, saving the user a click
+      // locked or disconnected: start unlocking right away, saving the user a click
+      if (status.touchId && !error) return unlockWithTouchId(status);
       try {
         await send({ type: "request-code" });
-        return showCodeEntry(error);
+        return showCodeEntry(status, error);
       } catch (e) {
         return showRetry(error ?? messageOf(e));
       }
+  }
+}
+
+async function unlockWithTouchId(status: Status) {
+  show(
+    h("h1", { textContent: "Unlock with Touch ID" }),
+    h("p", {}, "Confirm with Touch ID, and the code your Mac shows is entered for you."),
+  );
+  try {
+    await send({ type: "unlock-with-touch-id" });
+    await refresh();
+  } catch (e) {
+    // the code is on screen either way, so typing it still works
+    showCodeEntry(status, messageOf(e));
   }
 }
 
@@ -73,7 +88,7 @@ function showRetry(error: string) {
   show(h("h1", { textContent: DISPLAY_NAME }), errorLine(error), h("div", { class: "actions" }, retry));
 }
 
-function showCodeEntry(error?: string) {
+function showCodeEntry(status: Status, error?: string) {
   const input = h("input", {
     class: "code",
     inputMode: "numeric",
@@ -93,7 +108,7 @@ function showCodeEntry(error?: string) {
     } catch (e) {
       // a wrong code burns the challenge, so ask the Mac for a fresh one
       await send({ type: "request-code", fresh: true }).catch(() => {});
-      showCodeEntry(messageOf(e));
+      showCodeEntry(status, messageOf(e));
     }
   };
 
@@ -102,17 +117,28 @@ function showCodeEntry(error?: string) {
     if (input.value.length === 6) void submit();
   });
   newCode.addEventListener("click", async () => {
-    await send({ type: "request-code", fresh: true }).catch((e) => showCodeEntry(messageOf(e)));
+    await send({ type: "request-code", fresh: true }).catch((e) => showCodeEntry(status, messageOf(e)));
     input.value = "";
     input.focus();
   });
+
+  let touchId: HTMLButtonElement | null = null;
+  if (status.touchId) {
+    touchId = h("button", { class: "link", textContent: "Use Touch ID" });
+    touchId.addEventListener("click", () => void unlockWithTouchId(status));
+  }
+  const companionHint =
+    status.companion === "needs-setup"
+      ? h("p", { class: "hint" }, "To unlock with Touch ID, finish setup in the Apple Passwords Plus app.")
+      : null;
 
   show(
     h("h1", { textContent: "Enter the code shown on your Mac" }),
     h("p", {}, "Your Mac is showing a 6-digit verification code. You only need to do this once per browser session."),
     input,
     errorLine(error),
-    h("div", { class: "actions" }, newCode),
+    h("div", { class: "actions" }, newCode, touchId),
+    companionHint,
   );
   // Apple's code window can take focus as it appears; take it back when the popup regains it
   const refocus = () => {
@@ -123,7 +149,7 @@ function showCodeEntry(error?: string) {
   requestAnimationFrame(refocus);
 }
 
-async function showLogins(error?: string) {
+async function showLogins(status: Status, error?: string) {
   const tabId = await activeTabId();
   let result: LoginsResult = { logins: [] };
   try {
@@ -154,20 +180,20 @@ async function showLogins(error?: string) {
     );
   }
 
-  show(h("h1", { textContent: result.hostname ?? DISPLAY_NAME }), body, errorLine(error), await footer());
+  show(h("h1", { textContent: result.hostname ?? DISPLAY_NAME }), body, errorLine(error), await footer(status));
 }
 
 async function fill(tabId: number, username: string) {
   try {
     const { result } = await send({ type: "fill", tabId, username });
     if (result === "filled") return window.close();
-    await showLogins(result === "no-fields" ? "No login fields found on this page." : "The page changed, try again.");
+    await refresh(result === "no-fields" ? "No login fields found on this page." : "The page changed, try again.");
   } catch (e) {
-    await showLogins(messageOf(e));
+    await refresh(messageOf(e));
   }
 }
 
-async function footer() {
+async function footer(status: Status) {
   const settings: Settings = await send({ type: "get-settings" });
   const option = (key: keyof Settings, label: string) => {
     const toggle = h("input", { type: "checkbox", checked: settings[key] });
@@ -185,6 +211,7 @@ async function footer() {
     "div",
     { class: "settings" },
     option("inlineMenu", "Suggest logins in login fields"),
+    status.companion && status.companion !== "not-installed" ? option("touchId", "Unlock with Touch ID") : null,
     h("div", { class: "actions" }, option("lockOnScreenLock", "Lock when my Mac locks"), lock),
   );
 }

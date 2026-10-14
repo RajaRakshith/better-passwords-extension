@@ -129,9 +129,13 @@ async function fill(username: string) {
   }
 }
 
-function showLocked(error?: string) {
+async function showLocked(error?: string) {
+  const status = await send({ type: "get-status" }).catch(() => undefined);
+  const touchId = status?.touchId === true;
   render(
-    row(LOCK, "Unlock to fill passwords", DISPLAY_NAME, () => void startPairing()),
+    row(LOCK, touchId ? "Unlock with Touch ID" : "Unlock to fill passwords", DISPLAY_NAME, () =>
+      touchId ? void unlockWithTouchId() : void startPairing(),
+    ),
     error ? message(error, true) : null,
   );
 }
@@ -143,6 +147,17 @@ async function startPairing() {
     return showLocked(messageOf(e));
   }
   showCodeEntry();
+}
+
+async function unlockWithTouchId() {
+  render(message("Confirm with Touch ID…"));
+  try {
+    await send({ type: "unlock-with-touch-id" });
+    await showLogins();
+  } catch (e) {
+    // the code is on screen either way, so typing it still works
+    showCodeEntry(messageOf(e));
+  }
 }
 
 function showCodeEntry(error?: string) {
@@ -201,5 +216,5 @@ function messageOf(error: unknown): string {
   return text || "Something went wrong.";
 }
 
-if (params.get("mode") === "locked") showLocked();
+if (params.get("mode") === "locked") void showLocked();
 else void showLogins();

@@ -1,12 +1,15 @@
 // Messages to the background worker, from our extension pages (popup, inline menu) and, for one
 // read-only question, from the autofill content script. Web pages never talk to the background.
 
+import type { CompanionState } from "./companion.ts";
 import type { SessionStatus } from "./session/session.ts";
 
 export type Request =
   | { type: "get-status" }
   | { type: "request-code"; fresh?: boolean }
   | { type: "verify-code"; code: string }
+  /** Shows a code on the Mac, then lets the companion app enter it after Touch ID. */
+  | { type: "unlock-with-touch-id" }
   /** `tabId` is required from the popup; the inline menu is always bound to its own tab. */
   | { type: "list-logins"; tabId?: number }
   | { type: "fill"; tabId: number; username: string }
@@ -31,12 +34,18 @@ export interface Settings {
   lockOnScreenLock: boolean;
   /** Show the inline menu on login fields. */
   inlineMenu: boolean;
+  /** Unlock with Touch ID through the companion app, when it is installed. */
+  touchId: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { lockOnScreenLock: false, inlineMenu: true };
+export const DEFAULT_SETTINGS: Settings = { lockOnScreenLock: false, inlineMenu: true, touchId: true };
 
 export interface Status extends SessionStatus {
   variant: "store" | "github";
+  /** The companion app, checked only while locked (unlocked sessions don't need it). */
+  companion?: CompanionState;
+  /** True when the user wants Touch ID and the companion is ready for it. */
+  touchId?: boolean;
 }
 
 export interface LoginsResult {

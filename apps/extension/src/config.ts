@@ -13,6 +13,9 @@ export const APPLE_HOST = "com.apple.passwordmanager";
 /** Our own registration of Apple's helper, written by scripts/setup-mac.sh or the companion app. */
 export const STORE_HOST = "org.applepasswordsplus.bridge";
 
+/** The optional Touch ID companion app's own native host (see apps/companion). */
+export const COMPANION_HOST = "org.applepasswordsplus.companion";
+
 export const HELPER_PATH =
   "/System/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper";
 

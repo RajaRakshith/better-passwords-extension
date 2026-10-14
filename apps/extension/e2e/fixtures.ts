@@ -5,38 +5,54 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { type BrowserContext, test as base, chromium, type Frame, type Page } from "@playwright/test";
-import { STORE_EXTENSION_ID, STORE_HOST } from "../src/config.ts";
+import { COMPANION_HOST, STORE_EXTENSION_ID, STORE_HOST } from "../src/config.ts";
 
 export const PAIRING_CODE = "246810";
 const extensionPath = resolve(import.meta.dirname, "../.output/store-chrome-mv3");
 const fakeHelper = resolve(import.meta.dirname, "../../../packages/fake-helper/src/main.ts");
+const fakeCompanion = resolve(import.meta.dirname, "../../../packages/fake-helper/src/companion-main.ts");
 
-/** Registers the fake helper as the store build's native host inside a fresh profile. */
-function profileWithFakeHelper(): string {
+/** How the fake Touch ID companion behaves; "none" leaves it uninstalled. */
+export type CompanionMode = "none" | "ok" | "cancelled" | "needs-accessibility";
+
+function writeHost(dir: string, name: string, script: string) {
+  const path = join(dir, `${name}.sh`);
+  writeFileSync(path, script);
+  chmodSync(path, 0o755);
+  writeFileSync(
+    join(dir, "profile", "NativeMessagingHosts", `${name}.json`),
+    JSON.stringify({
+      name,
+      description: "test double for e2e tests",
+      path,
+      type: "stdio",
+      allowed_origins: [`chrome-extension://${STORE_EXTENSION_ID}/`],
+    }),
+  );
+}
+
+/** Registers the fake helper (and optionally the fake companion) inside a fresh profile. */
+function profileWithFakeHelper(companion: CompanionMode): string {
   const dir = mkdtempSync(join(tmpdir(), "app-e2e-"));
   const vault = join(dir, "vault.json");
   writeFileSync(vault, JSON.stringify([{ hostname: "localhost", username: "e2e-user", password: "e2e-pass" }]));
 
   // browsers start native hosts with a minimal PATH, so call bun by absolute path
   const bun = execSync("command -v bun", { encoding: "utf8" }).trim();
-  const host = join(dir, "fake-helper.sh");
-  writeFileSync(
-    host,
-    `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}" FAKE_HELPER_LOG="${join(dir, "helper.log")}"\nexec "${bun}" "${fakeHelper}"\n`,
-  );
-  chmodSync(host, 0o755);
-
   mkdirSync(join(dir, "profile", "NativeMessagingHosts"), { recursive: true });
-  writeFileSync(
-    join(dir, "profile", "NativeMessagingHosts", `${STORE_HOST}.json`),
-    JSON.stringify({
-      name: STORE_HOST,
-      description: "fake Apple helper for e2e tests",
-      path: host,
-      type: "stdio",
-      allowed_origins: [`chrome-extension://${STORE_EXTENSION_ID}/`],
-    }),
+  const log = join(dir, "helper.log");
+  writeHost(
+    dir,
+    STORE_HOST,
+    `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}" FAKE_HELPER_LOG="${log}"\nexec "${bun}" "${fakeHelper}"\n`,
   );
+  if (companion !== "none") {
+    writeHost(
+      dir,
+      COMPANION_HOST,
+      `#!/bin/sh\nexport FAKE_COMPANION_CODE=${PAIRING_CODE} FAKE_COMPANION_RESULT=${companion}\nexec "${bun}" "${fakeCompanion}"\n`,
+    );
+  }
   return dir;
 }
 
@@ -59,6 +75,7 @@ export async function menuFrame(page: Page): Promise<Frame> {
 const profileDirs = new WeakMap<BrowserContext, string>();
 
 type Fixtures = {
+  companion: CompanionMode;
   context: BrowserContext;
   popupUrl: string;
   /** Search URLs of the requests to open the Passwords app that reached the fake helper. */
@@ -88,9 +105,9 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
     },
     { scope: "worker" },
   ],
-  // biome-ignore lint/correctness/noEmptyPattern: Playwright fixture signature
-  context: async ({}, use) => {
-    const dir = profileWithFakeHelper();
+  companion: ["none", { option: true }],
+  context: async ({ companion }, use) => {
+    const dir = profileWithFakeHelper(companion);
     const context = await chromium.launchPersistentContext(join(dir, "profile"), {
       channel: "chromium",
       args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
