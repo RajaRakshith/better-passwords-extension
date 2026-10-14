@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Apple Passwords Plus</title>
+    <meta
+      name="description"
+      content="A browser extension that fills logins from Apple Passwords on your Mac, without asking for a 6-digit code every few hours."
+    />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="./">
+        <img src="icon.svg" alt="" width="28" height="28" />
+        Apple Passwords Plus
+      </a>
+      <nav>
+        <a href="#how">How it works</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/fanckush/apple-passwords-plus">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-text">
+          <h1>Apple Passwords,<br />without the codes.</h1>
+          <p class="lead">
+            Fill logins from Apple Passwords in Chrome, Brave, Edge, Arc, Helium and Firefox on your Mac. Pair once
+            per browser launch instead of typing a 6-digit code every few hours, or unlock with Touch ID.
+          </p>
+          <div class="cta">
+            <a class="button primary" href="#install">Install</a>
+            <a class="button" href="https://github.com/fanckush/apple-passwords-plus">Source code</a>
+          </div>
+          <p class="fine">Free and open source. Not affiliated with Apple.</p>
+        </div>
+
+        <!-- an illustration of the inline menu, drawn in CSS -->
+        <div class="mock" aria-hidden="true">
+          <div class="mock-window">
+            <div class="mock-bar"><span></span><span></span><span></span></div>
+            <div class="mock-page">
+              <div class="mock-title">Sign in</div>
+              <div class="mock-label">Email</div>
+              <div class="mock-field focused">|</div>
+              <div class="mock-menu">
+                <div class="mock-row active">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.75a5.25 5.25 0 0 1 1.5 10.28v1.72h1.9a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.9v.75h1.4a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.4v.6a.8.8 0 0 1-.23.56l-.7.7a.8.8 0 0 1-1.14 0l-.7-.7a.8.8 0 0 1-.23-.56v-8.15A5.25 5.25 0 0 1 12 1.75Zm0 2.25a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5Z" /></svg>
+                  <div><b>jane@example.com</b><small>example.com</small></div>
+                </div>
+                <div class="mock-row">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.75a5.25 5.25 0 0 1 1.5 10.28v1.72h1.9a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.9v.75h1.4a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.4v.6a.8.8 0 0 1-.23.56l-.7.7a.8.8 0 0 1-1.14 0l-.7-.7a.8.8 0 0 1-.23-.56v-8.15A5.25 5.25 0 0 1 12 1.75Zm0 2.25a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5Z" /></svg>
+                  <div><b>jane.work</b><small>example.com</small></div>
+                </div>
+                <hr />
+                <div class="mock-row plain">Open Passwords…</div>
+              </div>
+              <div class="mock-label">Password</div>
+              <div class="mock-field"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="features">
+        <article>
+          <h2>Pair once</h2>
+          <p>
+            Apple's extension drops its connection whenever the browser idles, and every reconnect asks for a new
+            code. This one keeps the connection open until you quit the browser.
+          </p>
+        </article>
+        <article>
+          <h2>Or use Touch ID</h2>
+          <p>
+            With the optional Mac companion app, you confirm with your fingerprint and the code is entered for you.
+            Your browser never gets Accessibility access.
+          </p>
+        </article>
+        <article>
+          <h2>Suggestions in the page</h2>
+          <p>
+            Click a login field and pick an account, like in Safari. Use the arrow keys if you prefer the keyboard.
+          </p>
+        </article>
+        <article>
+          <h2>Apple keeps your passwords</h2>
+          <p>
+            Every request goes to the password helper built into macOS, over Apple's own encrypted pairing. Nothing
+            is stored or sent anywhere else.
+          </p>
+        </article>
+      </section>
+
+      <section id="how" class="how">
+        <h2>How it works</h2>
+        <ol class="flow">
+          <li><b>Extension</b><span>Asks for logins for the site you're on</span></li>
+          <li><b>Apple's helper</b><span>Ships with macOS 14 and later. Checks the pairing, talks to iCloud Keychain</span></li>
+          <li><b>Apple Passwords</b><span>Your passwords, where they already are</span></li>
+        </ol>
+        <p>
+          The extension speaks the same protocol as Apple's iCloud Passwords extension: SRP pairing with the code your
+          Mac shows, then AES-GCM encryption. The difference is that it keeps the session. Read the
+          <a href="https://github.com/fanckush/apple-passwords-plus/blob/main/docs/architecture.md">architecture</a>
+          and the
+          <a href="https://github.com/fanckush/apple-passwords-plus/blob/main/docs/threat-model.md">threat model</a>.
+        </p>
+      </section>
+
+      <section id="install" class="install">
+        <h2>Install</h2>
+        <p class="note">You need a Mac with macOS 14 (Sonoma) or later, signed in to iCloud with Passwords turned on.</p>
+        <div class="cards">
+          <article class="card">
+            <h3>From the browser stores</h3>
+            <p class="soon">Coming soon</p>
+            <ol>
+              <li>Install from the Chrome Web Store or Firefox Add-ons.</li>
+              <li>
+                Run the one-time setup in Terminal. It writes one small file per browser that lets the extension reach
+                Apple's helper. No admin rights needed.
+                <code>curl -fsSL https://github.com/fanckush/apple-passwords-plus/raw/main/scripts/setup-mac.sh | sh</code>
+              </li>
+              <li>Click the toolbar icon and enter the code your Mac shows.</li>
+            </ol>
+          </article>
+          <article class="card">
+            <h3>From GitHub</h3>
+            <p class="soon">Chromium browsers, no setup</p>
+            <ol>
+              <li>Turn off Apple's iCloud Passwords extension. This build uses its connection.</li>
+              <li>
+                Download <code class="inline">…-github-chrome.zip</code> from the
+                <a href="https://github.com/fanckush/apple-passwords-plus/releases">latest release</a> and unzip it.
+              </li>
+              <li>On the extensions page, turn on Developer mode, click Load unpacked, and pick the folder.</li>
+            </ol>
+          </article>
+          <article class="card">
+            <h3>Touch ID companion</h3>
+            <p class="soon">Optional, Mac app</p>
+            <ol>
+              <li>Download Apple Passwords Plus.app from the releases and move it to Applications.</li>
+              <li>Open it and follow the three steps: connect browsers, run in the background, allow reading the code.</li>
+              <li>The extension now unlocks with Touch ID. It also does the one-time setup for you.</li>
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section class="faq">
+        <h2>Questions</h2>
+        <details>
+          <summary>Is this made by Apple?</summary>
+          <p>
+            No. It's an independent open-source project that talks to software Apple ships with macOS. "Apple" and
+            "iCloud" are trademarks of Apple Inc.
+          </p>
+        </details>
+        <details>
+          <summary>Can it see my passwords?</summary>
+          <p>
+            Only the one you choose to fill, for the site you're on, at the moment you click. It never stores them.
+            The pairing key lives in memory and is gone when you quit the browser or press Lock.
+          </p>
+        </details>
+        <details>
+          <summary>Why does the store version need a setup step?</summary>
+          <p>
+            Browsers only let an extension start a program that a small permission file names. macOS ships that file
+            for Apple's own extension only. The setup writes the same kind of file for this one, pointing at Apple's
+            unmodified helper.
+          </p>
+        </details>
+        <details>
+          <summary>Why does Touch ID need Accessibility?</summary>
+          <p>
+            Touch ID can't replace the code in Apple's pairing, because the code is the pairing password. The
+            companion reads the code off Apple's window after you confirm with Touch ID. It checks that the window
+            really is Apple's, and it gives the extension nothing but the six digits.
+          </p>
+        </details>
+        <details>
+          <summary>Windows?</summary>
+          <p>Not yet. Apple's helper on Windows works differently; it's on the list.</p>
+        </details>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        <a href="https://github.com/fanckush/apple-passwords-plus">GitHub</a> ·
+        <a href="https://github.com/fanckush/apple-passwords-plus/blob/main/SECURITY.md">Security</a> ·
+        <a href="https://github.com/fanckush/apple-passwords-plus/blob/main/LICENSE">MIT License</a>
+      </p>
+      <p>Not affiliated with or endorsed by Apple Inc. Apple, iCloud and Touch ID are trademarks of Apple Inc.</p>
+    </footer>
+  </body>
+</html>
