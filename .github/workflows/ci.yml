@@ -49,3 +49,21 @@ jobs:
           name: playwright-results
           path: apps/extension/test-results
           retention-days: 7
+
+  companion:
+    name: Companion app (Swift)
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/companion
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: swift format lint --strict --recursive Sources Tests Package.swift scripts
+      - run: swift build
+      - run: swift test
+      - name: Bundle (ad hoc signed)
+        run: |
+          sh -n scripts/bundle.sh
+          scripts/bundle.sh
