@@ -64,7 +64,10 @@ struct SetupView: View {
         }
         .padding(24)
         .frame(width: 480)
-        .onAppear { model.refresh() }
+        .onAppear {
+            model.reRegisterIfRebuilt()
+            model.refresh()
+        }
         .onReceive(timer) { _ in model.refresh() }
     }
 

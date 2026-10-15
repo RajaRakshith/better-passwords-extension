@@ -39,10 +39,23 @@ public enum Processes {
         return CodeSigning.check(code, requirement)
     }
 
+    /// Where Apple's helper may be found. `/System/Cryptexes` links to the Preboot volume, and the
+    /// kernel reports a running process by the real location.
+    static let helperPaths: Set<String> = [
+        Identity.helperPath,
+        Identity.helperPath.replacingOccurrences(of: "/System/Cryptexes/", with: "/System/Volumes/Preboot/Cryptexes/"),
+        URL(fileURLWithPath: Identity.helperPath).resolvingSymlinksInPath().path,
+    ]
+
+    public static func isAppleHelperPath(_ path: String) -> Bool {
+        helperPaths.contains(path)
+    }
+
     /// Copies of Apple's helper that `browser` launched, after checking each one's signature.
     public static func appleHelpers(launchedBy browser: pid_t) -> [pid_t] {
         children(of: browser).filter { pid in
-            executablePath(of: pid) == Identity.helperPath && process(pid, satisfies: Identity.helperRequirement)
+            executablePath(of: pid).map(isAppleHelperPath) == true
+                && process(pid, satisfies: Identity.helperRequirement)
         }
     }
 }
@@ -68,6 +81,19 @@ public enum CodeSigning {
                 == errSecSuccess
         else { return nil }
         return (info as? [String: Any])?[kSecCodeInfoTeamIdentifier as String] as? String
+    }
+
+    /// This build's code hash (hex), which identifies the exact build.
+    public static func ownCDHash() -> String? {
+        var code: SecCode?
+        guard SecCodeCopySelf([], &code) == errSecSuccess, let code else { return nil }
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode else { return nil }
+        var info: CFDictionary?
+        guard SecCodeCopySigningInformation(staticCode, [], &info) == errSecSuccess,
+            let unique = (info as? [String: Any])?[kSecCodeInfoUnique as String] as? Data
+        else { return nil }
+        return unique.map { String(format: "%02x", $0) }.joined()
     }
 
     /// What a peer signed by the same developer as us must satisfy. Release builds are signed with a

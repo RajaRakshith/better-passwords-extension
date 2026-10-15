@@ -26,6 +26,19 @@ final class SetupModel {
     var agentEnabled: Bool { agentStatus == .enabled }
     var ready: Bool { browsersConnected && agentEnabled && accessibilityTrusted }
 
+    /// macOS ties a registered background agent to the exact build that registered it (for ad-hoc
+    /// signed builds, by code hash). After a rebuild the old registration can no longer start the
+    /// agent, so a new build re-registers it.
+    func reRegisterIfRebuilt() {
+        let key = "registeredBuild"
+        guard let build = CodeSigning.ownCDHash() else { return }
+        defer { UserDefaults.standard.set(build, forKey: key) }
+        // no record (an older build registered it) counts as a different build
+        guard agent.status == .enabled, UserDefaults.standard.string(forKey: key) != build else { return }
+        try? agent.unregister()
+        perform { try agent.register() }
+    }
+
     func refresh() {
         installedBrowsers = HostManifests.installed(in: support)
         connectedBrowsers = HostManifests.connected(hostPath: hostPath, support: support)
@@ -39,6 +52,7 @@ final class SetupModel {
     }
 
     func enableAgent() {
+        if let build = CodeSigning.ownCDHash() { UserDefaults.standard.set(build, forKey: "registeredBuild") }
         perform { try agent.register() }
         if agent.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
     }

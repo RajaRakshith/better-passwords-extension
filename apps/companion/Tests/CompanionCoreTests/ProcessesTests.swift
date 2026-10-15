@@ -23,6 +23,16 @@ import Testing
         #expect(!Processes.process(child.processIdentifier, satisfies: Identity.helperRequirement))
     }
 
+    @Test func recognisesTheHelperByEitherPath() {
+        #expect(Processes.isAppleHelperPath(Identity.helperPath))
+        // how the kernel reports the running helper: the real location behind /System/Cryptexes
+        #expect(
+            Processes.isAppleHelperPath(
+                "/System/Volumes/Preboot/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper"
+            ))
+        #expect(!Processes.isAppleHelperPath("/tmp/PasswordManagerBrowserExtensionHelper"))
+    }
+
     @Test func pinnedRequirementsNeedARealHash() {
         #expect(CodeSigning.pinned(identifier: "x", cdhash: "nope") == nil)
         #expect(
