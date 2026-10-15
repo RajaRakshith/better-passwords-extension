@@ -66,10 +66,10 @@ test("replacing a saved password fills it once the user confirms", async ({ cont
   const preview = await menu.locator(".password").first().textContent();
   await choose(menu, "Strong Password");
 
-  await expect(menu.getByText("This replaces the saved password")).toBeVisible();
+  await expect(menu.getByText("This replaces your saved password")).toBeVisible();
   expect(helperSaves()).toEqual([{ hostname: "localhost", username: "e2e-user", password: preview }]);
   await expect(page.locator("#new")).toHaveValue("");
-  await choose(menu, "Fill In the New Password");
+  await choose(menu, "I Updated It, Fill It In");
   await expect(page.locator("#new")).toHaveValue(preview ?? "");
 });
 

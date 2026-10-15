@@ -177,9 +177,9 @@ async function afterSave(saving: Promise<{ result: string }>) {
 function showConfirmSave(username = "", error?: string) {
   render(
     message(
-      `This replaces the saved password${username ? ` for ${username}` : ""}. Click Save in the dialog on your Mac, then:`,
+      `This replaces your saved password${username ? ` for ${username}` : ""}. Click Update Password on your Mac, then come back here:`,
     ),
-    row(KEY, "Fill In the New Password", "", () => void confirmSave(username)),
+    row(KEY, "I Updated It, Fill It In", "Checks with Touch ID that it was saved", () => void confirmSave(username)),
     error ? message(error, true) : null,
     h("hr", { class: "separator" }),
     row(CANCEL, "Cancel", "", () => void cancelSave()),
@@ -191,7 +191,9 @@ async function confirmSave(username: string) {
   try {
     const { result } = await send({ type: "confirm-generated-password", nonce });
     if (result === "filled") return;
-    if (result === "not-saved") return showConfirmSave(username, "It isn't saved yet. Click Save on your Mac first.");
+    if (result === "not-saved") {
+      return showConfirmSave(username, "It isn't updated yet. Click Update Password on your Mac first.");
+    }
     await showGenerate(saveError(result));
   } catch (e) {
     showConfirmSave(username, messageOf(e));
