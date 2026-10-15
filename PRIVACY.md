@@ -9,6 +9,7 @@ Apple Passwords Plus (the browser extension and the optional Mac companion app) 
 - **The pairing key.** Pairing with your Mac creates a key that stays in the browser's memory until you quit the browser or press Lock. It is never written to disk.
 - **Settings.** Your settings (for example, whether to show suggestions in login fields) are saved in the browser's extension storage on your device.
 - **Hide My Email (only if you turn it on).** The extension asks iCloud, using your icloud.com sign-in in that browser, for your Hide My Email addresses and creates new ones when you ask. It sends iCloud the site's hostname as the new address's label, as Safari does. Nothing is stored by the extension.
+- **Your email addresses (companion app only, if you allow Contacts).** The companion app reads the emails on your own contact card and passes them to the extension on your Mac, which shows them in sign-up forms. They're kept in memory for ten minutes and never stored or sent anywhere.
 - **The pairing code (companion app only).** After you confirm with Touch ID, the companion app reads the 6-digit code from Apple's pairing window and passes it to the extension on your Mac. It isn't stored.
 
 ## What it doesn't do

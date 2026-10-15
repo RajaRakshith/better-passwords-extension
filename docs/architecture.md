@@ -85,6 +85,10 @@ The username is the one in the form, tracked as the user types, or the last user
 
 Until Apple Passwords confirms a new login, the password is kept in memory and listed in the popup with a Copy button for the rest of the session. An update to an existing login can't be confirmed (the list looks the same), so it is assumed and kept listed too.
 
+## Your email addresses (with the companion app)
+
+Below Hide My Email, sign-up email fields list the emails on the user's own contact card ("Me" in Contacts), as Safari does. The extension can't read Contacts; the companion app can, once the user allows it in the app's setup window. It answers the extension's `my-emails` request through its native host. Without the app, the menu shows a hint pointing to it, with a ✕ to dismiss it for good.
+
 ## Hide My Email (opt-in)
 
 Sign-up email fields get a menu that offers Hide My Email. Until the user turns it on, it's a hint with a ✕ that dismisses it for good (the popup can still turn it on). Once on, the menu shows the address made for this site before, or creates one: "Hide My Email…" proposes a random address ("Try Another" for a new one), and choosing it reserves it with the site as its label, then fills it in.
