@@ -172,3 +172,59 @@ label.toggle {
   padding-top: 8px;
   border-top: 1px solid var(--separator);
 }
+
+h2 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.settings hr {
+  margin: 2px 0;
+  border: 0;
+  border-top: 1px solid var(--separator);
+}
+
+/* a setting's name, with a short description under it */
+label.toggle .text {
+  display: grid;
+}
+
+label.toggle .detail {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+button.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+button.with-icon svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.recent {
+  display: grid;
+  gap: 6px;
+}
+
+.recent ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent li {
+  padding: 6px 10px;
+}
+
+.recent li + li {
+  border-top: 1px solid var(--separator);
+}

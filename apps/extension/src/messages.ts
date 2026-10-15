@@ -40,6 +40,8 @@ export type Request =
   | { type: "fill-email"; nonce: string; email: string }
   | { type: "dismiss-companion-emails-hint" }
   | { type: "open-companion-page" }
+  /** Opens the Mac app's window (its setup), through its native host. */
+  | { type: "open-companion-app" }
   /** Generated passwords for the tab's site whose update Apple Passwords couldn't confirm. */
   | { type: "unconfirmed-passwords"; tabId?: number }
 
@@ -62,11 +64,11 @@ export const CONTENT_SCRIPT_REQUESTS: ReadonlySet<Request["type"]> = new Set([
 export interface Settings {
   /** End the session when the Mac locks or sleeps. */
   lockOnScreenLock: boolean;
-  /** Show the inline menu on login fields. */
+  /** Suggestions when signing in: saved logins in login fields. */
   inlineMenu: boolean;
   /** Unlock with Touch ID through the companion app, when it is installed. */
   touchId: boolean;
-  /** Suggest strong passwords on sign-up and change-password forms. */
+  /** Suggestions when signing up: strong passwords, and the user's emails in email fields. */
   generatePasswords: boolean;
   /** Offer Hide My Email addresses on sign-up email fields (opt-in: uses icloud.com's web service). */
   hideMyEmail: boolean;
@@ -162,6 +164,7 @@ interface Responses {
   "fill-email": { result: string };
   "dismiss-companion-emails-hint": null;
   "open-companion-page": null;
+  "open-companion-app": null;
   "menu-resize": null;
   "menu-close": null;
   "menu-focus-field": null;

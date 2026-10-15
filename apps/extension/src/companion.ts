@@ -119,4 +119,12 @@ export class Companion {
     if ((reply?.version ?? 1) < 2) throw new CompanionError("Update the Apple Passwords Plus app.", "outdated");
     throw new CompanionError(reply?.message ?? "Couldn't read your contact card.", reply?.error ?? "failed");
   }
+
+  /** Brings the Mac app's window up, e.g. to finish its setup. */
+  async openApp(): Promise<void> {
+    const reply = (await within(this.sendNative(COMPANION_HOST, { type: "open-app" }), QUICK_MS)) as
+      | HostResponse
+      | undefined;
+    if (!reply?.ok) throw new CompanionError("Open Apple Passwords Plus from your Applications folder.", "failed");
+  }
 }

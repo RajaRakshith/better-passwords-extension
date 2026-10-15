@@ -96,7 +96,9 @@ export default defineBackground(() => {
   async function autofillStatus(caller: Caller & { kind: "content-script" }, kind: FieldKind): Promise<AutofillStatus> {
     const url = fillableUrl(caller.url);
     const settings = await getSettings();
-    if (!url || !settings.inlineMenu) return { show: "none" };
+    if (!url) return { show: "none" };
+    // "when signing in" covers login fields, "when signing up" new-password and email fields
+    if (kind === "login" ? !settings.inlineMenu : !settings.generatePasswords) return { show: "none" };
     if (kind === "signup-email") {
       // Hide My Email works without Apple Passwords, so no unlocking is needed
       const offered =
@@ -106,7 +108,6 @@ export default defineBackground(() => {
         (await companion.state()) !== "not-installed";
       return { show: offered ? "email" : "none" };
     }
-    if (kind === "new-password" && !settings.generatePasswords) return { show: "none" };
     if (session.status.state === "disconnected" || session.status.state === "closed") {
       await session.connect().catch(() => {});
     }
@@ -430,6 +431,9 @@ export default defineBackground(() => {
       }
       case "dismiss-companion-emails-hint":
         await saveSettings({ companionEmailsHint: false });
+        return null;
+      case "open-companion-app":
+        await companion.openApp();
         return null;
       case "open-companion-page":
         await browser.tabs.create({ url: `${REPO_URL}/blob/main/docs/companion.md` });

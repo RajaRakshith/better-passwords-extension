@@ -35,7 +35,7 @@ test("moving to the next field opens a fresh menu that still fills", async ({ co
   await page.keyboard.press("Tab");
   await expect.poll(() => page.frames().some((f) => f.url().includes("/menu.html#") && f !== first)).toBe(true);
   menu = await menuFrame(page);
-  await expect(menu.getByText("Open Passwords…")).toBeVisible();
+  await expect(menu.getByText("Open Passwords App")).toBeVisible();
   const height = await page.locator("app-autofill-menu").evaluate((el) => el.getBoundingClientRect().height);
   expect(height).toBeGreaterThan(70);
 
@@ -70,7 +70,7 @@ test("opens the Passwords app for the current site", async ({ context, siteUrl, 
   await choose(menu, "Unlock to fill passwords");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
 
-  await choose(menu, "Open Passwords…");
+  await choose(menu, "Open Passwords App");
   await expect.poll(passwordsAppLaunches).toEqual([siteUrl]);
   await expect.poll(() => page.locator("app-autofill-menu").count()).toBe(0);
 });

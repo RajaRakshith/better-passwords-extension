@@ -57,5 +57,7 @@ test.describe("when the companion still needs setup", () => {
     await popup.goto(popupUrl);
     await expect(popup.getByText("Enter the code shown on your Mac")).toBeVisible();
     await expect(popup.getByText("finish setup in the Apple Passwords Plus app")).toBeVisible();
+    await popup.getByLabel("Verification code").fill(PAIRING_CODE);
+    await expect(popup.getByRole("button", { name: "Finish setting up the Mac app" })).toBeVisible();
   });
 });

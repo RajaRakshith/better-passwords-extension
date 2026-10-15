@@ -3,6 +3,7 @@ import { DISPLAY_NAME, REPO_URL, SETUP_COMMAND } from "@/src/config.ts";
 import { type LoginsResult, type Settings, type Status, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { h } from "@/src/ui/h.ts";
+import { icon, OPEN } from "@/src/ui/icons.ts";
 
 applySystemAccent();
 
@@ -183,7 +184,7 @@ async function showLogins(status: Status, error?: string) {
     );
   }
 
-  const openApp = h("button", { class: "link", textContent: "Open Passwords…" });
+  const openApp = h("button", { class: "link with-icon" }, icon(OPEN), "Open Passwords App");
   openApp.addEventListener("click", async () => {
     await send({ type: "open-passwords-app", ...(tabId === undefined ? {} : { tabId }) }).catch(() => {});
     window.close();
@@ -208,21 +209,22 @@ async function unconfirmedPasswords(tabId: number | undefined) {
   const entries = await send({ type: "unconfirmed-passwords", tabId }).catch(() => []);
   if (entries.length === 0) return null;
   return h(
-    "div",
-    { class: "card padded" },
+    "section",
+    { class: "recent" },
+    h("h2", { textContent: "Recent passwords" }),
     h(
-      "p",
-      { class: "hint" },
-      "Passwords filled in this session that Apple Passwords may not have. If you need one, copy it from here:",
+      "ul",
+      { class: "card" },
+      ...entries.map(({ username, password }) => {
+        const copy = h("button", { class: "secondary", textContent: "Copy" });
+        copy.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(password);
+          copy.textContent = "Copied";
+        });
+        return h("li", { class: "actions" }, h("span", { textContent: username || "(no username)" }), copy);
+      }),
     ),
-    ...entries.map(({ username, password }) => {
-      const copy = h("button", { class: "secondary", textContent: "Copy" });
-      copy.addEventListener("click", async () => {
-        await navigator.clipboard.writeText(password);
-        copy.textContent = "Copied";
-      });
-      return h("div", { class: "actions" }, h("span", { textContent: username || "(no username)" }), copy);
-    }),
+    h("p", { class: "hint" }, "New passwords from this session, in case one wasn't saved."),
   );
 }
 
@@ -238,12 +240,17 @@ async function fill(tabId: number, username: string) {
 
 async function footer(status: Status) {
   const settings: Settings = await send({ type: "get-settings" });
-  const option = (key: keyof Settings, label: string) => {
+  const option = (key: keyof Settings, label: string, detail?: string) => {
     const toggle = h("input", { type: "checkbox", checked: settings[key] });
     toggle.addEventListener("change", () => {
       void send({ type: "set-settings", settings: { [key]: toggle.checked } });
     });
-    return h("label", { class: "toggle" }, toggle, label);
+    return h(
+      "label",
+      { class: "toggle" },
+      toggle,
+      h("span", { class: "text" }, label, detail ? h("span", { class: "detail", textContent: detail }) : null),
+    );
   };
   const lock = h("button", { class: "secondary", textContent: "Lock" });
   lock.addEventListener("click", async () => {
@@ -253,10 +260,12 @@ async function footer(status: Status) {
   return h(
     "div",
     { class: "settings" },
-    option("inlineMenu", "Suggest logins in login fields"),
-    option("generatePasswords", "Suggest strong passwords when signing up"),
-    option("hideMyEmail", "Offer Hide My Email when signing up (uses icloud.com)"),
-    status.companion && status.companion !== "not-installed" ? option("touchId", "Unlock with Touch ID") : null,
+    h("h2", { textContent: "Suggestions" }),
+    option("inlineMenu", "When signing in", "saved passwords"),
+    option("generatePasswords", "When signing up", "strong passwords and your emails"),
+    option("hideMyEmail", "Hide My Email", "uses icloud.com"),
+    h("hr"),
+    touchIdLine(status, option),
     // Firefox's idle API never reports "locked", so the option would do nothing there
     h(
       "div",
@@ -265,6 +274,31 @@ async function footer(status: Status) {
       lock,
     ),
   );
+}
+
+/** Touch ID needs the Mac app: offer it, help finish its setup, or let it be turned off. */
+function touchIdLine(status: Status, option: (key: keyof Settings, label: string) => HTMLElement) {
+  const link = (label: string, request: { type: "open-companion-app" } | { type: "open-companion-page" }) => {
+    const button = h("button", { class: "link", textContent: label });
+    button.addEventListener("click", async () => {
+      await send(request).catch(() => {});
+      window.close();
+    });
+    return button;
+  };
+  if (status.companion === "ready") {
+    return h(
+      "div",
+      { class: "actions" },
+      option("touchId", "Unlock with Touch ID"),
+      link("Open Mac App…", { type: "open-companion-app" }),
+    );
+  }
+  const label = h("span", { class: "toggle", textContent: "Touch ID" });
+  if (status.companion === "needs-setup") {
+    return h("div", { class: "actions" }, label, link("Finish setting up the Mac app", { type: "open-companion-app" }));
+  }
+  return h("div", { class: "actions" }, label, link("Get the free Mac app", { type: "open-companion-page" }));
 }
 
 function messageOf(error: unknown): string {
