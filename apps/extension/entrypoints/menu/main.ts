@@ -28,6 +28,8 @@ const KEY =
   "M12 1.75a5.25 5.25 0 0 1 1.5 10.28v1.72h1.9a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.9v.75h1.4a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.4v.6a.8.8 0 0 1-.23.56l-.7.7a.8.8 0 0 1-1.14 0l-.7-.7a.8.8 0 0 1-.23-.56v-8.15A5.25 5.25 0 0 1 12 1.75Zm0 2.25a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5Z";
 const LOCK =
   "M12 2a5 5 0 0 1 5 5v2.5h.5a2 2 0 0 1 2 2V20a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-8.5a2 2 0 0 1 2-2H7V7a5 5 0 0 1 5-5Zm0 1.75A3.25 3.25 0 0 0 8.75 7v2.5h6.5V7A3.25 3.25 0 0 0 12 3.75Z";
+const CANCEL =
+  "M6.47 6.47a.75.75 0 0 1 1.06 0L12 10.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L13.06 12l4.47 4.47a.75.75 0 1 1-1.06 1.06L12 13.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L10.94 12 6.47 7.53a.75.75 0 0 1 0-1.06Z";
 const OPEN =
   "M6.5 3.5h11a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3v-11a3 3 0 0 1 3-3Zm0 1.75c-.69 0-1.25.56-1.25 1.25v11c0 .69.56 1.25 1.25 1.25h11c.69 0 1.25-.56 1.25-1.25v-11c0-.69-.56-1.25-1.25-1.25h-11Zm3.25 3.5h5a.75.75 0 0 1 .75.75v5a.75.75 0 0 1-1.5 0v-3.19l-4.47 4.47a.75.75 0 0 1-1.06-1.06l4.47-4.47H9.75a.75.75 0 0 1 0-1.5Z";
 
@@ -116,18 +118,20 @@ async function showLogins(error?: string) {
 }
 
 async function showGenerate(error?: string) {
-  let passwords: { strong: string; alphanumeric: string };
+  let reply: Awaited<ReturnType<typeof send<{ type: "generate-passwords"; nonce: string }>>>;
   try {
-    passwords = await send({ type: "generate-passwords", nonce });
+    reply = await send({ type: "generate-passwords", nonce });
   } catch (e) {
     return render(message(messageOf(e), true));
   }
+  // reopened while a save still waits for the user
+  if ("pending" in reply) return reply.pending === "confirm" ? showConfirmSave(reply.username) : waitForSave();
   render(
-    row(KEY, "Strong Password", passwords.strong, () => void useGenerated("strong"), "detail password"),
+    row(KEY, "Strong Password", reply.strong, () => void useGenerated("strong"), "detail password"),
     row(
       KEY,
       "Without Special Characters",
-      passwords.alphanumeric,
+      reply.alphanumeric,
       () => void useGenerated("alphanumeric"),
       "detail password",
     ),
@@ -137,21 +141,70 @@ async function showGenerate(error?: string) {
   );
 }
 
+function showWaiting() {
+  render(
+    message("Click Save in the dialog on your Mac. The password is filled in once it's saved."),
+    h("hr", { class: "separator" }),
+    row(CANCEL, "Cancel", "", () => void cancelSave()),
+  );
+}
+
 async function useGenerated(style: "strong" | "alphanumeric") {
-  render(message("Click Save in the dialog on your Mac. The password is filled in once it's saved."));
+  showWaiting();
+  await afterSave(send({ type: "use-generated-password", nonce, style }));
+}
+
+async function waitForSave() {
+  showWaiting();
+  await afterSave(send({ type: "await-generated-password", nonce }));
+}
+
+async function afterSave(saving: Promise<{ result: string }>) {
   try {
-    const { result } = await send({ type: "use-generated-password", nonce, style });
+    const { result } = await saving;
+    // when filled, the content script closes the menu
     if (result === "filled") return;
-    await showGenerate(
-      result === "not-saved"
-        ? "Not saved, so nothing was filled in."
-        : result === "menu-hidden"
-          ? "The page tried to hide this menu, so nothing was filled in."
-          : "Couldn't fill in this page.",
-    );
+    if (result === "needs-confirmation") return showConfirmSave();
+    await showGenerate(saveError(result));
   } catch (e) {
     await showGenerate(messageOf(e));
   }
+}
+
+/** Replacing a saved password: Apple's helper can't tell us it saved, so the user confirms. */
+function showConfirmSave(username = "", error?: string) {
+  render(
+    message(
+      `This replaces the saved password${username ? ` for ${username}` : ""}. Click Save in the dialog on your Mac, then:`,
+    ),
+    row(KEY, "Fill In the New Password", "", () => void confirmSave(username)),
+    error ? message(error, true) : null,
+    h("hr", { class: "separator" }),
+    row(CANCEL, "Cancel", "", () => void cancelSave()),
+  );
+}
+
+async function confirmSave(username: string) {
+  render(message("Checking that it was saved…"));
+  try {
+    const { result } = await send({ type: "confirm-generated-password", nonce });
+    if (result === "filled") return;
+    if (result === "not-saved") return showConfirmSave(username, "It isn't saved yet. Click Save on your Mac first.");
+    await showGenerate(saveError(result));
+  } catch (e) {
+    showConfirmSave(username, messageOf(e));
+  }
+}
+
+async function cancelSave() {
+  await send({ type: "cancel-generated-password", nonce }).catch(() => {});
+  await showGenerate();
+}
+
+function saveError(result: string): string {
+  if (result === "not-saved") return "Not saved, so nothing was filled in.";
+  if (result === "menu-hidden") return "The page tried to hide this menu, so nothing was filled in.";
+  return "Couldn't fill in this page.";
 }
 
 /** After unlocking: the menu's real content. */

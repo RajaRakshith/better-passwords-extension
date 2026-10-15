@@ -27,6 +27,11 @@ export type Request =
   | { type: "generate-passwords"; nonce: string }
   /** Saves the chosen password to Apple Passwords, then fills it once the user confirmed. */
   | { type: "use-generated-password"; nonce: string; style: PasswordStyle }
+  /** Waits for a save the user hasn't answered yet (a reopened menu). */
+  | { type: "await-generated-password"; nonce: string }
+  /** The user clicked Save for a password that replaces a saved one: verify it and fill. */
+  | { type: "confirm-generated-password"; nonce: string }
+  | { type: "cancel-generated-password"; nonce: string }
   /** Opens Apple's Passwords app, searching for the tab's site when there is one. */
   | { type: "open-passwords-app"; tabId?: number }
   // content script → background (the only requests content scripts may send)
@@ -85,8 +90,23 @@ export interface GeneratedPasswords {
   alphanumeric: string;
 }
 
-/** "not-saved": the user declined macOS's Save prompt, so nothing was filled. */
-export type NewPasswordResult = "filled" | "not-saved" | "menu-hidden" | "no-fields" | "origin-mismatch";
+/** A save is waiting for the user: "waiting" for macOS's prompt, "confirm" for the user's word. */
+export interface PendingGeneratedPassword {
+  pending: "waiting" | "confirm";
+  username: string;
+}
+
+/**
+ * "not-saved": the user declined macOS's Save prompt (or never answered), so nothing was filled.
+ * "needs-confirmation": it replaces a saved password; the user confirms once they clicked Save.
+ */
+export type NewPasswordResult =
+  | "filled"
+  | "not-saved"
+  | "needs-confirmation"
+  | "menu-hidden"
+  | "no-fields"
+  | "origin-mismatch";
 
 /** What each request answers with. Requests not listed answer with the session status. */
 interface Responses {
@@ -97,8 +117,11 @@ interface Responses {
   "get-settings": Settings;
   "set-settings": Settings;
   "autofill-status": AutofillStatus;
-  "generate-passwords": GeneratedPasswords;
+  "generate-passwords": GeneratedPasswords | PendingGeneratedPassword;
   "use-generated-password": { result: NewPasswordResult };
+  "await-generated-password": { result: NewPasswordResult };
+  "confirm-generated-password": { result: NewPasswordResult };
+  "cancel-generated-password": null;
   "menu-resize": null;
   "menu-close": null;
   "menu-focus-field": null;

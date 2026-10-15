@@ -48,3 +48,48 @@ test("never offers new passwords on a login form", async ({ context, siteUrl }) 
   const menu = await menuFrame(page);
   await expect(menu.getByText("Unlock to fill passwords")).toBeVisible();
 });
+
+test("replacing a saved password fills it once the user confirms", async ({ context, siteUrl, helperSaves }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/signup.html`);
+  // e2e-user already has a saved password for this site
+  await page.locator("#email").fill("e2e-user");
+  await page.locator("#new").click();
+  const menu = await menuFrame(page);
+  await choose(menu, "Unlock to suggest a strong password");
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  const preview = await menu.locator(".password").first().textContent();
+  await choose(menu, "Strong Password");
+
+  await expect(menu.getByText("This replaces the saved password")).toBeVisible();
+  expect(helperSaves()).toEqual([{ hostname: "localhost", username: "e2e-user", password: preview }]);
+  await expect(page.locator("#new")).toHaveValue("");
+  await choose(menu, "Fill In the New Password");
+  await expect(page.locator("#new")).toHaveValue(preview ?? "");
+});
+
+test.describe("when the user doesn't save", () => {
+  test.use({ declineSaves: true });
+
+  test("nothing is filled, the wait survives reopening the menu, and Cancel ends it", async ({ context, siteUrl }) => {
+    const page = await context.newPage();
+    await page.goto(`${siteUrl}/signup.html`);
+    await page.locator("#email").fill("new-user@example.com");
+    await page.locator("#new").click();
+    let menu = await menuFrame(page);
+    await choose(menu, "Unlock to suggest a strong password");
+    await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+    await choose(menu, "Strong Password");
+    await expect(menu.getByText("Click Save in the dialog on your Mac")).toBeVisible();
+
+    // leave the field and come back: still waiting
+    await page.locator("#email").click();
+    await page.locator("#new").click();
+    menu = await menuFrame(page);
+    await expect(menu.getByText("Click Save in the dialog on your Mac")).toBeVisible();
+
+    await choose(menu, "Cancel");
+    await expect(menu.getByText("Strong Password").first()).toBeVisible();
+    await expect(page.locator("#new")).toHaveValue("");
+  });
+});

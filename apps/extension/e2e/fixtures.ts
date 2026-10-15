@@ -32,7 +32,7 @@ function writeHost(dir: string, name: string, script: string) {
 }
 
 /** Registers the fake helper (and optionally the fake companion) inside a fresh profile. */
-function profileWithFakeHelper(companion: CompanionMode): string {
+function profileWithFakeHelper(companion: CompanionMode, declineSaves: boolean): string {
   const dir = mkdtempSync(join(tmpdir(), "app-e2e-"));
   const vault = join(dir, "vault.json");
   writeFileSync(vault, JSON.stringify([{ hostname: "localhost", username: "e2e-user", password: "e2e-pass" }]));
@@ -44,7 +44,7 @@ function profileWithFakeHelper(companion: CompanionMode): string {
   writeHost(
     dir,
     STORE_HOST,
-    `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}" FAKE_HELPER_LOG="${log}"\nexec "${bun}" "${fakeHelper}"\n`,
+    `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}" FAKE_HELPER_LOG="${log}"${declineSaves ? " FAKE_HELPER_SAVE=decline" : ""}\nexec "${bun}" "${fakeHelper}"\n`,
   );
   if (companion !== "none") {
     writeHost(
@@ -76,6 +76,8 @@ const profileDirs = new WeakMap<BrowserContext, string>();
 
 type Fixtures = {
   companion: CompanionMode;
+  /** The user answers every "Save password?" prompt with Not Now. */
+  declineSaves: boolean;
   context: BrowserContext;
   popupUrl: string;
   /** Search URLs of the requests to open the Passwords app that reached the fake helper. */
@@ -135,8 +137,9 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
     { scope: "worker" },
   ],
   companion: ["none", { option: true }],
-  context: async ({ companion }, use) => {
-    const dir = profileWithFakeHelper(companion);
+  declineSaves: [false, { option: true }],
+  context: async ({ companion, declineSaves }, use) => {
+    const dir = profileWithFakeHelper(companion, declineSaves);
     const context = await chromium.launchPersistentContext(join(dir, "profile"), {
       channel: "chromium",
       args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
