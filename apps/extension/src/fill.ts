@@ -83,6 +83,14 @@ export function fillNewPassword(expectedOrigin: string, password: string, anchor
   return "filled";
 }
 
+/** Fills an email address into the field the menu was opened on (sign-up email fields). */
+export function fillEmail(expectedOrigin: string, email: string, field: HTMLInputElement): FillResult {
+  if (window.location.origin !== expectedOrigin) return "origin-mismatch";
+  if (!field.isConnected || !isFillable(field)) return "no-fields";
+  setInputValue(field, email);
+  return "filled";
+}
+
 /** The username or email typed into the same form as `anchor`, if any. */
 export function usernameNear(anchor: HTMLInputElement): string {
   const scope = anchor.form ?? document;

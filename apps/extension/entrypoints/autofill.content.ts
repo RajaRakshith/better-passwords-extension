@@ -3,7 +3,7 @@ import { MenuHost } from "@/src/autofill/menu-host.ts";
 import { isGone, isUsernameInput, watchUntilGone } from "@/src/autofill/submission.ts";
 import { isMenuGenuinelyVisible } from "@/src/autofill/visibility.ts";
 import { FILL_MATCHES } from "@/src/config.ts";
-import { fillCredentials, fillNewPassword, usernameNear } from "@/src/fill.ts";
+import { fillCredentials, fillEmail, fillNewPassword, usernameNear } from "@/src/fill.ts";
 import { type ContentMessage, type NewPasswordContext, send } from "@/src/messages.ts";
 
 // Top frame only for now. Logins inside cross-origin iframes need their own origin rules.
@@ -35,6 +35,8 @@ export default defineContentScript({
         } else {
           menu.close();
         }
+      } else if (show === "email" && kind === "signup-email") {
+        menu.open(field, "email", kind);
       } else if (show === "logins" || show === "generate" || (show === "locked" && unlockHere)) {
         menu.open(field, show, kind);
       } else {
@@ -45,7 +47,7 @@ export default defineContentScript({
     /** Offers a menu for `target` if it gets one; returns whether it does. */
     function offerFor(target: EventTarget | null): boolean {
       const kind = fieldKind(target);
-      if (!kind || kind === "signup-email") return false;
+      if (!kind) return false;
       void offer(target as HTMLInputElement, kind);
       return true;
     }
@@ -206,6 +208,19 @@ export default defineContentScript({
             visible: isMenuGenuinelyVisible(menu.element),
           };
           sendResponse(context);
+          return false;
+        }
+        case "menu-fill-email": {
+          const anchor = menu.anchor;
+          if (!anchor || !isMenuGenuinelyVisible(menu.element)) {
+            sendResponse({ result: "menu-hidden" });
+            menu.close();
+            return false;
+          }
+          const result = fillEmail(message.origin, message.email, anchor);
+          dismissed = anchor;
+          menu.close();
+          sendResponse({ result });
           return false;
         }
         case "menu-fill": {

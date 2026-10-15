@@ -21,7 +21,16 @@ export default defineConfig({
     return {
       name: variant === "github" ? `${DISPLAY_NAME} (GitHub build)` : DISPLAY_NAME,
       description: "Fill passwords from Apple Passwords, pairing far less often.",
-      permissions: ["nativeMessaging", "storage", "alarms", "idle", "activeTab", "scripting"],
+      permissions: [
+        "nativeMessaging",
+        "storage",
+        "alarms",
+        "idle",
+        "activeTab",
+        "scripting",
+        // while Hide My Email is on, sets icloud.com's Origin on our own requests to iCloud
+        "declarativeNetRequestWithHostAccess",
+      ],
       // the inline menu reads the page's URL and runs on login pages
       host_permissions: FILL_MATCHES,
       web_accessible_resources: [{ resources: ["menu.html"], matches: FILL_MATCHES }],

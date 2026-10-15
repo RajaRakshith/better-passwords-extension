@@ -8,12 +8,13 @@ Apple Passwords Plus (the browser extension and the optional Mac companion app) 
 - **The site's address.** The extension sends the current site's hostname to Apple's helper, on your Mac, to look up matching logins.
 - **The pairing key.** Pairing with your Mac creates a key that stays in the browser's memory until you quit the browser or press Lock. It is never written to disk.
 - **Settings.** Your settings (for example, whether to show suggestions in login fields) are saved in the browser's extension storage on your device.
+- **Hide My Email (only if you turn it on).** The extension asks iCloud, using your icloud.com sign-in in that browser, for your Hide My Email addresses and creates new ones when you ask. It sends iCloud the site's hostname as the new address's label, as Safari does. Nothing is stored by the extension.
 - **The pairing code (companion app only).** After you confirm with Touch ID, the companion app reads the 6-digit code from Apple's pairing window and passes it to the extension on your Mac. It isn't stored.
 
 ## What it doesn't do
 
 - No analytics, telemetry, crash reporting or ads.
-- No servers. The project runs no backend, and neither the extension nor the app makes network requests.
+- No servers. The project runs no backend. The only network requests are to Apple's iCloud, for Hide My Email, and only if you turn it on.
 - No selling or sharing of data, because none is collected.
 
 ## Contact

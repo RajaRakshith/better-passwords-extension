@@ -2,11 +2,13 @@ import type { FieldKind } from "@/src/autofill/fields.ts";
 import { Companion } from "@/src/companion.ts";
 import { nativeHostFor } from "@/src/config.ts";
 import { fillCredentials } from "@/src/fill.ts";
+import { HideMyEmail, headerRule, ICloudError } from "@/src/icloud/hide-my-email.ts";
 import {
   type AutofillStatus,
   CONTENT_SCRIPT_REQUESTS,
   type ContentMessage,
   DEFAULT_SETTINGS,
+  type EmailSuggestions,
   type Envelope,
   type GeneratedPasswords,
   type NewPasswordContext,
@@ -93,7 +95,10 @@ export default defineBackground(() => {
     const url = fillableUrl(caller.url);
     const settings = await getSettings();
     if (!url || !settings.inlineMenu) return { show: "none" };
-    if (kind === "signup-email") return { show: "none" };
+    if (kind === "signup-email") {
+      // Hide My Email works without Apple Passwords, so no unlocking is needed
+      return { show: settings.hideMyEmail || settings.hideMyEmailHint ? "email" : "none" };
+    }
     if (kind === "new-password" && !settings.generatePasswords) return { show: "none" };
     if (session.status.state === "disconnected" || session.status.state === "closed") {
       await session.connect().catch(() => {});
@@ -208,6 +213,40 @@ export default defineBackground(() => {
     void relay(tabId, { type: "generated-password-saved", password: generated.password }).catch(() => {});
   }
 
+  // Hide My Email: the header rule exists only while the user has it turned on (session rules
+  // don't outlive the browser, so it's set again on every start)
+  const hideMyEmail = new HideMyEmail();
+  async function syncHideMyEmail(on: boolean) {
+    await browser.declarativeNetRequest.updateSessionRules({
+      removeRuleIds: [headerRule.id],
+      ...(on ? { addRules: [headerRule] } : {}),
+    });
+    if (!on) hideMyEmail.reset();
+  }
+  void getSettings().then((settings) => syncHideMyEmail(settings.hideMyEmail));
+
+  async function emailSuggestions(tabId: number): Promise<EmailSuggestions> {
+    const settings = await getSettings();
+    if (!settings.hideMyEmail) return { hideMyEmail: { state: settings.hideMyEmailHint ? "hint" : "off" } };
+    const url = await tabUrl(tabId);
+    if (!url) return { hideMyEmail: { state: "off" } };
+    try {
+      const address = await hideMyEmail.addressFor(url.hostname);
+      return { hideMyEmail: address ? { state: "ready", address } : { state: "ready" } };
+    } catch (error) {
+      if (error instanceof ICloudError && error.code === "signed-out") return { hideMyEmail: { state: "signed-out" } };
+      return { hideMyEmail: { state: "error", message: error instanceof Error ? error.message : String(error) } };
+    }
+  }
+
+  async function saveSettings(changes: Partial<Settings>): Promise<Settings> {
+    const before = await getSettings();
+    const settings = { ...before, ...changes };
+    await browser.storage.local.set({ settings });
+    if (settings.hideMyEmail !== before.hideMyEmail) await syncHideMyEmail(settings.hideMyEmail);
+    return settings;
+  }
+
   async function handle(request: Request, caller: Caller): Promise<unknown> {
     if (caller.kind === "content-script") {
       if (request.type === "autofill-status") return autofillStatus(caller, request.kind);
@@ -316,11 +355,35 @@ export default defineBackground(() => {
         return null;
       case "get-settings":
         return getSettings();
-      case "set-settings": {
-        const settings = { ...(await getSettings()), ...request.settings };
-        await browser.storage.local.set({ settings });
-        return settings;
+      case "set-settings":
+        return saveSettings(request.settings);
+      case "email-suggestions":
+        return emailSuggestions(tabOf(caller));
+      case "enable-hide-my-email":
+        await saveSettings({ hideMyEmail: true });
+        return emailSuggestions(tabOf(caller));
+      case "dismiss-hide-my-email-hint":
+        await saveSettings({ hideMyEmailHint: false });
+        return null;
+      case "generate-hide-my-email":
+        tabOf(caller);
+        return { address: await hideMyEmail.generate() };
+      case "use-hide-my-email": {
+        const tabId = tabOf(caller);
+        const url = await tabUrl(tabId);
+        if (!url) throw new Error("this page can't be filled");
+        const email = request.reserve ? await hideMyEmail.reserve(request.address, url.hostname) : request.address;
+        const reply = (await relay(tabId, {
+          type: "menu-fill-email",
+          nonce: request.nonce,
+          origin: url.origin,
+          email,
+        })) as { result: string } | undefined;
+        return { result: reply?.result ?? "no-fields" };
       }
+      case "open-icloud":
+        await browser.tabs.create({ url: "https://www.icloud.com/" });
+        return null;
       case "autofill-status":
         throw new Error("content scripts only");
     }

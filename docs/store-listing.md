@@ -49,6 +49,7 @@ Whichever title wins goes into `DISPLAY_NAME` in `apps/extension/src/config.ts`.
 | `storage` | To remember the user's settings. |
 | `alarms` | To keep the connection to the Mac alive, so the user isn't asked for a new code. |
 | `idle` | To lock when the Mac's screen locks, if the user turned that on. |
+| `declarativeNetRequestWithHostAccess` | Only for the opt-in Hide My Email feature: iCloud's web service accepts requests only with icloud.com's Origin, so while the user has it on, a session rule sets that header on the extension's own requests to iCloud. Websites' requests are never modified. |
 
 **Remote code:** No. All code ships in the package.
 

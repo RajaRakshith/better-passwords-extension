@@ -5,7 +5,7 @@
 import type { FieldKind } from "./fields.ts";
 
 /** "generated": the field holds a strong password we filled in (and saved, unless "-unsaved"). */
-export type MenuMode = "logins" | "generate" | "generated" | "generated-unsaved" | "locked";
+export type MenuMode = "logins" | "generate" | "generated" | "generated-unsaved" | "email" | "locked";
 
 const WIDTH = 300;
 const GAP = 4;

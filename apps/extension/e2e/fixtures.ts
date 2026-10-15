@@ -7,6 +7,9 @@ import { join, resolve } from "node:path";
 import { type BrowserContext, test as base, chromium, expect, type Frame, type Page } from "@playwright/test";
 import { COMPANION_HOST, STORE_EXTENSION_ID, STORE_HOST } from "../src/config.ts";
 
+// lets tests intercept the extension background's own requests (a fake iCloud for Hide My Email)
+process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS = "1";
+
 export const PAIRING_CODE = "246810";
 const extensionPath = resolve(import.meta.dirname, "../.output/store-chrome-mv3");
 const fakeHelper = resolve(import.meta.dirname, "../../../packages/fake-helper/src/main.ts");

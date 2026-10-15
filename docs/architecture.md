@@ -84,3 +84,9 @@ Like Safari, the chosen password is filled right away, and Apple Passwords is as
 The username is the one in the form, tracked as the user types, or the last username or email typed on the page (multi-step sign-ups). Without one, macOS asks for it in its dialog, and the new login that appears tells us which name was saved.
 
 Until Apple Passwords confirms a new login, the password is kept in memory and listed in the popup with a Copy button for the rest of the session. An update to an existing login can't be confirmed (the list looks the same), so it is assumed and kept listed too.
+
+## Hide My Email (opt-in)
+
+Sign-up email fields get a menu that offers Hide My Email. Until the user turns it on, it's a hint with a ✕ that dismisses it for good (the popup can still turn it on). Once on, the menu shows the address made for this site before, or creates one: "Hide My Email…" proposes a random address ("Try Another" for a new one), and choosing it reserves it with the site as its label, then fills it in.
+
+Apple's helper has no Hide My Email, so this uses icloud.com's web service with the browser's icloud.com sign-in (`src/icloud/hide-my-email.ts`, background only). That service accepts only icloud.com's Origin. While the feature is on, a session rule sets Origin and Referer on requests to iCloud that come from outside any tab, which means our background's own. Turning the feature off removes the rule. See the [threat model](threat-model.md).

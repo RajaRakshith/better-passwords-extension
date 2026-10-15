@@ -34,6 +34,8 @@ What we protect: the user's passwords in Apple Passwords, and the session that c
 | A future macOS change in Apple's helper | Fail closed: unknown replies and protocol versions are rejected. |
 | A page reads a generated password | It's generated in the background and shown only in our menu frame. The page gets it only when the user picks it, into that page's own new-password fields. |
 | A generated password is filled but never saved | macOS asks before saving, and the user may decline. Until Apple Passwords lists the login, the password stays in memory, shown in the popup for the session. |
+| Hide My Email needs icloud.com's Origin on our requests | Off until the user opts in. While on, a session-only rule sets Origin and Referer only on requests to iCloud that don't come from a tab: our background's own (a session rule never applies to other extensions). Websites' requests to iCloud are never touched, so no page can borrow icloud.com's identity. Turning it off removes the rule. |
+| Hide My Email uses an undocumented iCloud web service | Background only; the menu and pages never talk to iCloud. It relies on the user's icloud.com sign-in in that browser and stores no iCloud credentials. If Apple changes the service, the feature fails visibly and nothing else is affected. |
 | A page fakes a sign-up to trigger save prompts | Only a password we filled can be saved, and only with a user-visible macOS prompt. A page can at worst cause an extra prompt. |
 
 ## Known gaps

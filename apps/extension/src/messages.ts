@@ -27,6 +27,15 @@ export type Request =
   | { type: "generate-passwords"; nonce: string }
   /** Fills the chosen password; Apple Passwords is asked to save it when the form is submitted. */
   | { type: "use-generated-password"; nonce: string; style: PasswordStyle }
+  // Hide My Email, on sign-up email fields (the menu is bound to its tab)
+  | { type: "email-suggestions"; nonce: string }
+  /** The user clicked the hint: turn Hide My Email on. */
+  | { type: "enable-hide-my-email"; nonce: string }
+  | { type: "dismiss-hide-my-email-hint" }
+  | { type: "generate-hide-my-email"; nonce: string }
+  /** Fills an address in; a new (generated) one is reserved for the site first. */
+  | { type: "use-hide-my-email"; nonce: string; address: string; reserve: boolean }
+  | { type: "open-icloud" }
   /** Generated passwords for the tab's site whose update Apple Passwords couldn't confirm. */
   | { type: "unconfirmed-passwords"; tabId?: number }
 
@@ -55,6 +64,10 @@ export interface Settings {
   touchId: boolean;
   /** Suggest strong passwords on sign-up and change-password forms. */
   generatePasswords: boolean;
+  /** Offer Hide My Email addresses on sign-up email fields (opt-in: uses icloud.com's web service). */
+  hideMyEmail: boolean;
+  /** Advertise Hide My Email in sign-up email fields until the user turns it on or dismisses it. */
+  hideMyEmailHint: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -62,6 +75,8 @@ export const DEFAULT_SETTINGS: Settings = {
   inlineMenu: true,
   touchId: true,
   generatePasswords: true,
+  hideMyEmail: false,
+  hideMyEmailHint: true,
 };
 
 export interface Status extends SessionStatus {
@@ -83,12 +98,27 @@ export interface AutofillStatus {
    * "logins": saved logins exist for this site; "generate": suggest a new password;
    * "locked": pairing needed; "none": stay out of the way.
    */
-  show: "logins" | "generate" | "locked" | "none";
+  show: "logins" | "generate" | "email" | "locked" | "none";
 }
 
 export interface GeneratedPasswords {
   strong: string;
   alphanumeric: string;
+}
+
+/**
+ * Hide My Email for a sign-up email field. "hint": not turned on yet, offer it; "ready": on, with
+ * the address made for this site before, if any; "signed-out": no icloud.com sign-in in this browser.
+ */
+export type HideMyEmailState =
+  | { state: "off" }
+  | { state: "hint" }
+  | { state: "signed-out" }
+  | { state: "ready"; address?: string }
+  | { state: "error"; message: string };
+
+export interface EmailSuggestions {
+  hideMyEmail: HideMyEmailState;
 }
 
 export type NewPasswordResult = "filled" | "menu-hidden" | "no-fields" | "origin-mismatch";
@@ -105,6 +135,12 @@ interface Responses {
   "generate-passwords": GeneratedPasswords;
   "use-generated-password": { result: NewPasswordResult };
   "unconfirmed-passwords": { username: string; password: string }[];
+  "email-suggestions": EmailSuggestions;
+  "enable-hide-my-email": EmailSuggestions;
+  "dismiss-hide-my-email-hint": null;
+  "generate-hide-my-email": { address: string };
+  "use-hide-my-email": { result: string };
+  "open-icloud": null;
   "menu-resize": null;
   "menu-close": null;
   "menu-focus-field": null;
@@ -126,6 +162,8 @@ export type ContentMessage =
   | { type: "menu-new-password-context"; nonce: string }
   /** Fills a password that Apple Passwords has saved. */
   | { type: "menu-fill-new-password"; nonce: string; origin: string; password: string }
+  /** Fills an email address into the field the menu was opened on. */
+  | { type: "menu-fill-email"; nonce: string; origin: string; email: string }
   /** Apple Passwords has the generated password filled into this page. */
   | { type: "generated-password-saved"; password: string };
 

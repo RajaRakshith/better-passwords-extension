@@ -130,8 +130,9 @@ body {
   outline-offset: 0;
 }
 
-/* the eye that reveals a suggested password, inside its row */
-.reveal {
+/* the eye that reveals a suggested password, and the ✕ that dismisses a hint: inside their row */
+.reveal,
+.dismiss {
   display: grid;
   flex: none;
   place-items: center;
@@ -141,11 +142,13 @@ body {
   border-radius: 6px;
 }
 
-.reveal:hover {
+.reveal:hover,
+.dismiss:hover {
   background: rgb(255 255 255 / 20%);
 }
 
-.row .reveal svg {
+.row .reveal svg,
+.row .dismiss svg {
   width: 16px;
   height: 16px;
 }
