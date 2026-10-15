@@ -45,12 +45,19 @@ The host checks the agent too: release builds require our team, and development 
 
 ## Building and trying it
 
+Sign local builds with an Apple Development certificate and install them in /Applications:
+
 ```sh
 cd apps/companion
 swift test
-scripts/bundle.sh          # ad-hoc signed app in dist/
-open "dist/Apple Passwords Plus.app"
+scripts/bundle.sh --sign "Apple Development: Your Name (XXXXXXXXXX)"
+ditto "dist/Apple Passwords Plus.app" "/Applications/Apple Passwords Plus.app" && rm -rf dist/*.app
+open "/Applications/Apple Passwords Plus.app"
 ```
+
+Why both:
+- **The certificate:** macOS ties the background agent's registration and the Accessibility and Contacts permissions to the app's signature. A team-signed build keeps them across rebuilds. An ad-hoc build (`scripts/bundle.sh` without `--sign`) is a new app every time: the old registration then fails with "Launch Constraint Violation", and the permissions must be granted again.
+- **/Applications:** a single copy in a fixed place. Replacing an app in place, or having two copies with the same identity, can leave macOS checking the agent against an older build.
 
 In the window:
 1. Click **Connect**. This writes the bridge manifest (the same one as `scripts/setup-mac.sh`) and the companion's manifest for every installed browser.
@@ -60,11 +67,12 @@ In the window:
 
 Reload the extension. Its popup now unlocks with Touch ID, and so does the inline menu ("Unlock with Touch ID").
 
-Every ad-hoc build has a new signature, so macOS treats it as a new app. After rebuilding, remove the old entry from Accessibility and allow the new one.
+If the agent won't start, `launchctl print gui/$(id -u)/org.applepasswordsplus.agent` shows why. "Launch Constraint Violation" in a crash report means a stale registration: click **Remove Setup**, then **Turn On** again. A rebuilt app also re-registers by itself when its window opens.
 
 Signed releases: `scripts/bundle.sh --version 1.2.3 --sign "Developer ID Application: …"`, then notarize. See [release.md](release.md).
 
 ## Known limits
 
+- macOS reports Apple's helper at its real location (`/System/Volumes/Preboot/Cryptexes/…`), behind the `/System/Cryptexes` link. Both are accepted; the code-signature check is what matters.
 - The agent finds the browser through its parent process. A browser that launches native hosts through an intermediate process would not work. Chromium browsers and Firefox launch hosts directly.
 - Accessibility can be removed only in System Settings. **Remove Setup** in the app removes the browser connections and the agent.
