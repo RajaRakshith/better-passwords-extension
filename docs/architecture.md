@@ -72,3 +72,18 @@ The content script runs in the top frame only. Logins inside cross-origin iframe
 3. On click, the background fetches the password from the helper. macOS may ask for Touch ID here.
 4. It injects `fillCredentials` into the tab's top frame with the expected origin. If the page navigated elsewhere in the meantime, nothing is filled.
 5. The fill function skips hidden and zero-size fields, and fills the username field from the password field's own form.
+
+## New passwords (sign-up and change-password forms)
+
+Password fields on sign-up and change-password forms get a menu with two generated passwords: Apple's style (`xxxxxx-xxxxxx-xxxxxx`) and one without special characters. Both follow the field's `minlength`, `maxlength` and `passwordrules`. They are generated in the background worker, and shown masked until the user hovers the eye.
+
+Like Safari, the chosen password is filled right away, and Apple Passwords is asked to save it only once the sign-up goes through. Apple's helper shows macOS's "Save password?" prompt but never reports the outcome, so the background then looks the login up until it appears.
+
+A save needs two signals, so an invalid or rejected form isn't saved (`src/autofill/submission.ts`):
+
+1. **A submit attempt on a valid form.** This is the form's submit event, a click on its submit button or a sign-up-looking control, or Enter in one of its fields. Validity is read from `validity`, which fires no events the page could show errors for.
+2. **Evidence it went through, within 20 seconds.** Either the tab navigates or changes URL (watched by the background, so leaving the page can't lose it), or the password field goes away (a dialog closes, or a multi-step form moves on).
+
+The username is the one in the form, or the last username or email typed on the page (multi-step sign-ups). Without one, macOS asks for it in its dialog, and the new login that appears tells us which name was saved.
+
+Until Apple Passwords confirms a new login, the password is kept in memory and listed in the popup with a Copy button for the rest of the session. An update to an existing login can't be confirmed (the list looks the same), so it is assumed and kept listed too.

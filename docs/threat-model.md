@@ -32,6 +32,9 @@ What we protect: the user's passwords in Apple Passwords, and the session that c
 | The setup script is tampered with | It is plain, short shell. It writes only one JSON file per browser, pointing at Apple's signed helper, and needs no admin rights. Read it before running. |
 | The GitHub build borrows Apple's public key | That only decides the extension ID; it grants no access Apple's own design doesn't already give that ID. It is clearly labelled and can't be published to stores. |
 | A future macOS change in Apple's helper | Fail closed: unknown replies and protocol versions are rejected. |
+| A page reads a generated password | It's generated in the background and shown only in our menu frame. The page gets it only when the user picks it, into that page's own new-password fields. |
+| A generated password is filled but never saved | macOS asks before saving, and the user may decline. Until Apple Passwords lists the login, the password stays in memory, shown in the popup for the session. |
+| A page fakes a sign-up to trigger save prompts | Only a password we filled can be saved, and only with a user-visible macOS prompt. A page can at worst cause an extra prompt. |
 
 ## Known gaps
 
