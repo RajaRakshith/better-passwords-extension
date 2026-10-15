@@ -30,7 +30,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: lts/*
-      - run: bun install --frozen-lockfile
+      # these jobs hold release secrets: no dependency's install script runs here
+      - run: bun install --frozen-lockfile --ignore-scripts
       - id: release
         working-directory: apps/extension
         run: bunx semantic-release
@@ -77,7 +78,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: lts/*
-      - run: bun install --frozen-lockfile
+      # these jobs hold release secrets: no dependency's install script runs here
+      - run: bun install --frozen-lockfile --ignore-scripts
       - name: Import the signing certificate and notary key
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
