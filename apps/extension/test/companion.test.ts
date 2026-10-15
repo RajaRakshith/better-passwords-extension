@@ -80,4 +80,13 @@ describe("Companion", () => {
     const old = fakeHost(() => ({ ok: false, version: 1, message: "unknown request" }));
     await expect(new Companion(old.send).myEmails()).rejects.toMatchObject({ code: "outdated" });
   });
+
+  it("doesn't wait long for an app that doesn't answer", async () => {
+    const stuck = async () => new Promise<never>(() => {});
+    const companion = new Companion(stuck);
+    const started = Date.now();
+    expect(await companion.state()).toBe("needs-setup");
+    await expect(companion.myEmails()).rejects.toMatchObject({ code: "timeout" });
+    expect(Date.now() - started).toBeLessThan(9_000);
+  }, 15_000);
 });

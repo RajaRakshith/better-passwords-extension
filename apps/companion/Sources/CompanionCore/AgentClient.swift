@@ -2,12 +2,12 @@ import Foundation
 
 /// The native host's connection to the agent over XPC.
 public final class XPCAgentClient: HostRelay.Agent, @unchecked Sendable {
+    /// Quick questions give up soon, so a broken agent can't hold the extension's menu up.
+    static let quick: Duration = .seconds(3)
     /// Touch ID waits for the user, so allow plenty of time.
-    private let timeout: Duration
+    static let touchID: Duration = .seconds(90)
 
-    public init(timeout: Duration = .seconds(90)) {
-        self.timeout = timeout
-    }
+    public init() {}
 
     /// The agent must be our own app. Release builds check the team; ad-hoc development builds can
     /// only check the identifier, because the app is signed after the host.
@@ -21,6 +21,7 @@ public final class XPCAgentClient: HostRelay.Agent, @unchecked Sendable {
     typealias Finish<T> = @Sendable (Result<T, CompanionError>) -> Void
 
     private func withAgent<T: Sendable>(
+        timeout: Duration,
         _ body: @escaping @Sendable (CompanionAgentProtocol, @escaping Finish<T>) -> Void
     ) async -> Result<T, CompanionError> {
         let connection = NSXPCConnection(machServiceName: Identity.agentService, options: [])
@@ -37,7 +38,6 @@ public final class XPCAgentClient: HostRelay.Agent, @unchecked Sendable {
             let proxy = connection.remoteObjectProxyWithErrorHandler { _ in finish(.failure(.agentUnavailable)) }
             guard let agent = proxy as? CompanionAgentProtocol else { return finish(.failure(.agentUnavailable)) }
             body(agent, finish)
-            let timeout = self.timeout
             Task {
                 try? await Task.sleep(for: timeout)
                 finish(.failure(.agentUnavailable))
@@ -46,13 +46,13 @@ public final class XPCAgentClient: HostRelay.Agent, @unchecked Sendable {
     }
 
     public func status() async -> Result<Bool, CompanionError> {
-        await withAgent { agent, finish in
+        await withAgent(timeout: Self.quick) { agent, finish in
             agent.status { trusted in finish(.success(trusted)) }
         }
     }
 
     public func myEmails() async -> Result<[String], CompanionError> {
-        await withAgent { agent, finish in
+        await withAgent(timeout: Self.quick) { agent, finish in
             agent.myEmails { emails, error in
                 if let emails {
                     finish(.success(emails))
@@ -64,7 +64,7 @@ public final class XPCAgentClient: HostRelay.Agent, @unchecked Sendable {
     }
 
     public func readPairingCode() async -> Result<String, CompanionError> {
-        await withAgent { agent, finish in
+        await withAgent(timeout: Self.touchID) { agent, finish in
             agent.readPairingCode { code, error in
                 if let code {
                     finish(.success(code))

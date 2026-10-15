@@ -29,6 +29,28 @@ export class CompanionError extends Error {
 type SendNative = (host: string, message: unknown) => Promise<unknown>;
 
 const STATE_TTL_MS = 30_000;
+/** Quick questions (status, emails) get this long; a stuck agent must not hold a menu up. */
+const QUICK_MS = 3_500;
+
+/** Rejects if `promise` takes longer than `ms`. */
+function within<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new CompanionError("The Apple Passwords Plus app didn't answer.", "timeout")),
+      ms,
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
 export class Companion {
   #cached: { state: CompanionState; at: number } | undefined;
@@ -44,11 +66,14 @@ export class Companion {
     if (this.#cached && this.now() - this.#cached.at < STATE_TTL_MS) return this.#cached.state;
     let state: CompanionState;
     try {
-      const reply = (await this.sendNative(COMPANION_HOST, { type: "hello" })) as HostResponse | undefined;
+      const reply = (await within(this.sendNative(COMPANION_HOST, { type: "hello" }), QUICK_MS)) as
+        | HostResponse
+        | undefined;
       state = reply?.ok ? (reply.accessibility ? "ready" : "needs-setup") : "needs-setup";
-    } catch {
-      // the host isn't registered: the app isn't installed, or its setup didn't run
-      state = "not-installed";
+    } catch (error) {
+      // no answer in time: installed, but its agent isn't running properly
+      // otherwise the host isn't registered: the app isn't installed, or its setup didn't run
+      state = (error as { code?: string }).code === "timeout" ? "needs-setup" : "not-installed";
     }
     this.#cached = { state, at: this.now() };
     return state;
@@ -79,8 +104,11 @@ export class Companion {
     if (this.#emails && this.now() - this.#emails.at < 10 * 60_000) return this.#emails.value;
     let reply: HostResponse | undefined;
     try {
-      reply = (await this.sendNative(COMPANION_HOST, { type: "my-emails" })) as HostResponse | undefined;
+      reply = (await within(this.sendNative(COMPANION_HOST, { type: "my-emails" }), QUICK_MS)) as
+        | HostResponse
+        | undefined;
     } catch (error) {
+      if (error instanceof CompanionError) throw error;
       throw new CompanionError(error instanceof Error ? error.message : String(error), "not-installed");
     }
     if (reply?.ok && Array.isArray(reply.emails)) {
