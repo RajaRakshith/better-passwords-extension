@@ -4,7 +4,7 @@ import { choose, expect, menuFrame, test } from "./fixtures.ts";
 /** A fake icloud.com for the extension's background, recording what it was asked. */
 async function fakeICloud(
   context: BrowserContext,
-  { signedIn = true, existing }: { signedIn?: boolean; existing?: string } = {},
+  { signedIn = true, existing, delayMs = 0 }: { signedIn?: boolean; existing?: string; delayMs?: number } = {},
 ) {
   const seen: { path: string; origin: string | undefined; body?: unknown }[] = [];
   let generated = 0;
@@ -12,6 +12,7 @@ async function fakeICloud(
     const request = route.request();
     const { pathname } = new URL(request.url());
     seen.push({ path: pathname, origin: request.headers().origin, body: request.postDataJSON?.() ?? undefined });
+    if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
     const json = (body: unknown, status = 200) =>
       route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     if (pathname === "/setup/ws/1/validate") {
@@ -138,4 +139,24 @@ test("the iCloud header rule exists only while Hide My Email is on", async ({ co
     return chrome.runtime.sendMessage({ type: "set-settings", settings: { hideMyEmail: false } });
   });
   await expect.poll(rules).toEqual([]);
+});
+
+test("shows that it's loading while iCloud answers", async ({ context, siteUrl, popupUrl }) => {
+  await fakeICloud(context, { existing: "slow@icloud.com", delayMs: 1_000 });
+  // already on (as the popup's toggle does), so nothing is cached yet
+  const popup = await context.newPage();
+  await popup.goto(popupUrl);
+  await popup.evaluate(() => {
+    type Runtime = { runtime: { sendMessage(message: unknown): Promise<unknown> } };
+    const { chrome } = globalThis as unknown as { chrome: Runtime };
+    return chrome.runtime.sendMessage({ type: "set-settings", settings: { hideMyEmail: true } });
+  });
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/signup.html`);
+  await page.locator("#email").click();
+  await expect.poll(() => page.frames().some((f) => f.url().includes("/menu.html#"))).toBe(true);
+  const menu = page.frames().find((f) => f.url().includes("/menu.html#")) as Frame;
+  await expect(menu.getByText("Loading…")).toBeVisible();
+  await expect(menu.getByText("slow@icloud.com")).toBeVisible();
+  await expect(menu.getByText("Loading…")).toHaveCount(0);
 });

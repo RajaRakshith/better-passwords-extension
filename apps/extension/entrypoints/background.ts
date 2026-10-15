@@ -225,13 +225,21 @@ export default defineBackground(() => {
   }
   void getSettings().then((settings) => syncHideMyEmail(settings.hideMyEmail));
 
+  // each site's Hide My Email address, remembered for a minute so reopening the menu is instant
+  const addressCache = new Map<string, { address: string | undefined; at: number }>();
+
   async function emailSuggestions(tabId: number): Promise<EmailSuggestions> {
     const settings = await getSettings();
     if (!settings.hideMyEmail) return { hideMyEmail: { state: settings.hideMyEmailHint ? "hint" : "off" } };
     const url = await tabUrl(tabId);
     if (!url) return { hideMyEmail: { state: "off" } };
     try {
-      const address = await hideMyEmail.addressFor(url.hostname);
+      let cached = addressCache.get(url.hostname);
+      if (!cached || Date.now() - cached.at > 60_000) {
+        cached = { address: await hideMyEmail.addressFor(url.hostname), at: Date.now() };
+        addressCache.set(url.hostname, cached);
+      }
+      const { address } = cached;
       return { hideMyEmail: address ? { state: "ready", address } : { state: "ready" } };
     } catch (error) {
       if (error instanceof ICloudError && error.code === "signed-out") return { hideMyEmail: { state: "signed-out" } };
@@ -373,6 +381,7 @@ export default defineBackground(() => {
         const url = await tabUrl(tabId);
         if (!url) throw new Error("this page can't be filled");
         const email = request.reserve ? await hideMyEmail.reserve(request.address, url.hostname) : request.address;
+        addressCache.set(url.hostname, { address: email, at: Date.now() });
         const reply = (await relay(tabId, {
           type: "menu-fill-email",
           nonce: request.nonce,

@@ -82,7 +82,9 @@ function close() {
 
 function render(...children: (Node | null)[]) {
   panel.replaceChildren(...children.filter((c): c is Node => c !== null));
-  requestAnimationFrame(reportSize);
+  // right away: the frame stays hidden until the first report, and a hidden frame gets no
+  // animation frames (reading the size lays the panel out synchronously)
+  reportSize();
 }
 
 function row(
@@ -203,11 +205,31 @@ function showGeneratedDone(saved: boolean) {
 // --- sign-up email fields: Hide My Email ---------------------------------------------------------
 
 async function showEmail() {
+  // asking iCloud can take a second or two: show that something is happening, unless it's quick
+  const loading = setTimeout(() => render(loadingRow(ENVELOPE, "Hide My Email")), 150);
   try {
     renderEmail(await send({ type: "email-suggestions", nonce }));
   } catch (e) {
     render(message(messageOf(e), true));
+  } finally {
+    clearTimeout(loading);
   }
+}
+
+/** A row that can't be chosen yet, with a spinner. */
+function loadingRow(svgPath: string, title: string): HTMLElement {
+  return h(
+    "div",
+    { class: "row loading", attrs: { "aria-busy": "true" } },
+    icon(svgPath),
+    h(
+      "span",
+      { class: "text" },
+      h("span", { class: "title", textContent: title }),
+      h("span", { class: "detail", textContent: "Loading…" }),
+    ),
+    h("span", { class: "spinner", attrs: { "aria-hidden": "true" } }),
+  );
 }
 
 function renderEmail({ hideMyEmail: hme }: EmailSuggestions, error?: string) {

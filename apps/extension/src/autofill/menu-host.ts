@@ -57,6 +57,8 @@ export class MenuHost {
   #anchor: HTMLInputElement | undefined;
   #nonce: string | undefined;
   #height = 48;
+  /** Hidden until the menu page reports its size, so an empty frame never shows. */
+  #rendered = false;
 
   constructor(private readonly menuUrl: string) {
     this.#host = document.createElement("app-autofill-menu");
@@ -85,6 +87,7 @@ export class MenuHost {
     this.#anchor = anchor;
     this.#nonce = randomNonce();
     this.#height = 48;
+    this.#rendered = false;
     // A new iframe every time: changing only the URL fragment of an existing one would not reload
     // the menu page, which would keep the previous menu's nonce and size.
     // The nonce ties requests to this menu; a copy of menu.html framed by the page itself has none.
@@ -98,6 +101,7 @@ export class MenuHost {
   }
 
   resize(height: number): void {
+    this.#rendered = true;
     this.#height = Math.max(24, Math.min(MAX_HEIGHT, Math.ceil(height)));
     this.position();
   }
@@ -116,7 +120,13 @@ export class MenuHost {
     const below = rect.bottom + GAP;
     const top =
       below + this.#height > window.innerHeight && rect.top > this.#height ? rect.top - GAP - this.#height : below;
-    this.#applyStyle({ left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${this.#height}px` });
+    this.#applyStyle({
+      left: `${left}px`,
+      top: `${top}px`,
+      width: `${width}px`,
+      height: `${this.#height}px`,
+      visibility: this.#rendered ? "visible" : "hidden",
+    });
   }
 
   focusMenu(): void {
