@@ -44,6 +44,8 @@ export interface FakeHelperOptions {
   code?: string;
   base64?: boolean;
   capabilities?: Capabilities;
+  /** Answer macOS's "Save password?" prompt with Don't Save. */
+  declineSaves?: boolean;
 }
 
 interface Handshake {
@@ -66,6 +68,7 @@ export class FakeHelper {
   readonly #fixedCode: string | undefined;
   readonly #codec: BinaryCodec;
   readonly #capabilities: Capabilities;
+  readonly #declineSaves: boolean;
   #handshake: Handshake | undefined;
   #session: { tid: string; channel: SecureChannel } | undefined;
   /** The code the "pairing window" currently shows, if any. */
@@ -74,6 +77,7 @@ export class FakeHelper {
   constructor(options: FakeHelperOptions = {}) {
     this.vault = options.vault ?? [];
     this.#fixedCode = options.code;
+    this.#declineSaves = options.declineSaves ?? false;
     this.#codec = new BinaryCodec(options.base64 ?? true);
     this.#capabilities = {
       shouldUseBase64: options.base64 ?? true,
@@ -91,8 +95,9 @@ export class FakeHelper {
         return [await this.#handshakeStep(message)];
       case Command.GetLoginNamesForUrl:
       case Command.GetPasswordForLoginName:
-      case Command.SetPassword:
         return [await this.#query(message)];
+      case Command.SetPassword:
+        return this.#save(message);
       case Command.LaunchPasswordsApp:
         this.passwordsAppLaunches.push(typeof message.searchQueryURL === "string" ? message.searchQueryURL : "");
         return [];
@@ -166,25 +171,23 @@ export class FakeHelper {
     return reply({ TID: hs.tid, MSG: PakeMessage.ServerVerification, HAMK: this.#codec.encode(HAMK), ErrCode: 0 });
   }
 
-  async #query(message: HelperMessage): Promise<HelperMessage> {
-    const payload = message.payload as { SMSG: string };
+  /** Decrypts a request; undefined when it isn't for the current session. */
+  async #open<T>(
+    message: HelperMessage,
+  ): Promise<{ session: { tid: string; channel: SecureChannel }; request: T } | undefined> {
+    const payload = (typeof message.payload === "string" ? JSON.parse(message.payload) : message.payload) as {
+      SMSG: string;
+    };
     const smsg = JSON.parse(payload.SMSG) as { TID: string; SDATA: string };
     const session = this.#session;
-    if (!session || session.tid !== smsg.TID) {
-      return { cmd: message.cmd, payload: { SMSG: JSON.stringify({ TID: smsg.TID, SDATA: "" }) } };
-    }
+    if (!session || session.tid !== smsg.TID) return undefined;
+    return { session, request: (await session.channel.decryptRequest(this.#codec.decode(smsg.SDATA))) as T };
+  }
 
-    const request = (await session.channel.decryptRequest(this.#codec.decode(smsg.SDATA))) as {
-      URL: string;
-      USR?: string;
-      ACT?: number;
-      NURL?: string;
-      NUSR?: string;
-      NPWD?: string;
-    };
-    if (message.cmd === Command.SetPassword) {
-      return this.#reply(session, message.cmd, this.#save(request));
-    }
+  async #query(message: HelperMessage): Promise<HelperMessage> {
+    const opened = await this.#open<{ URL: string; USR?: string }>(message);
+    if (!opened) return { cmd: message.cmd, payload: { SMSG: JSON.stringify({ TID: "", SDATA: "" }) } };
+    const { session, request } = opened;
     const matches = this.vault.filter((e) => e.hostname === request.URL);
     let entries: LoginEntry[];
     if (message.cmd === Command.GetLoginNamesForUrl) {
@@ -196,23 +199,46 @@ export class FakeHelper {
     }
     const result =
       entries.length > 0 ? { STATUS: QueryStatus.Success, Entries: entries } : { STATUS: QueryStatus.NoResults };
-    return this.#reply(session, message.cmd, result);
+    return this.#reply(session, message, message.cmd, result);
   }
 
-  /** "Maybe add": adds the login, or updates the password of an existing one. */
-  #save(request: { ACT?: number; NURL?: string; NUSR?: string; NPWD?: string }): { STATUS: number } {
+  /**
+   * "Maybe add", as the real helper does it: no reply to the request. macOS asks the user, and
+   * after Save the helper sends the tab's updated logins (cmd 4).
+   */
+  async #save(message: HelperMessage): Promise<HelperMessage[]> {
+    const opened = await this.#open<{ ACT?: number; NURL?: string; NUSR?: string; NPWD?: string }>(message);
+    if (!opened) return [];
+    const { session, request } = opened;
     const { NURL: hostname, NUSR: username = "", NPWD: password } = request;
-    if (request.ACT !== Action.MaybeAdd || !hostname || !password) return { STATUS: QueryStatus.InvalidParam };
+    if (request.ACT !== Action.MaybeAdd || !hostname || !password || this.#declineSaves) return [];
     const existing = this.vault.find((e) => e.hostname === hostname && e.username === username);
-    if (existing?.password === password) return { STATUS: QueryStatus.DuplicateItem };
     if (existing) existing.password = password;
     else this.vault.push({ hostname, username, password });
     this.saved.push({ hostname, username, password });
-    return { STATUS: QueryStatus.Success };
+    const entries = this.vault
+      .filter((e) => e.hostname === hostname)
+      .map((e) => ({ USR: e.username, sites: [hostname] }));
+    return [
+      await this.#reply(session, message, Command.GetLoginNamesForUrl, {
+        STATUS: QueryStatus.Success,
+        Entries: entries,
+      }),
+    ];
   }
 
-  async #reply(session: { tid: string; channel: SecureChannel }, cmd: number, result: unknown): Promise<HelperMessage> {
+  /** An encrypted message for the request's tab and frame (replies echo them). */
+  async #reply(
+    session: { tid: string; channel: SecureChannel },
+    request: HelperMessage,
+    cmd: number,
+    result: unknown,
+  ): Promise<HelperMessage> {
     const SDATA = this.#codec.encode(await session.channel.encryptReply(result));
-    return { cmd, payload: { SMSG: JSON.stringify({ TID: session.tid, SDATA }) } };
+    return {
+      cmd,
+      ...(request.tabId === undefined ? {} : { tabId: request.tabId, frameId: request.frameId ?? 0 }),
+      payload: { SMSG: JSON.stringify({ TID: session.tid, SDATA }) },
+    };
   }
 }

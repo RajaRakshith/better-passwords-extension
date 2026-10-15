@@ -4,6 +4,8 @@
 // Env: FAKE_HELPER_CODE  fixed pairing code (default 123456)
 //      FAKE_HELPER_VAULT path to a JSON array of { hostname, username, password }
 //      FAKE_HELPER_LOG   file to append a JSON line to for each request to open the Passwords app
+//                        and each save
+//      FAKE_HELPER_SAVE  "decline" answers every "Save password?" prompt with Don't Save
 
 import { appendFileSync } from "node:fs";
 import { Command, type HelperMessage } from "@app/protocol";
@@ -12,7 +14,11 @@ import { encodeFrame, FrameDecoder } from "./native-messaging.ts";
 
 const vaultPath = process.env.FAKE_HELPER_VAULT;
 const vault: VaultEntry[] = vaultPath ? await Bun.file(vaultPath).json() : [];
-const helper = new FakeHelper({ vault, code: process.env.FAKE_HELPER_CODE ?? "123456" });
+const helper = new FakeHelper({
+  vault,
+  code: process.env.FAKE_HELPER_CODE ?? "123456",
+  declineSaves: process.env.FAKE_HELPER_SAVE === "decline",
+});
 const decoder = new FrameDecoder();
 
 const reader = Bun.stdin.stream().getReader();
@@ -21,11 +27,20 @@ for (;;) {
   if (done) break;
   for (const message of decoder.push(value)) {
     const logPath = process.env.FAKE_HELPER_LOG;
+    const savedBefore = helper.saved.length;
     if (logPath && (message as HelperMessage).cmd === Command.LaunchPasswordsApp) {
-      appendFileSync(logPath, `${JSON.stringify({ url: (message as HelperMessage).searchQueryURL ?? "" })}\n`);
+      appendFileSync(
+        logPath,
+        `${JSON.stringify({ type: "launch", url: (message as HelperMessage).searchQueryURL ?? "" })}\n`,
+      );
     }
     for (const reply of await helper.handle(message as HelperMessage)) {
       await Bun.write(Bun.stdout, encodeFrame(reply));
+    }
+    if (logPath) {
+      for (const save of helper.saved.slice(savedBefore)) {
+        appendFileSync(logPath, `${JSON.stringify({ type: "save", ...save })}\n`);
+      }
     }
   }
 }

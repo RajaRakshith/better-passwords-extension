@@ -84,7 +84,14 @@ interface Waiter {
   resolve(message: HelperMessage): void;
   reject(error: Error): void;
   timer: ReturnType<typeof setTimeout> | undefined;
+  /** Replies to tab-scoped queries echo the tab and frame; anything else isn't ours. */
+  tab?: { tabId: number; frameId: number };
 }
+
+/** "not-saved": the user declined or ignored macOS's prompt, or the connection closed. */
+export type SaveResult = "saved" | "not-saved";
+
+type Tab = { tabId: number; frameId?: number };
 
 const DEFAULTS = { browserName: "Chrome", timeoutMs: 8_000, challengeTtlMs: 3 * 60_000 };
 
@@ -98,6 +105,8 @@ export class ApplePasswordsClient {
   #waiters = new Map<number, Waiter>();
   #queue: Promise<unknown> = Promise.resolve();
   #stateListeners = new Set<(state: ClientState) => void>();
+  /** Messages nobody asked for, such as the logins the helper sends after a save. */
+  #pushListeners = new Set<(message: HelperMessage | undefined) => void>();
   readonly #options: Required<ClientOptions>;
 
   private constructor(
@@ -275,31 +284,58 @@ export class ApplePasswordsClient {
   }
 
   /**
-   * Saves a login to Apple Passwords. The helper adds it, or updates the password when that
-   * username is already saved for the site. No timeout: macOS may ask the user first.
+   * Asks Apple Passwords to save a login. macOS shows its own "Save password?" prompt, and the
+   * helper never answers the request itself. Once the user saves, it sends the tab's updated
+   * logins; that confirms the save. Without confirmation within `confirmTimeoutMs` (declined,
+   * ignored, or the connection closed) the result is "not-saved".
+   *
+   * If the username was already saved for the site, an update can't be told apart from the old
+   * entry this way: callers must verify the password themselves.
    */
   savePassword(
     login: { hostname: string; username: string; password: string },
-    tab: { tabId: number; frameId?: number },
-  ): Promise<void> {
+    tab: Tab,
+    options: { confirmTimeoutMs?: number } = {},
+  ): Promise<SaveResult> {
     return this.#serialized(async () => {
-      await this.#query(
-        Command.SetPassword,
-        login.hostname,
-        tab,
-        {
-          ACT: Action.MaybeAdd,
-          URL: "",
-          USR: "",
-          PWD: "",
-          NURL: login.hostname,
-          NUSR: login.username,
-          NPWD: login.password,
-        },
-        null,
-        // already saved exactly like this: nothing to do
-        [QueryStatus.DuplicateItem],
-      );
+      const frameId = tab.frameId ?? 0;
+      let finish: (result: SaveResult) => void = () => {};
+      const confirmed = new Promise<SaveResult>((resolve) => {
+        const timer = setTimeout(() => finish("not-saved"), options.confirmTimeoutMs ?? 120_000);
+        const listener = (message: HelperMessage | undefined) => {
+          if (!message) return finish("not-saved");
+          if (message.cmd !== Command.GetLoginNamesForUrl || message.tabId !== tab.tabId) return;
+          if ((message.frameId ?? 0) !== frameId) return;
+          this.#openReply(message).then(
+            (reply) => {
+              if (reply.Entries?.some((entry) => entry.USR === login.username)) finish("saved");
+            },
+            () => {},
+          );
+        };
+        finish = (result) => {
+          clearTimeout(timer);
+          this.#pushListeners.delete(listener);
+          resolve(result);
+        };
+        this.#pushListeners.add(listener);
+      });
+      const message = await this.#secureMessage(Command.SetPassword, tab, {
+        ACT: Action.MaybeAdd,
+        URL: "",
+        USR: "",
+        PWD: "",
+        NURL: login.hostname,
+        NUSR: login.username,
+        NPWD: login.password,
+      });
+      try {
+        this.transport.send(message);
+      } catch (error) {
+        finish("not-saved");
+        throw error;
+      }
+      return confirmed;
     });
   }
 
@@ -322,36 +358,39 @@ export class ApplePasswordsClient {
     timeoutMs?: number | null,
     alsoAccept: readonly number[] = [],
   ): Promise<QueryReply> {
-    this.#assertOpen();
-    const channel = this.#channel;
-    if (this.#state !== "unlocked" || !channel) throw new ProtocolError("not paired", "closed");
-
-    const reply = await this.#request(
-      {
-        cmd,
-        tabId: tab.tabId,
-        frameId: tab.frameId ?? 0,
-        url: hostname,
-        payload: {
-          QID: QueryId[cmd],
-          SMSG: JSON.stringify({
-            TID: this.#username,
-            SDATA: this.#codec.encode(await channel.encryptRequest(body)),
-          }),
-        },
-      },
-      timeoutMs,
-    );
-
-    const raw = reply.payload?.SMSG;
-    const smsg = (typeof raw === "string" ? JSON.parse(raw) : raw) as SecureMessage | undefined;
-    if (!smsg || smsg.TID !== this.#username) throw invalid("reply for another session");
-    const result = (await channel.decryptReply(this.#codec.decode(smsg.SDATA))) as QueryReply;
+    const message = { ...(await this.#secureMessage(cmd, tab, body)), url: hostname };
+    const result = await this.#openReply(await this.#request(message, timeoutMs));
 
     if (result.STATUS === QueryStatus.Success || alsoAccept.includes(result.STATUS)) return result;
     if (result.STATUS === QueryStatus.NoResults) return { STATUS: result.STATUS, Entries: [] };
     if (result.STATUS === QueryStatus.InvalidSession) this.#lock();
     throw new ProtocolError(`helper query failed (status ${result.STATUS})`, "query-failed");
+  }
+
+  /** An encrypted, tab-scoped request. */
+  async #secureMessage(cmd: keyof typeof QueryId, tab: Tab, body: Record<string, unknown>) {
+    this.#assertOpen();
+    const channel = this.#channel;
+    if (this.#state !== "unlocked" || !channel) throw new ProtocolError("not paired", "closed");
+    return {
+      cmd,
+      tabId: tab.tabId,
+      frameId: tab.frameId ?? 0,
+      payload: {
+        QID: QueryId[cmd],
+        SMSG: JSON.stringify({ TID: this.#username, SDATA: this.#codec.encode(await channel.encryptRequest(body)) }),
+      },
+    };
+  }
+
+  /** Decrypts an encrypted reply or push from the helper. */
+  async #openReply(message: HelperMessage): Promise<QueryReply> {
+    const channel = this.#channel;
+    if (!channel) throw new ProtocolError("not paired", "closed");
+    const raw = message.payload?.SMSG;
+    const smsg = (typeof raw === "string" ? JSON.parse(raw) : raw) as SecureMessage | undefined;
+    if (!smsg || smsg.TID !== this.#username) throw invalid("reply for another session");
+    return (await channel.decryptReply(this.#codec.decode(smsg.SDATA))) as QueryReply;
   }
 
   /** Runs `task` after every earlier one: replies carry no correlation id. */
@@ -365,7 +404,12 @@ export class ApplePasswordsClient {
     return new Promise<HelperMessage>((resolve, reject) => {
       if (this.#state === "closed") return reject(new ProtocolError("connection closed", "closed"));
       const ms = timeoutMs === undefined ? this.#options.timeoutMs : timeoutMs;
+      const tab =
+        typeof message.tabId === "number"
+          ? { tabId: message.tabId, frameId: typeof message.frameId === "number" ? message.frameId : 0 }
+          : undefined;
       const waiter: Waiter = {
+        ...(tab ? { tab } : {}),
         resolve,
         reject,
         timer:
@@ -389,18 +433,25 @@ export class ApplePasswordsClient {
 
   #dispatch(message: HelperMessage): void {
     const waiter = this.#waiters.get(message.cmd);
-    if (waiter) {
+    const forWaiter =
+      waiter &&
+      (!waiter.tab ||
+        message.tabId === undefined ||
+        (message.tabId === waiter.tab.tabId && (message.frameId ?? 0) === waiter.tab.frameId));
+    if (waiter && forWaiter) {
       this.#waiters.delete(message.cmd);
       clearTimeout(waiter.timer);
       waiter.resolve(message);
       return;
     }
     if (message.cmd === Command.PasswordsDisabled || message.cmd === Command.ReloginNeeded) this.#lock();
+    for (const listener of this.#pushListeners) listener(message);
   }
 
   #lock(): void {
     this.#channel = undefined;
     this.#challenge = undefined;
+    for (const listener of [...this.#pushListeners]) listener(undefined);
     if (this.#state !== "closed") this.#setState("locked");
   }
 
@@ -412,6 +463,7 @@ export class ApplePasswordsClient {
       waiter.reject(new ProtocolError(error ?? "connection closed", "closed"));
     }
     this.#waiters.clear();
+    for (const listener of [...this.#pushListeners]) listener(undefined);
     this.#setState("closed");
   }
 

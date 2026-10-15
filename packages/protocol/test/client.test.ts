@@ -87,17 +87,34 @@ describe("ApplePasswordsClient", () => {
     await vi.waitFor(() => expect(helper.passwordsAppLaunches).toEqual(["https://example.com/login", "", ""]));
   });
 
-  it("saves a new login and updates an existing one", async () => {
+  it("saves a login once the user confirms macOS's prompt", async () => {
     const { helper, client } = await setup();
     await pair(helper, client);
-    await client.savePassword({ hostname: "new.test", username: "dana", password: "s3cret-one" }, tab);
+    const login = { hostname: "new.test", username: "dana", password: "s3cret-one" };
+    expect(await client.savePassword(login, tab)).toBe("saved");
+    expect(helper.saved).toEqual([login]);
     expect(await client.getPassword("new.test", "dana", tab)).toEqual({ username: "dana", password: "s3cret-one" });
+  });
 
-    await client.savePassword({ hostname: "new.test", username: "dana", password: "s3cret-two" }, tab);
-    expect(await client.getPassword("new.test", "dana", tab)).toMatchObject({ password: "s3cret-two" });
-    // saving the same thing again is fine
-    await client.savePassword({ hostname: "new.test", username: "dana", password: "s3cret-two" }, tab);
-    expect(helper.saved).toHaveLength(2);
+  it("reports a declined save as not saved", async () => {
+    const helper = new FakeHelper({ vault, declineSaves: true });
+    const client = await ApplePasswordsClient.connect(new MemoryTransport(helper));
+    await pair(helper, client);
+    const login = { hostname: "new.test", username: "dana", password: "x" };
+    expect(await client.savePassword(login, tab, { confirmTimeoutMs: 50 })).toBe("not-saved");
+    // the queue moves on afterwards
+    expect(await client.getLogins("example.com", tab)).toHaveLength(2);
+  });
+
+  it("stops waiting for a save when the helper exits", async () => {
+    const helper = new FakeHelper({ vault, declineSaves: true });
+    const transport = new MemoryTransport(helper);
+    const client = await ApplePasswordsClient.connect(transport);
+    await pair(helper, client);
+    const saving = client.savePassword({ hostname: "new.test", username: "dana", password: "x" }, tab);
+    await new Promise((r) => setTimeout(r, 10));
+    transport.kill();
+    expect(await saving).toBe("not-saved");
   });
 
   it("refuses to save before pairing", async () => {
@@ -105,6 +122,15 @@ describe("ApplePasswordsClient", () => {
     await expect(
       client.savePassword({ hostname: "new.test", username: "dana", password: "x" }, tab),
     ).rejects.toMatchObject({ code: "closed" });
+  });
+
+  it("ignores updates for another tab while waiting for a reply", async () => {
+    const { helper, transport, client } = await setup();
+    await pair(helper, client);
+    const pending = client.getLogins("example.com", { tabId: 1 });
+    // an unrequested update for tab 2 arrives first; it must not answer tab 1's query
+    transport.push({ cmd: Command.GetLoginNamesForUrl, tabId: 2, frameId: 0, payload: { SMSG: "{}" } });
+    expect((await pending).map((l) => l.username)).toEqual(["alice@example.com", "bob"]);
   });
 
   it("locks when the helper asks to re-login", async () => {

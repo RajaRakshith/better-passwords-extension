@@ -141,7 +141,9 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
       return text
         .split("\n")
         .filter(Boolean)
-        .map((line) => (JSON.parse(line) as { url: string }).url);
+        .map((line) => JSON.parse(line) as { type: string; url: string })
+        .filter((entry) => entry.type === "launch")
+        .map((entry) => entry.url);
     });
   },
   popupUrl: async ({ context }, use) => {
