@@ -61,7 +61,9 @@ export function fillCredentials(
   if (!passwordField && !usernameField) return "no-fields";
   if (usernameField && username) setValue(usernameField, username);
   if (passwordField) setValue(passwordField, password);
-  (passwordField ?? usernameField)?.focus();
+  // leave the filled fields unfocused: the login is ready, and there's nothing left to type
+  const focused = document.activeElement;
+  if (focused instanceof HTMLElement && (focused === passwordField || focused === usernameField)) focused.blur();
   return "filled";
 }
 

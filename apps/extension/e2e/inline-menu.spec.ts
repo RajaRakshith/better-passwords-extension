@@ -14,6 +14,9 @@ test("unlocks from the inline menu and fills the form", async ({ context, siteUr
   await expect(page.locator("#user")).toHaveValue("e2e-user");
   await expect(page.locator("#pass")).toHaveValue("e2e-pass");
   await expect(page.locator("#newsletter-email")).toHaveValue("");
+  // filled and done: no field is left focused
+  await expect(page.locator("#pass")).not.toBeFocused();
+  await expect(page.locator("#user")).not.toBeFocused();
 });
 
 test("moving to the next field opens a fresh menu that still fills", async ({ context, siteUrl }) => {
