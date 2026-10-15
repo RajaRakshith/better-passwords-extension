@@ -288,3 +288,39 @@ button.with-icon svg {
   height: 20px;
   border-radius: 5px;
 }
+
+/* While Apple's code window has the keyboard, the code box asks for a click. */
+.code-field {
+  position: relative;
+}
+
+.click-hint {
+  display: none;
+  margin-top: 6px;
+  color: var(--accent);
+  font-size: 12px;
+  text-align: center;
+}
+
+.code-field.waiting-for-focus .click-hint {
+  display: block;
+}
+
+.code-field.waiting-for-focus .code {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  animation: nudge 1.6s ease-in-out infinite;
+  cursor: pointer;
+}
+
+@keyframes nudge {
+  50% {
+    outline-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .code-field.waiting-for-focus .code {
+    animation: none;
+  }
+}
