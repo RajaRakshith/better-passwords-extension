@@ -34,15 +34,15 @@ export type Request =
   | { type: "open-passwords-app"; tabId?: number }
   // content script → background (the only requests content scripts may send)
   | { type: "autofill-status"; kind: FieldKind }
-  /** A valid form holding a password we generated was sent, with this username. */
-  | { type: "generated-password-submitted"; username: string }
-  /** After that, the password field went away (a dialog closed, a step moved on). */
-  | { type: "generated-form-gone" };
+  /** The username next to a password we generated (as it's typed). */
+  | { type: "generated-username"; username: string }
+  /** The field holding a password we generated went away (a dialog closed, a step moved on). */
+  | { type: "generated-form-gone"; username: string };
 
 /** Requests content scripts are allowed to send. */
 export const CONTENT_SCRIPT_REQUESTS: ReadonlySet<Request["type"]> = new Set([
   "autofill-status",
-  "generated-password-submitted",
+  "generated-username",
   "generated-form-gone",
 ]);
 
@@ -109,7 +109,7 @@ interface Responses {
   "menu-close": null;
   "menu-focus-field": null;
   "open-passwords-app": null;
-  "generated-password-submitted": null;
+  "generated-username": null;
   "generated-form-gone": null;
 }
 

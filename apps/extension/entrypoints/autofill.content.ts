@@ -1,12 +1,6 @@
 import { type FieldKind, fieldKind, isPasswordField } from "@/src/autofill/fields.ts";
 import { MenuHost } from "@/src/autofill/menu-host.ts";
-import {
-  clickedControl,
-  formLooksValid,
-  isUsernameInput,
-  sendsForm,
-  watchForSuccess,
-} from "@/src/autofill/submission.ts";
+import { isGone, isUsernameInput, watchUntilGone } from "@/src/autofill/submission.ts";
 import { isMenuGenuinelyVisible } from "@/src/autofill/visibility.ts";
 import { FILL_MATCHES } from "@/src/config.ts";
 import { fillCredentials, fillNewPassword, usernameNear } from "@/src/fill.ts";
@@ -24,7 +18,7 @@ export default defineContentScript({
     // new-password fields by menu nonce: a save can outlast the menu (macOS asks the user first)
     const newPasswordFields = new Map<string, HTMLInputElement>();
     // the last generated password we filled: to recognise it, and to save it once the form is sent
-    let generated: { field: HTMLInputElement; value: string; saved: boolean } | undefined;
+    let generated: { field: HTMLInputElement; value: string; saved: boolean; username: string } | undefined;
 
     async function offer(field: HTMLInputElement, kind: FieldKind) {
       if (menu.anchor === field || dismissed === field) return;
@@ -118,58 +112,38 @@ export default defineContentScript({
     ctx.onInvalidated(() => menu.close());
 
     // Like Safari: a generated password is filled right away, and Apple Passwords is asked to save
-    // it once the sign-up goes through (see src/autofill/submission.ts). Here: the submit attempt
-    // (submit, a click on a sign-up control, or Enter) on a valid form, and the field going away
-    // afterwards. The background watches the tab for navigation.
+    // it once the page moves on with it: the password field goes away (a dialog closes, a step
+    // moves on) or the tab navigates (watched by the background). An invalid or rejected form
+    // keeps the field, so it isn't asked. Asking once too often beats missing a save: macOS's
+    // prompt has Not Now.
     let lastUsername = "";
     let stopWatching = () => {};
+
+    /** The username to save with: the form's, or the last one typed on the page (multi-step sign-ups). */
+    function trackUsername() {
+      if (!generated || isGone(generated.field)) return;
+      const username = usernameNear(generated.field) || lastUsername;
+      if (username === generated.username) return;
+      generated.username = username;
+      void send({ type: "generated-username", username }).catch(() => {});
+    }
     ctx.addEventListener(
       document,
       "change",
       (event) => {
-        // multi-step sign-ups ask for the email on an earlier step
         if (isUsernameInput(event.target) && event.target.value.trim()) lastUsername = event.target.value.trim();
+        trackUsername();
       },
       { capture: true },
     );
 
-    function submitAttempt() {
-      if (!generated) return;
-      const { field } = generated;
-      if (!field.isConnected || field.value !== generated.value || !formLooksValid(field)) return;
-      const username = usernameNear(field) || lastUsername;
-      void send({ type: "generated-password-submitted", username }).catch(() => {});
+    function watchGenerated(field: HTMLInputElement) {
       stopWatching();
-      stopWatching = watchForSuccess(field, () => {
-        void send({ type: "generated-form-gone" }).catch(() => {});
+      stopWatching = watchUntilGone(field, () => {
+        if (generated?.field !== field || field.value !== generated.value) return;
+        void send({ type: "generated-form-gone", username: generated.username }).catch(() => {});
       });
     }
-    ctx.addEventListener(
-      document,
-      "submit",
-      (event) => {
-        if (generated && event.target === generated.field.form) submitAttempt();
-      },
-      { capture: true },
-    );
-    ctx.addEventListener(
-      document,
-      "click",
-      (event) => {
-        if (generated && sendsForm(clickedControl(event.target), generated.field)) submitAttempt();
-      },
-      { capture: true },
-    );
-    ctx.addEventListener(
-      document,
-      "keydown",
-      (event) => {
-        if (event.key !== "Enter" || !generated || !(event.target instanceof HTMLInputElement)) return;
-        const { field } = generated;
-        if (event.target === field || (field.form && event.target.form === field.form)) submitAttempt();
-      },
-      { capture: true },
-    );
 
     // messages relayed by the background from our menu page; only our extension can send these
     browser.runtime.onMessage.addListener((message: ContentMessage, sender, sendResponse) => {
@@ -186,7 +160,11 @@ export default defineContentScript({
           return false;
         }
         const result = fillNewPassword(message.origin, message.password, field);
-        if (result === "filled") generated = { field, value: message.password, saved: false };
+        if (result === "filled") {
+          generated = { field, value: message.password, saved: false, username: "" };
+          trackUsername();
+          watchGenerated(field);
+        }
         if (menu.isCurrent(message.nonce)) {
           dismissed = field;
           menu.close();

@@ -96,7 +96,7 @@ test("never offers new passwords on a login form", async ({ context, siteUrl }) 
   await expect(menu.getByText("Unlock to fill passwords")).toBeVisible();
 });
 
-test.describe("saves only sign-ups that went through", () => {
+test.describe("asks to save once the page moves on with the password", () => {
   test("not while the browser blocks an invalid form", async ({ context, siteUrl, helperSaves }) => {
     const page = await context.newPage();
     await page.goto(`${siteUrl}/signup.html`);
@@ -139,23 +139,26 @@ test.describe("saves only sign-ups that went through", () => {
     await expect.poll(helperSaves).toEqual([{ hostname: "localhost", username: "enter@example.com", password }]);
   });
 
-  test("when a sign-up dialog closes after creating the account, not when it's dismissed", async ({
+  test("when a sign-up dialog closes after creating the account", async ({ context, siteUrl, helperSaves }) => {
+    const page = await context.newPage();
+    await page.goto(`${siteUrl}/modal.html`);
+    await page.locator("#email").fill("dialog@example.com");
+    const password = await fillStrongPassword(page);
+    await create(page);
+    await expect.poll(helperSaves).toEqual([{ hostname: "localhost", username: "dialog@example.com", password }]);
+  });
+
+  test("also when the dialog is dismissed: better to ask, Not Now is one click", async ({
     context,
     siteUrl,
     helperSaves,
   }) => {
     const page = await context.newPage();
     await page.goto(`${siteUrl}/modal.html`);
-    await page.locator("#email").fill("dialog@example.com");
-    await fillStrongPassword(page);
-    await page.getByRole("button", { name: "Close" }).click();
-    await expectNoSave(page, helperSaves);
-
-    await page.reload();
-    await page.locator("#email").fill("dialog@example.com");
+    await page.locator("#email").fill("dismissed@example.com");
     const password = await fillStrongPassword(page);
-    await create(page);
-    await expect.poll(helperSaves).toEqual([{ hostname: "localhost", username: "dialog@example.com", password }]);
+    await page.getByRole("button", { name: "Close" }).click();
+    await expect.poll(helperSaves).toEqual([{ hostname: "localhost", username: "dismissed@example.com", password }]);
   });
 
   test("on multi-step sign-ups, with the email from the earlier step", async ({ context, siteUrl, helperSaves }) => {
@@ -177,13 +180,16 @@ test.describe("saves only sign-ups that went through", () => {
     await expect.poll(helperSaves).toEqual([{ hostname: "localhost", username: "formless@example.com", password }]);
   });
 
-  test("not when the page is left without signing up", async ({ context, siteUrl, helperSaves }) => {
+  test("when the page is left with the password in it, once", async ({ context, siteUrl, helperSaves }) => {
     const page = await context.newPage();
     await page.goto(`${siteUrl}/signup.html`);
     await page.locator("#email").fill("left@example.com");
-    await fillStrongPassword(page);
+    const password = await fillStrongPassword(page);
     await page.goto(`${siteUrl}/login.html`);
-    await expectNoSave(page, helperSaves);
+    await expect.poll(helperSaves).toEqual([{ hostname: "localhost", username: "left@example.com", password }]);
+    await page.goto(`${siteUrl}/signup.html`);
+    await page.waitForTimeout(1_000);
+    expect(helperSaves()).toHaveLength(1);
   });
 });
 

@@ -37,12 +37,11 @@ interface GeneratedLogin {
   state: "unsaved" | "saving" | "saved";
   /** The username it was (or is being) saved with. */
   username?: string;
-  /** The latest submit attempt; it's saved once that turns out to have gone through. */
-  attempt?: { username: string; at: number };
+  /** The username in the form, as the user types it. */
+  formUsername: string;
+  /** Whether Apple Passwords was asked already: once per generated password. */
+  asked: boolean;
 }
-
-/** How long after a submit attempt its success (navigation, the field going away) still counts. */
-const ATTEMPT_WINDOW_MS = 20_000;
 
 export default defineBackground(() => {
   const session = new Session({
@@ -150,7 +149,13 @@ export default defineBackground(() => {
     if (result !== "filled") return result;
     const previous = generatedByTab.get(tabId);
     if (previous) forget(previous.password);
-    generatedByTab.set(tabId, { hostname: url.hostname, password, state: "unsaved" });
+    generatedByTab.set(tabId, {
+      hostname: url.hostname,
+      password,
+      state: "unsaved",
+      formUsername: context.username,
+      asked: false,
+    });
     unconfirmed.push({ hostname: url.hostname, username: context.username, password });
     return result;
   }
@@ -160,33 +165,27 @@ export default defineBackground(() => {
     if (index >= 0) unconfirmed.splice(index, 1);
   }
 
-  /** A submit attempt; it is saved only once it turns out to have gone through. */
-  function recordAttempt(caller: Caller & { kind: "content-script" }, username: string) {
+  /** The username next to the generated password, as the user types it. */
+  function trackUsername(caller: Caller & { kind: "content-script" }, username: string) {
     const generated = generatedByTab.get(caller.tabId);
-    if (!generated || fillableUrl(caller.url)?.hostname !== generated.hostname) return;
-    generated.attempt = { username, at: Date.now() };
+    if (generated && fillableUrl(caller.url)?.hostname === generated.hostname) generated.formUsername = username;
   }
 
-  /** The tab navigated, changed URL, or the field went away: did a recent attempt go through? */
-  function attemptSucceeded(tabId: number) {
-    const attempt = generatedByTab.get(tabId)?.attempt;
-    if (!attempt || Date.now() - attempt.at > ATTEMPT_WINDOW_MS) return;
-    void saveGenerated(tabId, attempt.username);
-  }
+  // The tab navigated or changed URL while holding a generated password: the page moved on.
   browser.tabs.onUpdated.addListener((tabId, change) => {
-    if (change.url || change.status === "loading") attemptSucceeded(tabId);
+    const generated = generatedByTab.get(tabId);
+    if (generated && (change.url || change.status === "loading")) void saveGenerated(tabId, generated.formUsername);
   });
 
   /**
-   * The sign-up went through: ask Apple Passwords to save the generated password with the form's
-   * username. A new login confirms the save; an update can't be seen, so it's assumed and the
-   * password stays in the popup's list.
+   * The page moved on with a generated password: ask Apple Passwords, once, to save it with the
+   * form's username. A new login confirms the save; an update can't be seen, so it's assumed and
+   * the password stays in the popup's list.
    */
   async function saveGenerated(tabId: number, username: string) {
     const generated = generatedByTab.get(tabId);
-    if (!generated) return;
-    delete generated.attempt;
-    if (generated.state !== "unsaved" && generated.username === username) return;
+    if (!generated || generated.asked) return;
+    generated.asked = true;
     generated.state = "saving";
     generated.username = username;
     const before = await usernamesFor(generated.hostname);
@@ -212,12 +211,13 @@ export default defineBackground(() => {
   async function handle(request: Request, caller: Caller): Promise<unknown> {
     if (caller.kind === "content-script") {
       if (request.type === "autofill-status") return autofillStatus(caller, request.kind);
-      if (request.type === "generated-password-submitted") {
-        recordAttempt(caller, request.username);
+      if (request.type === "generated-username") {
+        trackUsername(caller, request.username);
         return null;
       }
       if (request.type === "generated-form-gone") {
-        attemptSucceeded(caller.tabId);
+        trackUsername(caller, request.username);
+        void saveGenerated(caller.tabId, request.username);
         return null;
       }
       throw new Error("not allowed");
@@ -287,7 +287,7 @@ export default defineBackground(() => {
           .filter((entry) => entry.hostname === url?.hostname)
           .map(({ username, password }) => ({ username, password }));
       }
-      case "generated-password-submitted":
+      case "generated-username":
       case "generated-form-gone":
         throw new Error("content scripts only");
       case "fill-from-menu": {
