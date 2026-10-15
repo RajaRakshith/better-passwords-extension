@@ -153,3 +153,26 @@ test("ignores a copy of the menu framed by the page itself", async ({ context, s
   expect(reply).toEqual({ ok: true, value: { result: "menu-hidden" } });
   await expect(page.locator("#pass")).toHaveValue("");
 });
+
+test("a long list of logins scrolls inside the menu", async ({ context, siteUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
+  await page.locator("#pass").click();
+  const menu = await menuFrame(page);
+  await choose(menu, "Unlock to fill passwords");
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(menu.getByText("e2e-user")).toBeVisible();
+  // make the list longer than the menu's cap, as on a site with many saved logins
+  await menu.evaluate(() => {
+    const panel = document.getElementById("menu") as HTMLElement;
+    const row = panel.querySelector(".row") as HTMLElement;
+    for (let i = 0; i < 15; i++) panel.prepend(row.cloneNode(true));
+  });
+  const scrolled = await menu.evaluate(async () => {
+    const panel = document.getElementById("menu") as HTMLElement;
+    panel.scrollTop = 200;
+    return { scrollTop: panel.scrollTop, overflows: panel.scrollHeight > panel.clientHeight };
+  });
+  expect(scrolled.overflows).toBe(true);
+  expect(scrolled.scrollTop).toBeGreaterThan(0);
+});

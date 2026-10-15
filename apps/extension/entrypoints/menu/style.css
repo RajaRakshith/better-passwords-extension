@@ -21,6 +21,10 @@ body {
   background: var(--surface);
   display: grid;
   gap: 1px;
+  /* the frame is capped (see MenuHost), so long lists scroll inside it, without scrolling the page */
+  max-height: 100vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .row {

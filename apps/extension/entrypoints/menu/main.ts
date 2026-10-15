@@ -63,8 +63,10 @@ function deliberate(event: Event): boolean {
 
 // --- rendering ---------------------------------------------------------------------------------
 
+/** Asks for room for the whole list (the host caps it; beyond that the list scrolls). */
 function reportSize() {
-  void send({ type: "menu-resize", nonce, height: panel.getBoundingClientRect().height }).catch(() => {});
+  const borders = panel.offsetHeight - panel.clientHeight;
+  void send({ type: "menu-resize", nonce, height: panel.scrollHeight + borders }).catch(() => {});
 }
 
 function close() {
