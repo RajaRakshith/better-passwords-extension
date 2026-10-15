@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test service worker</title>
+  </head>
+  <body>
+    <!-- A site's service worker, whose requests belong to no tab: it asks iCloud for something -->
+    <script>
+      window.ready = navigator.serviceWorker.register("/service-worker.js").then(() => navigator.serviceWorker.ready);
+      window.requestFromWorker = async (url) => {
+        const registration = await window.ready;
+        registration.active.postMessage(url);
+      };
+    </script>
+  </body>
+</html>

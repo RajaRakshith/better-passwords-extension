@@ -84,6 +84,8 @@ type Fixtures = {
   declineSaves: boolean;
   /** The emails on the "Me" card the fake companion reports (comma-separated), or "needs-contacts". */
   companionEmails: string;
+  /** Extra command-line switches for the browser. */
+  browserArgs: string[];
   context: BrowserContext;
   popupUrl: string;
   /** Search URLs of the requests to open the Passwords app that reached the fake helper. */
@@ -134,7 +136,8 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
           res.writeHead(404).end();
           return;
         }
-        res.writeHead(200, { "content-type": "text/html" }).end(body);
+        const type = name.endsWith(".js") ? "text/javascript" : "text/html";
+        res.writeHead(200, { "content-type": type }).end(body);
       });
       await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
       await use(`http://localhost:${(server.address() as AddressInfo).port}`);
@@ -145,11 +148,12 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
   companion: ["none", { option: true }],
   declineSaves: [false, { option: true }],
   companionEmails: ["jane@example.com,jane.work@example.com", { option: true }],
-  context: async ({ companion, declineSaves, companionEmails }, use) => {
+  browserArgs: [[], { option: true }],
+  context: async ({ companion, declineSaves, companionEmails, browserArgs }, use) => {
     const dir = profileWithFakeHelper(companion, declineSaves, companionEmails);
     const context = await chromium.launchPersistentContext(join(dir, "profile"), {
       channel: "chromium",
-      args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+      args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`, ...browserArgs],
     });
     profileDirs.set(context, dir);
     await use(context);

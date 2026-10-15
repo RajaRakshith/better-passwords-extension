@@ -2,7 +2,7 @@ import type { FieldKind } from "@/src/autofill/fields.ts";
 import { Companion } from "@/src/companion.ts";
 import { nativeHostFor } from "@/src/config.ts";
 import { fillCredentials } from "@/src/fill.ts";
-import { HideMyEmail, headerRule, ICloudError } from "@/src/icloud/hide-my-email.ts";
+import { HEADER_RULE_ID, HideMyEmail, headerRule, ICloudError } from "@/src/icloud/hide-my-email.ts";
 import {
   type AutofillStatus,
   CONTENT_SCRIPT_REQUESTS,
@@ -226,8 +226,8 @@ export default defineBackground(() => {
   const hideMyEmail = new HideMyEmail();
   async function syncHideMyEmail(on: boolean) {
     await browser.declarativeNetRequest.updateSessionRules({
-      removeRuleIds: [headerRule.id],
-      ...(on ? { addRules: [headerRule] } : {}),
+      removeRuleIds: [HEADER_RULE_ID],
+      ...(on ? { addRules: [headerRule(new URL(browser.runtime.getURL("/")).host)] } : {}),
     });
     if (!on) hideMyEmail.reset();
   }

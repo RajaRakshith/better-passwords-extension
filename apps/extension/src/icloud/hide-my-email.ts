@@ -38,26 +38,32 @@ interface ServiceReply<T> {
 const RULE_ID = 1;
 
 /**
- * Sets icloud.com's Origin and Referer on requests to iCloud that aren't made from a tab: only our
- * own background's, since a session rule never applies to other extensions' requests. Pages'
- * requests to iCloud are left alone.
+ * Sets icloud.com's Origin and Referer on our own background's requests to iCloud, and nobody
+ * else's. `tabIds: [-1]` alone isn't enough: a website's service worker belongs to no tab either,
+ * so the rule also requires our extension as the initiator. `extensionHost` is the host of our
+ * extension's URLs: its ID in Chromium, its per-install UUID in Firefox.
  */
-export const headerRule = {
-  id: RULE_ID,
-  priority: 1,
-  action: {
-    type: "modifyHeaders" as const,
-    requestHeaders: [
-      { header: "Origin", operation: "set" as const, value: ICLOUD_WEB },
-      { header: "Referer", operation: "set" as const, value: `${ICLOUD_WEB}/` },
-    ],
-  },
-  condition: {
-    requestDomains: ["icloud.com"],
-    tabIds: [-1],
-    resourceTypes: ["xmlhttprequest" as const],
-  },
-};
+export function headerRule(extensionHost: string) {
+  return {
+    id: RULE_ID,
+    priority: 1,
+    action: {
+      type: "modifyHeaders" as const,
+      requestHeaders: [
+        { header: "Origin", operation: "set" as const, value: ICLOUD_WEB },
+        { header: "Referer", operation: "set" as const, value: `${ICLOUD_WEB}/` },
+      ],
+    },
+    condition: {
+      requestDomains: ["icloud.com"],
+      initiatorDomains: [extensionHost],
+      tabIds: [-1],
+      resourceTypes: ["xmlhttprequest" as const],
+    },
+  };
+}
+
+export const HEADER_RULE_ID = RULE_ID;
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
