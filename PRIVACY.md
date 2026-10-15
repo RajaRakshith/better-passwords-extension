@@ -1,6 +1,6 @@
 # Privacy policy
 
-Apple Passwords Plus (the browser extension and the optional Mac companion app) collects nothing and sends nothing to anyone.
+Apple Passwords Plus (the browser extension and the optional Mac companion app) collects nothing. It sends nothing anywhere, except to Apple's iCloud if you turn on Hide My Email.
 
 ## What it handles, and where
 
