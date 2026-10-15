@@ -32,11 +32,18 @@ final class SetupModel {
     func reRegisterIfRebuilt() {
         let key = "registeredBuild"
         guard let build = CodeSigning.ownCDHash() else { return }
-        defer { UserDefaults.standard.set(build, forKey: key) }
         // no record (an older build registered it) counts as a different build
-        guard agent.status == .enabled, UserDefaults.standard.string(forKey: key) != build else { return }
-        try? agent.unregister()
-        perform { try agent.register() }
+        guard agent.status == .enabled, UserDefaults.standard.string(forKey: key) != build else {
+            UserDefaults.standard.set(build, forKey: key)
+            return
+        }
+        Task {
+            // the asynchronous unregister returns once macOS has dropped the old registration;
+            // registering right after the synchronous one keeps the old build's pin
+            try? await agent.unregister()
+            perform { try agent.register() }
+            UserDefaults.standard.set(build, forKey: key)
+        }
     }
 
     func refresh() {
