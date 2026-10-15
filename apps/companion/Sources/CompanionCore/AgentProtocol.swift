@@ -9,6 +9,10 @@ import Foundation
     /// Asks for Touch ID, then reads the pairing code Apple's helper shows for the caller's browser.
     /// Replies with the six digits, or with one of `CompanionError`'s raw values.
     func readPairingCode(reply: @escaping @Sendable (_ code: String?, _ error: String?) -> Void)
+
+    /// The email addresses on the user's own contact card ("Me" in Contacts), for sign-up forms.
+    /// Replies with them, or with one of `CompanionError`'s raw values.
+    func myEmails(reply: @escaping @Sendable (_ emails: [String]?, _ error: String?) -> Void)
 }
 
 public enum CompanionError: String, Error, Codable, Sendable, CaseIterable {
@@ -26,6 +30,8 @@ public enum CompanionError: String, Error, Codable, Sendable, CaseIterable {
     case agentUnavailable = "agent-unavailable"
     /// Another request is already in progress.
     case busy
+    /// The app isn't allowed to read Contacts (it asks in its setup window).
+    case needsContacts = "needs-contacts"
 
     public var message: String {
         switch self {
@@ -36,6 +42,7 @@ public enum CompanionError: String, Error, Codable, Sendable, CaseIterable {
         case .untrustedCaller: "The request didn't come from a trusted browser connection."
         case .agentUnavailable: "The Apple Passwords Plus app isn't running. Open it to finish setup."
         case .busy: "Already reading a code."
+        case .needsContacts: "Allow Contacts in Apple Passwords Plus to suggest your email addresses."
         }
     }
 }

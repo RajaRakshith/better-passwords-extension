@@ -51,6 +51,18 @@ public final class XPCAgentClient: HostRelay.Agent, @unchecked Sendable {
         }
     }
 
+    public func myEmails() async -> Result<[String], CompanionError> {
+        await withAgent { agent, finish in
+            agent.myEmails { emails, error in
+                if let emails {
+                    finish(.success(emails))
+                } else {
+                    finish(.failure(error.flatMap(CompanionError.init(rawValue:)) ?? .needsContacts))
+                }
+            }
+        }
+    }
+
     public func readPairingCode() async -> Result<String, CompanionError> {
         await withAgent { agent, finish in
             agent.readPairingCode { code, error in

@@ -6,6 +6,7 @@ public struct HostRelay: Sendable {
     public protocol Agent: Sendable {
         func status() async -> Result<Bool, CompanionError>
         func readPairingCode() async -> Result<String, CompanionError>
+        func myEmails() async -> Result<[String], CompanionError>
     }
 
     let agent: any Agent
@@ -28,6 +29,13 @@ public struct HostRelay: Sendable {
             switch await agent.readPairingCode() {
             case .success(let code):
                 return HostResponse(ok: true, code: code)
+            case .failure(let error):
+                return .failure(error)
+            }
+        case .myEmails:
+            switch await agent.myEmails() {
+            case .success(let emails):
+                return HostResponse(ok: true, emails: emails)
             case .failure(let error):
                 return .failure(error)
             }

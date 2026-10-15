@@ -6,7 +6,9 @@ import Testing
 private struct StubAgent: HostRelay.Agent {
     var statusResult: Result<Bool, CompanionError> = .success(true)
     var codeResult: Result<String, CompanionError> = .success("123456")
+    var emailsResult: Result<[String], CompanionError> = .success(["jane@example.com"])
     func status() async -> Result<Bool, CompanionError> { statusResult }
+    func myEmails() async -> Result<[String], CompanionError> { emailsResult }
     func readPairingCode() async -> Result<String, CompanionError> { codeResult }
 }
 
@@ -36,6 +38,13 @@ private func json(_ response: HostResponse) -> [String: Any] {
         #expect(reply["ok"] as? Bool == false)
         #expect(reply["error"] as? String == "cancelled")
         #expect(reply["message"] as? String == CompanionError.cancelled.message)
+    }
+
+    @Test func relaysContactEmails() async {
+        let reply = json(await HostRelay(agent: StubAgent()).handle(Data(#"{"type":"my-emails"}"#.utf8)))
+        #expect(reply["emails"] as? [String] == ["jane@example.com"])
+        let denied = HostRelay(agent: StubAgent(emailsResult: .failure(.needsContacts)))
+        #expect(json(await denied.handle(Data(#"{"type":"my-emails"}"#.utf8)))["error"] as? String == "needs-contacts")
     }
 
     @Test func rejectsUnknownRequests() async {

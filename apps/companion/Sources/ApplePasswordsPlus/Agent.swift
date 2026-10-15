@@ -59,6 +59,14 @@ final class AgentSession: NSObject, CompanionAgentProtocol, @unchecked Sendable 
         reply(AXIsProcessTrusted())
     }
 
+    func myEmails(reply: @escaping @Sendable ([String]?, String?) -> Void) {
+        IdleExit.shared.touch()
+        switch ContactCard.myEmails() {
+        case .success(let emails): reply(emails, nil)
+        case .failure(let error): reply(nil, error.rawValue)
+        }
+    }
+
     func readPairingCode(reply: @escaping @Sendable (String?, String?) -> Void) {
         IdleExit.shared.begin()
         let caller = caller

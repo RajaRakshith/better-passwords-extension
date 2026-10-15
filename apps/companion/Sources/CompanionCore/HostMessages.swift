@@ -7,6 +7,8 @@ public struct HostRequest: Codable, Equatable, Sendable {
         case hello
         /// Touch ID, then the code on screen.
         case readCode = "read-code"
+        /// The emails on the user's contact card.
+        case myEmails = "my-emails"
     }
 
     public var type: Kind
@@ -20,10 +22,12 @@ public struct HostResponse: Codable, Equatable, Sendable {
     public var version = HostResponse.protocolVersion
     public var code: String?
     public var accessibility: Bool?
+    public var emails: [String]?
     public var error: CompanionError?
     public var message: String?
 
-    public static let protocolVersion = 1
+    /// 1: hello, read-code. 2: adds my-emails.
+    public static let protocolVersion = 2
 
     public static func failure(_ error: CompanionError) -> HostResponse {
         HostResponse(ok: false, error: error, message: error.message)

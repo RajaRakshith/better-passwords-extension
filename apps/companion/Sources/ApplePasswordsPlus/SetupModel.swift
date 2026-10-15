@@ -12,6 +12,7 @@ final class SetupModel {
     private(set) var installedBrowsers: [Browser] = []
     private(set) var agentStatus: SMAppService.Status = .notRegistered
     private(set) var accessibilityTrusted = false
+    private(set) var contactsAllowed = false
     private(set) var lastError: String?
 
     private let agent = SMAppService.agent(plistName: Identity.agentPlistName)
@@ -30,6 +31,7 @@ final class SetupModel {
         connectedBrowsers = HostManifests.connected(hostPath: hostPath, support: support)
         agentStatus = agent.status
         accessibilityTrusted = AXIsProcessTrusted()
+        contactsAllowed = ContactCard.allowed
     }
 
     func connectBrowsers() {
@@ -46,6 +48,14 @@ final class SetupModel {
         // the constant's value; reading the imported global trips Swift 6's concurrency checks
         let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
         accessibilityTrusted = AXIsProcessTrustedWithOptions(options)
+    }
+
+    /// Optional: lets the extension suggest the emails on the user's contact card.
+    func requestContacts() {
+        Task {
+            _ = await ContactCard.requestAccess()
+            refresh()
+        }
     }
 
     /// Undoes everything the app set up. Accessibility can only be removed in System Settings.

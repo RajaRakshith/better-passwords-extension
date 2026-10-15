@@ -29,6 +29,8 @@
 	<!-- The agent role runs without a Dock icon; the setup window switches itself to a normal app. -->
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSContactsUsageDescription</key>
+	<string>Apple Passwords Plus suggests the email addresses on your contact card when you sign up for websites.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>MIT License. Not affiliated with Apple Inc.</string>
 </dict>

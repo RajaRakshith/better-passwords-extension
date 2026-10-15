@@ -53,7 +53,7 @@ if [ "$identity" = "-" ]; then
     cdhash="$(codesign -dvvv "$host" 2>&1 | sed -n 's/^CDHash=//p')"
     plutil -insert APPHostCDHash -string "$cdhash" "$app/Contents/Info.plist"
 fi
-codesign "$@" "$app"
+codesign "$@" --entitlements Resources/ApplePasswordsPlus.entitlements "$app"
 codesign --verify --strict --deep "$app"
 
 echo "built $app ($version, signed: $identity)"

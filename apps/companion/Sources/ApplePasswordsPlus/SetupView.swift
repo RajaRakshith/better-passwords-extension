@@ -39,6 +39,14 @@ struct SetupView: View {
                 actionTitle: "Allow…"
             ) { model.requestAccessibility() }
 
+            Step(
+                number: 4,
+                title: "Suggest your email addresses (optional)",
+                detail: "On sign-up forms, the extension offers the emails on your contact card, like Safari.",
+                done: model.contactsAllowed,
+                actionTitle: "Allow…"
+            ) { model.requestContacts() }
+
             if let error = model.lastError {
                 Text(error).foregroundStyle(.red).font(.callout)
             }
