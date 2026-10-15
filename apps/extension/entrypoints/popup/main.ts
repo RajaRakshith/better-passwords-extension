@@ -189,9 +189,37 @@ async function showLogins(status: Status, error?: string) {
   show(
     h("h1", { textContent: result.hostname ?? DISPLAY_NAME }),
     body,
+    await unconfirmedPasswords(tabId),
     errorLine(error),
     h("div", { class: "actions" }, openApp),
     await footer(status),
+  );
+}
+
+/**
+ * Generated passwords that replaced a saved one on this site. Apple's helper can't confirm the
+ * update, so if the user didn't click Update Password, this is where the new password still is.
+ */
+async function unconfirmedPasswords(tabId: number | undefined) {
+  if (tabId === undefined) return null;
+  const entries = await send({ type: "unconfirmed-passwords", tabId }).catch(() => []);
+  if (entries.length === 0) return null;
+  return h(
+    "div",
+    { class: "card padded" },
+    h(
+      "p",
+      { class: "hint" },
+      "New passwords filled in this session. If you didn't click Update Password on your Mac, copy yours from here:",
+    ),
+    ...entries.map(({ username, password }) => {
+      const copy = h("button", { class: "secondary", textContent: "Copy" });
+      copy.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(password);
+        copy.textContent = "Copied";
+      });
+      return h("div", { class: "actions" }, h("span", { textContent: username || "(no username)" }), copy);
+    }),
   );
 }
 

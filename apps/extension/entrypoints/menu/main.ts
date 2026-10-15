@@ -127,7 +127,7 @@ async function showGenerate(error?: string) {
     return render(message(messageOf(e), true));
   }
   // reopened while a save still waits for the user
-  if ("pending" in reply) return reply.pending === "confirm" ? showConfirmSave(reply.username) : waitForSave();
+  if ("pending" in reply) return waitForSave();
   render(
     row(KEY, "Strong Password", reply.strong, () => void useGenerated("strong"), "detail password"),
     row(
@@ -166,37 +166,9 @@ async function afterSave(saving: Promise<{ result: string }>) {
     const { result } = await saving;
     // when filled, the content script closes the menu
     if (result === "filled") return;
-    if (result === "needs-confirmation") return showConfirmSave();
     await showGenerate(saveError(result));
   } catch (e) {
     await showGenerate(messageOf(e));
-  }
-}
-
-/** Replacing a saved password: Apple's helper can't tell us it saved, so the user confirms. */
-function showConfirmSave(username = "", error?: string) {
-  render(
-    message(
-      `This replaces your saved password${username ? ` for ${username}` : ""}. Click Update Password on your Mac, then come back here:`,
-    ),
-    row(KEY, "I Updated It, Fill It In", "Checks with Touch ID that it was saved", () => void confirmSave(username)),
-    error ? message(error, true) : null,
-    h("hr", { class: "separator" }),
-    row(CANCEL, "Cancel", "", () => void cancelSave()),
-  );
-}
-
-async function confirmSave(username: string) {
-  render(message("Checking that it was saved…"));
-  try {
-    const { result } = await send({ type: "confirm-generated-password", nonce });
-    if (result === "filled") return;
-    if (result === "not-saved") {
-      return showConfirmSave(username, "It isn't updated yet. Click Update Password on your Mac first.");
-    }
-    await showGenerate(saveError(result));
-  } catch (e) {
-    showConfirmSave(username, messageOf(e));
   }
 }
 

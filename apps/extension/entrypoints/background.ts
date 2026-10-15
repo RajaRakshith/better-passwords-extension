@@ -35,8 +35,6 @@ interface PendingSave {
   password: string;
   /** The menu to fill through; updated when the menu is reopened. */
   nonce: string;
-  /** Replacing a saved password: the site's login list can't show whether it was saved. */
-  replaces: boolean;
   abort: AbortController;
   outcome?: Promise<NewPasswordResult>;
 }
@@ -109,6 +107,12 @@ export default defineBackground(() => {
   const generatedForMenu = new Map<string, GeneratedPasswords>();
   const pendingSaves = new Map<number, PendingSave>();
   const filledByTab = new Map<number, { hostname: string; username: string; password: string }>();
+  // generated passwords that replaced a saved one: Apple's helper can't confirm the update, so
+  // they're kept (in memory, until the session ends) for the popup to show
+  const unconfirmed: { hostname: string; username: string; password: string; at: number }[] = [];
+  session.onChange(({ state }) => {
+    if (state !== "unlocked") unconfirmed.length = 0;
+  });
   browser.tabs.onRemoved.addListener((tabId) => {
     pendingSaves.get(tabId)?.abort.abort();
     pendingSaves.delete(tabId);
@@ -131,9 +135,10 @@ export default defineBackground(() => {
   }
 
   /**
-   * Asks Apple Passwords to save a generated password. The page gets it only once it's saved:
-   * a new username is watched for in the site's logins; replacing a saved password needs the
-   * user's word that they clicked Save (see confirmPendingSave).
+   * Asks Apple Passwords to save a generated password. For a new username, the page gets it once
+   * the login shows up in Apple Passwords. Replacing a saved password can't be seen in the site's
+   * logins (and reading the password back costs a Touch ID prompt), so it's filled right away and
+   * kept in memory until the session ends, in case the user didn't click Update Password.
    */
   async function startSave(tabId: number, nonce: string, password: string): Promise<NewPasswordResult> {
     if (pendingSaves.has(tabId)) return awaitPendingSave(tabId, nonce);
@@ -145,29 +150,23 @@ export default defineBackground(() => {
     const replaces = (await usernamesFor(url.hostname)).includes(username);
     const client = await session.unlockedClient();
     await client.savePassword({ hostname: url.hostname, username, password }, { tabId, frameId: 0 });
-    pendingSaves.set(tabId, { url, username, password, nonce, replaces, abort: new AbortController() });
-    return replaces ? "needs-confirmation" : awaitPendingSave(tabId, nonce);
+    const pending: PendingSave = { url, username, password, nonce, abort: new AbortController() };
+    if (replaces) {
+      unconfirmed.push({ hostname: url.hostname, username, password, at: Date.now() });
+      return finishSave(tabId, pending);
+    }
+    pendingSaves.set(tabId, pending);
+    return awaitPendingSave(tabId, nonce);
   }
 
   function awaitPendingSave(tabId: number, nonce: string): Promise<NewPasswordResult> {
     const pending = pendingSaves.get(tabId);
     if (!pending) return Promise.resolve("not-saved");
     pending.nonce = nonce;
-    if (pending.replaces) return Promise.resolve("needs-confirmation");
     pending.outcome ??= waitForLogin(() => usernamesFor(pending.url.hostname), pending.username, {
       signal: pending.abort.signal,
     }).then((saved) => (saved ? finishSave(tabId, pending) : dropSave(tabId, pending)));
     return pending.outcome;
-  }
-
-  /** The user says they clicked Save: check the stored password really is the new one. */
-  async function confirmPendingSave(tabId: number, nonce: string): Promise<NewPasswordResult> {
-    const pending = pendingSaves.get(tabId);
-    if (!pending) return "not-saved";
-    pending.nonce = nonce;
-    const client = await session.unlockedClient();
-    const stored = await client.getPassword(pending.url.hostname, pending.username, { tabId, frameId: 0 });
-    return stored?.password === pending.password ? finishSave(tabId, pending) : "not-saved";
   }
 
   function dropSave(tabId: number, pending: PendingSave): NewPasswordResult {
@@ -252,7 +251,7 @@ export default defineBackground(() => {
         const { rules } = await newPasswordContext(tabId, request.nonce);
         // a menu reopened while a save waits for the user picks up where it left off
         const pending = pendingSaves.get(tabId);
-        if (pending) return { pending: pending.replaces ? "confirm" : "waiting", username: pending.username };
+        if (pending) return { pending: "waiting", username: pending.username };
         const passwords = {
           strong: generatePassword("strong", rules),
           alphanumeric: generatePassword("alphanumeric", rules),
@@ -268,8 +267,12 @@ export default defineBackground(() => {
       }
       case "await-generated-password":
         return { result: await awaitPendingSave(tabOf(caller), request.nonce) };
-      case "confirm-generated-password":
-        return { result: await confirmPendingSave(tabOf(caller), request.nonce) };
+      case "unconfirmed-passwords": {
+        const url = await tabUrl(tabOf(caller, request.tabId));
+        return unconfirmed
+          .filter((entry) => entry.hostname === url?.hostname)
+          .map(({ username, password }) => ({ username, password }));
+      }
       case "cancel-generated-password": {
         const tabId = tabOf(caller);
         pendingSaves.get(tabId)?.abort.abort();

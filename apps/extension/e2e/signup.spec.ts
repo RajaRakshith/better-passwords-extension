@@ -54,7 +54,11 @@ test("never offers new passwords on a login form", async ({ context, siteUrl }) 
   await expect(menu.getByText("Unlock to fill passwords")).toBeVisible();
 });
 
-test("replacing a saved password fills it once the user confirms", async ({ context, siteUrl, helperSaves }) => {
+test("replacing a saved password fills it right away and keeps it for the session", async ({
+  context,
+  siteUrl,
+  helperSaves,
+}) => {
   const page = await context.newPage();
   await page.goto(`${siteUrl}/signup.html`);
   // e2e-user already has a saved password for this site
@@ -66,11 +70,11 @@ test("replacing a saved password fills it once the user confirms", async ({ cont
   const preview = await menu.locator(".password").first().textContent();
   await choose(menu, "Strong Password");
 
-  await expect(menu.getByText("This replaces your saved password")).toBeVisible();
-  expect(helperSaves()).toEqual([{ hostname: "localhost", username: "e2e-user", password: preview }]);
-  await expect(page.locator("#new")).toHaveValue("");
-  await choose(menu, "I Updated It, Fill It In");
+  // an update can't be confirmed, so it's filled without waiting
   await expect(page.locator("#new")).toHaveValue(preview ?? "");
+  expect(helperSaves()).toEqual([{ hostname: "localhost", username: "e2e-user", password: preview }]);
+
+  // (the popup lists it for the session; a popup opened as a tab can't show it, see tabOf)
 });
 
 test.describe("when the user doesn't save", () => {
