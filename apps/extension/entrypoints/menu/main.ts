@@ -28,6 +28,8 @@ const KEY =
   "M12 1.75a5.25 5.25 0 0 1 1.5 10.28v1.72h1.9a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.9v.75h1.4a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.4v.6a.8.8 0 0 1-.23.56l-.7.7a.8.8 0 0 1-1.14 0l-.7-.7a.8.8 0 0 1-.23-.56v-8.15A5.25 5.25 0 0 1 12 1.75Zm0 2.25a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5Z";
 const LOCK =
   "M12 2a5 5 0 0 1 5 5v2.5h.5a2 2 0 0 1 2 2V20a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-8.5a2 2 0 0 1 2-2H7V7a5 5 0 0 1 5-5Zm0 1.75A3.25 3.25 0 0 0 8.75 7v2.5h6.5V7A3.25 3.25 0 0 0 12 3.75Z";
+const CHECK =
+  "M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19Zm4.03 6.22a.75.75 0 0 0-1.06.03l-4.2 4.5-1.74-1.74a.75.75 0 1 0-1.06 1.06l2.29 2.29a.75.75 0 0 0 1.08-.02l4.72-5.06a.75.75 0 0 0-.03-1.06Z";
 const CANCEL =
   "M6.47 6.47a.75.75 0 0 1 1.06 0L12 10.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L13.06 12l4.47 4.47a.75.75 0 1 1-1.06 1.06L12 13.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L10.94 12 6.47 7.53a.75.75 0 0 1 0-1.06Z";
 const OPEN =
@@ -207,6 +209,16 @@ function saveError(result: string): string {
   return "Couldn't fill in this page.";
 }
 
+/** The field already holds a strong password we generated and Apple Passwords saved. */
+function showGeneratedDone() {
+  render(
+    row(CHECK, "Strong Password Saved", "In Apple Passwords", () => close()),
+    row(KEY, "Choose a Different Password", "", () => void showGenerate()),
+    h("hr", { class: "separator" }),
+    openPasswordsRow(false),
+  );
+}
+
 /** After unlocking: the menu's real content. */
 function showUnlocked() {
   return kind === "new-password" ? showGenerate() : showLogins();
@@ -328,4 +340,5 @@ function messageOf(error: unknown): string {
 const mode = params.get("mode");
 if (mode === "locked") void showLocked();
 else if (mode === "generate") void showGenerate();
+else if (mode === "generated") showGeneratedDone();
 else void showLogins();

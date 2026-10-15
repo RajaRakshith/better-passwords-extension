@@ -16,8 +16,9 @@ export default defineContentScript({
     let dismissed: HTMLInputElement | undefined;
     // new-password fields by menu nonce: a save can outlast the menu (macOS asks the user first)
     const newPasswordFields = new Map<string, HTMLInputElement>();
-    // the last generated password we filled, to update its username when the form is submitted
-    let generated: { field: HTMLInputElement; username: string } | undefined;
+    // the last generated password we filled: to recognise it, and to update its username when
+    // the form is submitted
+    let generated: { field: HTMLInputElement; value: string; username: string } | undefined;
 
     async function offer(field: HTMLInputElement, kind: FieldKind) {
       if (menu.anchor === field || dismissed === field) return;
@@ -27,17 +28,26 @@ export default defineContentScript({
       if (ticket !== request || document.activeElement !== field) return;
       // when locked, offer to unlock only where a password is clearly expected
       const unlockHere = kind === "new-password" || isPasswordField(field) || field.autocomplete.includes("username");
-      if (show === "logins" || show === "generate" || (show === "locked" && unlockHere)) {
+      if (kind === "new-password" && field.value !== "") {
+        // our own password: say it's saved; one the user typed: stay out of the way
+        if (show !== "none" && generated?.field.form === field.form && field.value === generated.value) {
+          menu.open(field, "generated", kind);
+        } else {
+          menu.close();
+        }
+      } else if (show === "logins" || show === "generate" || (show === "locked" && unlockHere)) {
         menu.open(field, show, kind);
       } else {
         menu.close();
       }
     }
 
-    function offerFor(target: EventTarget | null) {
+    /** Offers a menu for `target` if it gets one; returns whether it does. */
+    function offerFor(target: EventTarget | null): boolean {
       const kind = fieldKind(target);
-      if (kind && kind !== "signup-email") void offer(target as HTMLInputElement, kind);
-      return kind;
+      if (!kind || kind === "signup-email") return false;
+      void offer(target as HTMLInputElement, kind);
+      return true;
     }
 
     ctx.addEventListener(
@@ -85,6 +95,18 @@ export default defineContentScript({
       },
       { capture: true },
     );
+    // typing a password of one's own closes the suggestions
+    ctx.addEventListener(
+      document,
+      "input",
+      (event) => {
+        if (!event.isTrusted || !menu.isOpen || event.target !== menu.anchor) return;
+        if (fieldKind(event.target) !== "new-password") return;
+        dismissed = menu.anchor;
+        menu.close();
+      },
+      { capture: true },
+    );
     ctx.addEventListener(window, "scroll", () => menu.position(), { capture: true, passive: true });
     ctx.addEventListener(window, "resize", () => menu.position());
     ctx.onInvalidated(() => menu.close());
@@ -123,7 +145,7 @@ export default defineContentScript({
           return false;
         }
         const result = fillNewPassword(message.origin, message.password, field);
-        if (result === "filled") generated = { field, username: usernameNear(field) };
+        if (result === "filled") generated = { field, value: message.password, username: usernameNear(field) };
         if (menu.isCurrent(message.nonce)) {
           dismissed = field;
           menu.close();

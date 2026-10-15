@@ -18,6 +18,11 @@ test("suggests a strong password, saves it, then fills it", async ({ context, si
   await expect(page.locator("#confirm")).toHaveValue(preview ?? "");
   expect(helperSaves()).toEqual([{ hostname: "localhost", username: "new-user@example.com", password: preview }]);
 
+  // back in either field, the menu says it's saved instead of offering new passwords
+  await page.locator("#email").click();
+  await page.locator("#confirm").click();
+  await expect((await menuFrame(page)).getByText("Strong Password Saved")).toBeVisible();
+
   // a different email when submitting is saved too
   await page.locator("#email").fill("renamed@example.com");
   await page.getByRole("button", { name: "Create account" }).click();
@@ -92,4 +97,22 @@ test.describe("when the user doesn't save", () => {
     await expect(menu.getByText("Strong Password").first()).toBeVisible();
     await expect(page.locator("#new")).toHaveValue("");
   });
+});
+
+test("typing a password of one's own closes the suggestions", async ({ context, siteUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/signup.html`);
+  await page.locator("#new").click();
+  const menu = await menuFrame(page);
+  await choose(menu, "Unlock to suggest a strong password");
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(menu.getByText("Without Special Characters")).toBeVisible();
+  await page.locator("#new").focus();
+  await page.keyboard.type("my own password");
+  await expect.poll(() => page.locator("app-autofill-menu").count()).toBe(0);
+  // and it stays closed for that field
+  await page.locator("#email").click();
+  await page.locator("#new").click();
+  await page.waitForTimeout(500);
+  expect(await page.locator("app-autofill-menu").count()).toBe(0);
 });

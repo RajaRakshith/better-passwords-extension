@@ -59,11 +59,12 @@ function profileWithFakeHelper(companion: CompanionMode, declineSaves: boolean):
 /** The inline menu's frame. It sits in a closed shadow root, so find it among the page's frames. */
 export async function menuFrame(page: Page): Promise<Frame> {
   for (let i = 0; i < 50; i++) {
-    const frame = page.frames().find((f) => f.url().includes("/menu.html#"));
-    if (frame) {
+    const frame = page.frames().find((f) => f.url().includes("/menu.html#") && !f.isDetached());
+    // a menu can be replaced right after it appears (the field asked again); then look again
+    const rendered = await frame?.waitForSelector("#menu > *", { timeout: 2_000 }).catch(() => undefined);
+    if (frame && rendered && !frame.isDetached()) {
       // The menu ignores clicks during its first 300 ms on screen (clickjacking guard); a person
       // never clicks that fast, so neither does the test. The clock starts once it has rendered.
-      await frame.waitForSelector("#menu > *");
       await page.waitForTimeout(500);
       return frame;
     }
