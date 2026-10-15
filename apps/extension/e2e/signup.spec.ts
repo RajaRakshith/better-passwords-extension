@@ -1,4 +1,14 @@
+import type { Frame } from "@playwright/test";
 import { choose, expect, menuFrame, PAIRING_CODE, test } from "./fixtures.ts";
+
+/** A suggested password: hidden but for its start, shown while the eye is hovered. */
+async function revealed(menu: Frame, index: number): Promise<string> {
+  const detail = menu.locator(".password").nth(index);
+  expect(await detail.textContent()).toMatch(/^.{3}[•-]+$/);
+  await menu.locator(".reveal").nth(index).hover();
+  await expect(detail).not.toContainText("•");
+  return (await detail.textContent()) ?? "";
+}
 
 test("suggests a strong password, saves it, then fills it", async ({ context, siteUrl, helperSaves }) => {
   const page = await context.newPage();
@@ -9,13 +19,13 @@ test("suggests a strong password, saves it, then fills it", async ({ context, si
   const menu = await menuFrame(page);
   await choose(menu, "Unlock to suggest a strong password");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
-  const preview = await menu.locator(".password").first().textContent();
+  const preview = await revealed(menu, 0);
   expect(preview).toMatch(/^[a-zA-Z0-9]{6}-[a-zA-Z0-9]{6}-[a-zA-Z0-9]{6}$/);
   await choose(menu, "Strong Password");
 
   // the fake helper "clicked Save" in macOS's prompt; only then is the password filled in
-  await expect(page.locator("#new")).toHaveValue(preview ?? "");
-  await expect(page.locator("#confirm")).toHaveValue(preview ?? "");
+  await expect(page.locator("#new")).toHaveValue(preview);
+  await expect(page.locator("#confirm")).toHaveValue(preview);
   expect(helperSaves()).toEqual([{ hostname: "localhost", username: "new-user@example.com", password: preview }]);
 
   // back in either field, the menu says it's saved instead of offering new passwords
@@ -38,10 +48,10 @@ test("offers passwords without special characters", async ({ context, siteUrl, h
   const menu = await menuFrame(page);
   await choose(menu, "Unlock to suggest a strong password");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
-  const preview = await menu.locator(".password").nth(1).textContent();
+  const preview = await revealed(menu, 1);
   expect(preview).toMatch(/^[a-zA-Z0-9]{20}$/);
   await choose(menu, "Without Special Characters");
-  await expect(page.locator("#new")).toHaveValue(preview ?? "");
+  await expect(page.locator("#new")).toHaveValue(preview);
   // no email typed yet: saved without a username, which the helper allows
   expect(helperSaves()).toEqual([{ hostname: "localhost", username: "", password: preview }]);
 });
@@ -67,11 +77,11 @@ test("replacing a saved password fills it right away and keeps it for the sessio
   const menu = await menuFrame(page);
   await choose(menu, "Unlock to suggest a strong password");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
-  const preview = await menu.locator(".password").first().textContent();
+  const preview = await revealed(menu, 0);
   await choose(menu, "Strong Password");
 
   // an update can't be confirmed, so it's filled without waiting
-  await expect(page.locator("#new")).toHaveValue(preview ?? "");
+  await expect(page.locator("#new")).toHaveValue(preview);
   expect(helperSaves()).toEqual([{ hostname: "localhost", username: "e2e-user", password: preview }]);
 
   // (the popup lists it for the session; a popup opened as a tab can't show it, see tabOf)

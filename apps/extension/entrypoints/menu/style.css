@@ -123,3 +123,46 @@ body {
   outline: 2px solid var(--accent);
   outline-offset: 0;
 }
+
+/* a row with an eye button that reveals its password */
+.choice {
+  position: relative;
+}
+
+.choice .row {
+  padding-right: 36px;
+}
+
+.reveal {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-secondary);
+  transform: translateY(-50%);
+  cursor: default;
+}
+
+.choice .reveal svg {
+  width: 16px;
+  height: 16px;
+}
+
+.reveal:hover,
+.reveal:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
+/* on the highlighted (blue) row, the eye follows the row's text color */
+.choice:has(.row:hover) .reveal,
+.choice:has(.row:focus-visible) .reveal {
+  color: var(--accent-text);
+}

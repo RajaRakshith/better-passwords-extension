@@ -20,6 +20,7 @@ function icon(path: string): SVGSVGElement {
   const p = document.createElementNS(SVG_NS, "path");
   p.setAttribute("d", path);
   p.setAttribute("fill", "currentColor");
+  p.setAttribute("fill-rule", "evenodd");
   svg.append(p);
   return svg;
 }
@@ -30,6 +31,8 @@ const LOCK =
   "M12 2a5 5 0 0 1 5 5v2.5h.5a2 2 0 0 1 2 2V20a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-8.5a2 2 0 0 1 2-2H7V7a5 5 0 0 1 5-5Zm0 1.75A3.25 3.25 0 0 0 8.75 7v2.5h6.5V7A3.25 3.25 0 0 0 12 3.75Z";
 const CHECK =
   "M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19Zm4.03 6.22a.75.75 0 0 0-1.06.03l-4.2 4.5-1.74-1.74a.75.75 0 1 0-1.06 1.06l2.29 2.29a.75.75 0 0 0 1.08-.02l4.72-5.06a.75.75 0 0 0-.03-1.06Z";
+const EYE =
+  "M12 5c4.6 0 8.5 2.9 10 7-1.5 4.1-5.4 7-10 7S3.5 16.1 2 12c1.5-4.1 5.4-7 10-7Zm0 1.75c-3.6 0-6.7 2.1-8.1 5.25 1.4 3.15 4.5 5.25 8.1 5.25s6.7-2.1 8.1-5.25C18.7 8.85 15.6 6.75 12 6.75Zm0 1.75a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z";
 const CANCEL =
   "M6.47 6.47a.75.75 0 0 1 1.06 0L12 10.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L13.06 12l4.47 4.47a.75.75 0 1 1-1.06 1.06L12 13.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L10.94 12 6.47 7.53a.75.75 0 0 1 0-1.06Z";
 const OPEN =
@@ -129,18 +132,40 @@ async function showGenerate(error?: string) {
   // reopened while a save still waits for the user
   if ("pending" in reply) return waitForSave();
   render(
-    row(KEY, "Strong Password", reply.strong, () => void useGenerated("strong"), "detail password"),
-    row(
-      KEY,
-      "Without Special Characters",
-      reply.alphanumeric,
-      () => void useGenerated("alphanumeric"),
-      "detail password",
-    ),
+    passwordRow("Strong Password", reply.strong, () => void useGenerated("strong")),
+    passwordRow("Without Special Characters", reply.alphanumeric, () => void useGenerated("alphanumeric")),
     error ? message(error, true) : null,
     h("hr", { class: "separator" }),
     openPasswordsRow(false),
   );
+}
+
+/** Shows the first characters only (and the hyphens), so a shared screen doesn't give it away. */
+function masked(password: string): string {
+  return [...password].map((c, i) => (i < 3 || c === "-" ? c : "•")).join("");
+}
+
+/** A generated password, partly hidden; hovering or focusing the eye shows it, a click keeps it shown. */
+function passwordRow(title: string, password: string, onChoose: () => void): HTMLElement {
+  const choice = row(KEY, title, masked(password), onChoose, "detail password");
+  const detail = choice.querySelector(".password") as HTMLElement;
+  const eye = h("button", { class: "reveal", type: "button", title: "Show password" }, icon(EYE));
+  eye.setAttribute("aria-label", `Show ${title.toLowerCase()}`);
+  let pinned = false;
+  const update = (shown: boolean) => {
+    detail.textContent = shown ? password : masked(password);
+    eye.setAttribute("aria-pressed", String(shown));
+  };
+  eye.addEventListener("mouseenter", () => update(true));
+  eye.addEventListener("mouseleave", () => update(pinned));
+  eye.addEventListener("focus", () => update(true));
+  eye.addEventListener("blur", () => update(pinned));
+  eye.addEventListener("click", () => {
+    pinned = !pinned;
+    update(pinned);
+  });
+  update(false);
+  return h("div", { class: "choice" }, choice, eye);
 }
 
 function showWaiting() {
