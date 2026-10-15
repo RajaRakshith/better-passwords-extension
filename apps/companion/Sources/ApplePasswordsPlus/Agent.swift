@@ -61,6 +61,9 @@ final class AgentSession: NSObject, CompanionAgentProtocol, @unchecked Sendable 
 
     func myEmails(reply: @escaping @Sendable ([String]?, String?) -> Void) {
         IdleExit.shared.touch()
+        // Any program can run our host binary, and so pass the XPC check. Only a browser can be
+        // the parent of Apple's helper: anything else would read Contacts without permission.
+        if case .failure(let error) = Processes.browser(behind: caller) { return reply(nil, error.rawValue) }
         switch ContactCard.myEmails() {
         case .success(let emails): reply(emails, nil)
         case .failure(let error): reply(nil, error.rawValue)
@@ -91,8 +94,11 @@ actor PairingCodeService {
         defer { busy = false }
 
         // The native host is a child of the browser, and so is the browser's copy of Apple's helper.
-        guard let browser = Processes.parent(of: caller), browser > 1 else { return .failure(.untrustedCaller) }
-        guard !Processes.appleHelpers(launchedBy: browser).isEmpty else { return .failure(.noHelper) }
+        let browser: pid_t
+        switch Processes.browser(behind: caller) {
+        case .success(let pid): browser = pid
+        case .failure(let error): return .failure(error)
+        }
         guard AXIsProcessTrusted() else { return .failure(.needsAccessibility) }
 
         let browserName = NSRunningApplication(processIdentifier: browser)?.localizedName ?? "your browser"

@@ -51,6 +51,15 @@ public enum Processes {
         helperPaths.contains(path)
     }
 
+    /// The browser behind a native host: the host's parent, which must have launched Apple's signed
+    /// helper. macOS lets only browsers start the helper (its launch constraints), so this tells a
+    /// browser's request apart from a program that ran our host binary itself.
+    public static func browser(behind host: pid_t) -> Result<pid_t, CompanionError> {
+        guard let browser = parent(of: host), browser > 1 else { return .failure(.untrustedCaller) }
+        guard !appleHelpers(launchedBy: browser).isEmpty else { return .failure(.noHelper) }
+        return .success(browser)
+    }
+
     /// Copies of Apple's helper that `browser` launched, after checking each one's signature.
     public static func appleHelpers(launchedBy browser: pid_t) -> [pid_t] {
         children(of: browser).filter { pid in

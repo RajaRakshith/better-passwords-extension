@@ -23,6 +23,13 @@ import Testing
         #expect(!Processes.process(child.processIdentifier, satisfies: Identity.helperRequirement))
     }
 
+    @Test func onlyABrowserRunningApplesHelperCountsAsOne() {
+        // the test runner's parent runs no copy of Apple's helper: it's like a program that ran
+        // our native host itself, which must not reach the agent's features
+        #expect(Processes.browser(behind: getpid()) == .failure(.noHelper))
+        #expect(Processes.browser(behind: 1) == .failure(.untrustedCaller))
+    }
+
     @Test func recognisesTheHelperByEitherPath() {
         #expect(Processes.isAppleHelperPath(Identity.helperPath))
         // how the kernel reports the running helper: the real location behind /System/Cryptexes
