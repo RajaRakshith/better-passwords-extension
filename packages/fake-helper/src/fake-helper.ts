@@ -5,6 +5,7 @@
 // sides agree, not that they match Apple. The RFC 5054 vectors and the live test cover that.
 
 import {
+  Action,
   BinaryCodec,
   bigIntToBytes,
   bytesToBigInt,
@@ -58,6 +59,8 @@ const group = RFC5054_3072;
 
 export class FakeHelper {
   readonly vault: VaultEntry[];
+  /** Every login saved through the helper, in order. */
+  readonly saved: VaultEntry[] = [];
   /** The search URL of every request to open the Passwords app ("" when none). */
   readonly passwordsAppLaunches: string[] = [];
   readonly #fixedCode: string | undefined;
@@ -88,6 +91,7 @@ export class FakeHelper {
         return [await this.#handshakeStep(message)];
       case Command.GetLoginNamesForUrl:
       case Command.GetPasswordForLoginName:
+      case Command.SetPassword:
         return [await this.#query(message)];
       case Command.LaunchPasswordsApp:
         this.passwordsAppLaunches.push(typeof message.searchQueryURL === "string" ? message.searchQueryURL : "");
@@ -173,7 +177,14 @@ export class FakeHelper {
     const request = (await session.channel.decryptRequest(this.#codec.decode(smsg.SDATA))) as {
       URL: string;
       USR?: string;
+      ACT?: number;
+      NURL?: string;
+      NUSR?: string;
+      NPWD?: string;
     };
+    if (message.cmd === Command.SetPassword) {
+      return this.#reply(session, message.cmd, this.#save(request));
+    }
     const matches = this.vault.filter((e) => e.hostname === request.URL);
     let entries: LoginEntry[];
     if (message.cmd === Command.GetLoginNamesForUrl) {
@@ -185,7 +196,23 @@ export class FakeHelper {
     }
     const result =
       entries.length > 0 ? { STATUS: QueryStatus.Success, Entries: entries } : { STATUS: QueryStatus.NoResults };
+    return this.#reply(session, message.cmd, result);
+  }
+
+  /** "Maybe add": adds the login, or updates the password of an existing one. */
+  #save(request: { ACT?: number; NURL?: string; NUSR?: string; NPWD?: string }): { STATUS: number } {
+    const { NURL: hostname, NUSR: username = "", NPWD: password } = request;
+    if (request.ACT !== Action.MaybeAdd || !hostname || !password) return { STATUS: QueryStatus.InvalidParam };
+    const existing = this.vault.find((e) => e.hostname === hostname && e.username === username);
+    if (existing?.password === password) return { STATUS: QueryStatus.DuplicateItem };
+    if (existing) existing.password = password;
+    else this.vault.push({ hostname, username, password });
+    this.saved.push({ hostname, username, password });
+    return { STATUS: QueryStatus.Success };
+  }
+
+  async #reply(session: { tid: string; channel: SecureChannel }, cmd: number, result: unknown): Promise<HelperMessage> {
     const SDATA = this.#codec.encode(await session.channel.encryptReply(result));
-    return { cmd: message.cmd, payload: { SMSG: JSON.stringify({ TID: session.tid, SDATA }) } };
+    return { cmd, payload: { SMSG: JSON.stringify({ TID: session.tid, SDATA }) } };
   }
 }

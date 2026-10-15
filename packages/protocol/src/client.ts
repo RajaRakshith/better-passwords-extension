@@ -274,6 +274,35 @@ export class ApplePasswordsClient {
     this.transport.send(message);
   }
 
+  /**
+   * Saves a login to Apple Passwords. The helper adds it, or updates the password when that
+   * username is already saved for the site. No timeout: macOS may ask the user first.
+   */
+  savePassword(
+    login: { hostname: string; username: string; password: string },
+    tab: { tabId: number; frameId?: number },
+  ): Promise<void> {
+    return this.#serialized(async () => {
+      await this.#query(
+        Command.SetPassword,
+        login.hostname,
+        tab,
+        {
+          ACT: Action.MaybeAdd,
+          URL: "",
+          USR: "",
+          PWD: "",
+          NURL: login.hostname,
+          NUSR: login.username,
+          NPWD: login.password,
+        },
+        null,
+        // already saved exactly like this: nothing to do
+        [QueryStatus.DuplicateItem],
+      );
+    });
+  }
+
   close(): void {
     if (this.#state === "closed") return;
     try {
@@ -286,11 +315,12 @@ export class ApplePasswordsClient {
   }
 
   async #query(
-    cmd: typeof Command.GetLoginNamesForUrl | typeof Command.GetPasswordForLoginName,
+    cmd: keyof typeof QueryId,
     hostname: string,
     tab: { tabId: number; frameId?: number },
     body: Record<string, unknown>,
     timeoutMs?: number | null,
+    alsoAccept: readonly number[] = [],
   ): Promise<QueryReply> {
     this.#assertOpen();
     const channel = this.#channel;
@@ -318,7 +348,7 @@ export class ApplePasswordsClient {
     if (!smsg || smsg.TID !== this.#username) throw invalid("reply for another session");
     const result = (await channel.decryptReply(this.#codec.decode(smsg.SDATA))) as QueryReply;
 
-    if (result.STATUS === QueryStatus.Success) return result;
+    if (result.STATUS === QueryStatus.Success || alsoAccept.includes(result.STATUS)) return result;
     if (result.STATUS === QueryStatus.NoResults) return { STATUS: result.STATUS, Entries: [] };
     if (result.STATUS === QueryStatus.InvalidSession) this.#lock();
     throw new ProtocolError(`helper query failed (status ${result.STATUS})`, "query-failed");

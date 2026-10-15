@@ -87,6 +87,26 @@ describe("ApplePasswordsClient", () => {
     await vi.waitFor(() => expect(helper.passwordsAppLaunches).toEqual(["https://example.com/login", "", ""]));
   });
 
+  it("saves a new login and updates an existing one", async () => {
+    const { helper, client } = await setup();
+    await pair(helper, client);
+    await client.savePassword({ hostname: "new.test", username: "dana", password: "s3cret-one" }, tab);
+    expect(await client.getPassword("new.test", "dana", tab)).toEqual({ username: "dana", password: "s3cret-one" });
+
+    await client.savePassword({ hostname: "new.test", username: "dana", password: "s3cret-two" }, tab);
+    expect(await client.getPassword("new.test", "dana", tab)).toMatchObject({ password: "s3cret-two" });
+    // saving the same thing again is fine
+    await client.savePassword({ hostname: "new.test", username: "dana", password: "s3cret-two" }, tab);
+    expect(helper.saved).toHaveLength(2);
+  });
+
+  it("refuses to save before pairing", async () => {
+    const { client } = await setup();
+    await expect(
+      client.savePassword({ hostname: "new.test", username: "dana", password: "x" }, tab),
+    ).rejects.toMatchObject({ code: "closed" });
+  });
+
   it("locks when the helper asks to re-login", async () => {
     const { helper, transport, client } = await setup();
     await pair(helper, client);

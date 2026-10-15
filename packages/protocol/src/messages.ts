@@ -8,6 +8,8 @@ export const Command = {
   Handshake: 2,
   GetLoginNamesForUrl: 4,
   GetPasswordForLoginName: 5,
+  /** Save a login ("maybe add"). Apple's extension sends it when a form is submitted. */
+  SetPassword: 6,
   PasswordsDisabled: 9,
   ReloginNeeded: 10,
   LaunchPasswordsApp: 13,
@@ -18,6 +20,7 @@ export type Command = (typeof Command)[keyof typeof Command];
 export const QueryId = {
   [Command.GetLoginNamesForUrl]: "CmdGetLoginNames4URL",
   [Command.GetPasswordForLoginName]: "CmdGetPassword4LoginName",
+  [Command.SetPassword]: "CmdNewAccount4URL",
 } as const;
 
 /** PAKE message types inside the handshake. */
@@ -32,7 +35,7 @@ export const PakeMessage = {
 export const SRP_WITH_RFC_VERIFICATION = 1;
 export const PROTOCOL_VERSION = "1.0";
 
-export const Action = { Search: 2, GhostSearch: 5 } as const;
+export const Action = { Search: 2, MaybeAdd: 4, GhostSearch: 5 } as const;
 
 export const QueryStatus = {
   Success: 0,
@@ -54,6 +57,8 @@ export interface Capabilities {
   shouldUseBase64?: boolean;
   secretSessionVersion?: number;
   canFillOneTimeCodes?: boolean;
+  /** Whether a login can be saved before the user has typed a username. */
+  canSaveAccountWithEmptyUserName?: boolean;
   operatingSystem?: { name: string; majorVersion: number; minorVersion: number };
   [key: string]: unknown;
 }
