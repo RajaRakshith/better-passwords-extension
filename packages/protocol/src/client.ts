@@ -88,9 +88,6 @@ interface Waiter {
   tab?: { tabId: number; frameId: number };
 }
 
-/** "not-saved": the user declined or ignored macOS's prompt, or the connection closed. */
-export type SaveResult = "saved" | "not-saved";
-
 type Tab = { tabId: number; frameId?: number };
 
 const DEFAULTS = { browserName: "Chrome", timeoutMs: 8_000, challengeTtlMs: 3 * 60_000 };
@@ -105,8 +102,7 @@ export class ApplePasswordsClient {
   #waiters = new Map<number, Waiter>();
   #queue: Promise<unknown> = Promise.resolve();
   #stateListeners = new Set<(state: ClientState) => void>();
-  /** Messages nobody asked for, such as the logins the helper sends after a save. */
-  #pushListeners = new Set<(message: HelperMessage | undefined) => void>();
+
   readonly #options: Required<ClientOptions>;
 
   private constructor(
@@ -284,58 +280,23 @@ export class ApplePasswordsClient {
   }
 
   /**
-   * Asks Apple Passwords to save a login. macOS shows its own "Save password?" prompt, and the
-   * helper never answers the request itself. Once the user saves, it sends the tab's updated
-   * logins; that confirms the save. Without confirmation within `confirmTimeoutMs` (declined,
-   * ignored, or the connection closed) the result is "not-saved".
-   *
-   * If the username was already saved for the site, an update can't be told apart from the old
-   * entry this way: callers must verify the password themselves.
+   * Asks Apple Passwords to save a login. macOS shows its own "Save password?" prompt; the helper
+   * saves in the background once the user agrees and never reports back. To know the outcome,
+   * look the login up afterwards (see `getLogins`).
    */
-  savePassword(
-    login: { hostname: string; username: string; password: string },
-    tab: Tab,
-    options: { confirmTimeoutMs?: number } = {},
-  ): Promise<SaveResult> {
+  savePassword(login: { hostname: string; username: string; password: string }, tab: Tab): Promise<void> {
     return this.#serialized(async () => {
-      const frameId = tab.frameId ?? 0;
-      let finish: (result: SaveResult) => void = () => {};
-      const confirmed = new Promise<SaveResult>((resolve) => {
-        const timer = setTimeout(() => finish("not-saved"), options.confirmTimeoutMs ?? 120_000);
-        const listener = (message: HelperMessage | undefined) => {
-          if (!message) return finish("not-saved");
-          if (message.cmd !== Command.GetLoginNamesForUrl || message.tabId !== tab.tabId) return;
-          if ((message.frameId ?? 0) !== frameId) return;
-          this.#openReply(message).then(
-            (reply) => {
-              if (reply.Entries?.some((entry) => entry.USR === login.username)) finish("saved");
-            },
-            () => {},
-          );
-        };
-        finish = (result) => {
-          clearTimeout(timer);
-          this.#pushListeners.delete(listener);
-          resolve(result);
-        };
-        this.#pushListeners.add(listener);
-      });
-      const message = await this.#secureMessage(Command.SetPassword, tab, {
-        ACT: Action.MaybeAdd,
-        URL: "",
-        USR: "",
-        PWD: "",
-        NURL: login.hostname,
-        NUSR: login.username,
-        NPWD: login.password,
-      });
-      try {
-        this.transport.send(message);
-      } catch (error) {
-        finish("not-saved");
-        throw error;
-      }
-      return confirmed;
+      this.transport.send(
+        await this.#secureMessage(Command.SetPassword, tab, {
+          ACT: Action.MaybeAdd,
+          URL: "",
+          USR: "",
+          PWD: "",
+          NURL: login.hostname,
+          NUSR: login.username,
+          NPWD: login.password,
+        }),
+      );
     });
   }
 
@@ -445,13 +406,11 @@ export class ApplePasswordsClient {
       return;
     }
     if (message.cmd === Command.PasswordsDisabled || message.cmd === Command.ReloginNeeded) this.#lock();
-    for (const listener of this.#pushListeners) listener(message);
   }
 
   #lock(): void {
     this.#channel = undefined;
     this.#challenge = undefined;
-    for (const listener of [...this.#pushListeners]) listener(undefined);
     if (this.#state !== "closed") this.#setState("locked");
   }
 
@@ -463,7 +422,6 @@ export class ApplePasswordsClient {
       waiter.reject(new ProtocolError(error ?? "connection closed", "closed"));
     }
     this.#waiters.clear();
-    for (const listener of [...this.#pushListeners]) listener(undefined);
     this.#setState("closed");
   }
 

@@ -87,34 +87,22 @@ describe("ApplePasswordsClient", () => {
     await vi.waitFor(() => expect(helper.passwordsAppLaunches).toEqual(["https://example.com/login", "", ""]));
   });
 
-  it("saves a login once the user confirms macOS's prompt", async () => {
+  it("saves a login, which a lookup then finds", async () => {
     const { helper, client } = await setup();
     await pair(helper, client);
     const login = { hostname: "new.test", username: "dana", password: "s3cret-one" };
-    expect(await client.savePassword(login, tab)).toBe("saved");
-    expect(helper.saved).toEqual([login]);
-    expect(await client.getPassword("new.test", "dana", tab)).toEqual({ username: "dana", password: "s3cret-one" });
+    await client.savePassword(login, tab);
+    await vi.waitFor(() => expect(helper.saved).toEqual([login]));
+    expect((await client.getLogins("new.test", { tabId: 99 })).map((l) => l.username)).toEqual(["dana"]);
   });
 
-  it("reports a declined save as not saved", async () => {
+  it("keeps working when the user declines", async () => {
     const helper = new FakeHelper({ vault, declineSaves: true });
     const client = await ApplePasswordsClient.connect(new MemoryTransport(helper));
     await pair(helper, client);
-    const login = { hostname: "new.test", username: "dana", password: "x" };
-    expect(await client.savePassword(login, tab, { confirmTimeoutMs: 50 })).toBe("not-saved");
-    // the queue moves on afterwards
-    expect(await client.getLogins("example.com", tab)).toHaveLength(2);
-  });
-
-  it("stops waiting for a save when the helper exits", async () => {
-    const helper = new FakeHelper({ vault, declineSaves: true });
-    const transport = new MemoryTransport(helper);
-    const client = await ApplePasswordsClient.connect(transport);
-    await pair(helper, client);
-    const saving = client.savePassword({ hostname: "new.test", username: "dana", password: "x" }, tab);
-    await new Promise((r) => setTimeout(r, 10));
-    transport.kill();
-    expect(await saving).toBe("not-saved");
+    await client.savePassword({ hostname: "new.test", username: "dana", password: "x" }, tab);
+    expect(await client.getLogins("new.test", { tabId: 99 })).toEqual([]);
+    expect(helper.saved).toEqual([]);
   });
 
   it("refuses to save before pairing", async () => {

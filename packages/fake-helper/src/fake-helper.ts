@@ -75,7 +75,8 @@ export class FakeHelper {
   currentCode: string | undefined;
 
   constructor(options: FakeHelperOptions = {}) {
-    this.vault = options.vault ?? [];
+    // a copy, so saves in one test can't leak into another sharing the same vault
+    this.vault = (options.vault ?? []).map((entry) => ({ ...entry }));
     this.#fixedCode = options.code;
     this.#declineSaves = options.declineSaves ?? false;
     this.#codec = new BinaryCodec(options.base64 ?? true);
@@ -203,28 +204,23 @@ export class FakeHelper {
   }
 
   /**
-   * "Maybe add", as the real helper does it: no reply to the request. macOS asks the user, and
-   * after Save the helper sends the tab's updated logins (cmd 4).
+   * "Maybe add", as the real helper does it: no reply to the request, and the login is saved once
+   * the user clicks Save in macOS's prompt. Like the real helper, it also sends the tab an update
+   * that lists no logins, which callers must not mistake for an answer.
    */
   async #save(message: HelperMessage): Promise<HelperMessage[]> {
     const opened = await this.#open<{ ACT?: number; NURL?: string; NUSR?: string; NPWD?: string }>(message);
     if (!opened) return [];
     const { session, request } = opened;
     const { NURL: hostname, NUSR: username = "", NPWD: password } = request;
-    if (request.ACT !== Action.MaybeAdd || !hostname || !password || this.#declineSaves) return [];
+    if (request.ACT !== Action.MaybeAdd || !hostname || !password) return [];
+    const update = await this.#reply(session, message, Command.GetLoginNamesForUrl, { STATUS: QueryStatus.Success });
+    if (this.#declineSaves) return [update];
     const existing = this.vault.find((e) => e.hostname === hostname && e.username === username);
     if (existing) existing.password = password;
     else this.vault.push({ hostname, username, password });
     this.saved.push({ hostname, username, password });
-    const entries = this.vault
-      .filter((e) => e.hostname === hostname)
-      .map((e) => ({ USR: e.username, sites: [hostname] }));
-    return [
-      await this.#reply(session, message, Command.GetLoginNamesForUrl, {
-        STATUS: QueryStatus.Success,
-        Entries: entries,
-      }),
-    ];
+    return [update];
   }
 
   /** An encrypted message for the request's tab and frame (replies echo them). */
