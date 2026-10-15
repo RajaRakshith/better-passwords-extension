@@ -41,13 +41,34 @@ async function refresh(error?: string) {
     default:
       // locked or disconnected: start unlocking right away, saving the user a click
       if (status.touchId && !error) return unlockWithTouchId(status);
+      codeRequest = popupSettled().then(() => send({ type: "request-code" }));
+      showCodeEntry(status, error);
       try {
-        await send({ type: "request-code" });
-        return showCodeEntry(status, error);
+        await codeRequest;
       } catch (e) {
         return showRetry(error ?? messageOf(e));
       }
   }
+}
+
+/** The pending request for a code; a code typed meanwhile is checked once it's done. */
+let codeRequest: Promise<unknown> = Promise.resolve();
+
+/**
+ * Resolves once the popup has the keyboard and a moment has passed. Asked while the popup is
+ * still opening, Apple's code window takes the keyboard from it; asked afterwards, it doesn't.
+ * Never waits more than a second.
+ */
+function popupSettled(): Promise<void> {
+  return new Promise((resolve) => {
+    const done = setTimeout(resolve, 1_000);
+    const settle = () => {
+      clearTimeout(done);
+      setTimeout(resolve, 300);
+    };
+    if (document.hasFocus()) settle();
+    else window.addEventListener("focus", settle, { once: true });
+  });
 }
 
 async function unlockWithTouchId(status: Status) {
@@ -98,11 +119,12 @@ function showCodeEntry(status: Status, error?: string) {
     ariaLabel: "Verification code",
     autofocus: true,
   });
-  const newCode = h("button", { class: "link", textContent: "Show a new code" });
+  const newCode = h("button", { class: "link", textContent: "Show code again" });
 
   const submit = async (code: string) => {
     input.disabled = true;
     try {
+      await codeRequest.catch(() => {});
       await send({ type: "verify-code", code });
       await refresh();
     } catch (e) {

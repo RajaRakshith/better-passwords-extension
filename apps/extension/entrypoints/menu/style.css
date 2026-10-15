@@ -192,3 +192,20 @@ body {
     animation-duration: 2.4s;
   }
 }
+
+/* a quiet text button, e.g. "Show code again" under the code box */
+.link {
+  justify-self: center;
+  margin: 0 0 4px;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: default;
+}
+
+.link:hover {
+  text-decoration: underline;
+}

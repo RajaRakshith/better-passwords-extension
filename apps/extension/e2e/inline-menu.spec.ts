@@ -8,6 +8,15 @@ test("unlocks from the inline menu and fills the form", async ({ context, siteUr
   // locked: the menu offers to unlock, and the code is typed inside the extension's own frame
   const menu = await menuFrame(page);
   await choose(menu, "Unlock to fill passwords");
+  // the code box and "Show code again" fit: nothing to scroll
+  await expect(menu.getByText("Show code again")).toBeVisible();
+  await page.waitForTimeout(300);
+  expect(
+    await menu.evaluate(() => {
+      const panel = document.getElementById("menu") as HTMLElement;
+      return panel.scrollHeight - panel.clientHeight;
+    }),
+  ).toBeLessThanOrEqual(0);
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
 
   await choose(menu, "e2e-user");

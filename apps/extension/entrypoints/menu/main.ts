@@ -45,7 +45,9 @@ function deliberate(event: Event): boolean {
 /** Asks for room for the whole list (the host caps it; beyond that the list scrolls). */
 function reportSize() {
   const borders = panel.offsetHeight - panel.clientHeight;
-  void send({ type: "menu-resize", nonce, height: panel.scrollHeight + borders }).catch(() => {});
+  // scrollHeight is rounded, the content may be a fraction taller: one spare pixel keeps a list
+  // that fits from scrolling by that fraction
+  void send({ type: "menu-resize", nonce, height: panel.scrollHeight + borders + 1 }).catch(() => {});
 }
 
 function close() {
@@ -423,7 +425,14 @@ function showCodeEntry(error?: string) {
       showCodeEntry(messageOf(e));
     }
   });
-  render(message("Enter the code shown on your Mac"), input, error ? message(error, true) : null);
+  // closed Apple's code window? this brings a fresh one up
+  const again = h("button", { class: "link", type: "button", textContent: "Show code again" });
+  again.addEventListener("click", async () => {
+    input.value = "";
+    await send({ type: "request-code", fresh: true }).catch((e) => showCodeEntry(messageOf(e)));
+    input.focus();
+  });
+  render(message("Enter the code shown on your Mac"), input, error ? message(error, true) : null, again);
   input.focus();
 }
 
