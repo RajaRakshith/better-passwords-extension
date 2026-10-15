@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test multi-step sign-up</title>
+    <style>
+      body { font: 16px system-ui; padding: 40px; }
+      input { display: block; margin: 8px 0 16px; padding: 6px; width: 260px; }
+    </style>
+  </head>
+  <body>
+    <!-- step 1 asks for the email, step 2 (a separate form) for the password -->
+    <div id="step1">
+      <form id="email-step" onsubmit="return false">
+        <label>Email <input id="email" type="email" autocomplete="email" /></label>
+        <button id="continue" type="button">Continue</button>
+      </form>
+    </div>
+    <div id="step2" hidden>
+      <form id="password-step">
+        <label>Password <input id="new" type="password" autocomplete="new-password" /></label>
+        <label>Confirm <input id="confirm" type="password" autocomplete="new-password" /></label>
+        <button type="submit">Create account</button>
+      </form>
+    </div>
+    <script>
+      document.getElementById("continue").addEventListener("click", () => {
+        document.getElementById("step1").hidden = true;
+        document.getElementById("step2").hidden = false;
+      });
+      document.getElementById("password-step").addEventListener("submit", (event) => {
+        event.preventDefault();
+        document.getElementById("step2").textContent = "Welcome!";
+      });
+    </script>
+  </body>
+</html>

@@ -1,5 +1,12 @@
 import { type FieldKind, fieldKind, isPasswordField } from "@/src/autofill/fields.ts";
 import { MenuHost } from "@/src/autofill/menu-host.ts";
+import {
+  clickedControl,
+  formLooksValid,
+  isUsernameInput,
+  sendsForm,
+  watchForSuccess,
+} from "@/src/autofill/submission.ts";
 import { isMenuGenuinelyVisible } from "@/src/autofill/visibility.ts";
 import { FILL_MATCHES } from "@/src/config.ts";
 import { fillCredentials, fillNewPassword, usernameNear } from "@/src/fill.ts";
@@ -16,8 +23,7 @@ export default defineContentScript({
     let dismissed: HTMLInputElement | undefined;
     // new-password fields by menu nonce: a save can outlast the menu (macOS asks the user first)
     const newPasswordFields = new Map<string, HTMLInputElement>();
-    // the last generated password we filled: to recognise it, and to update its username when
-    // the form is submitted
+    // the last generated password we filled: to recognise it, and to save it once the form is sent
     let generated: { field: HTMLInputElement; value: string; saved: boolean } | undefined;
 
     async function offer(field: HTMLInputElement, kind: FieldKind) {
@@ -112,29 +118,58 @@ export default defineContentScript({
     ctx.onInvalidated(() => menu.close());
 
     // Like Safari: a generated password is filled right away, and Apple Passwords is asked to save
-    // it when its form is submitted (many sites submit with script, so a click on a submit button
-    // counts too) or when the page is left with it still in the field.
-    function generatedFormSubmitted(form: HTMLFormElement | null) {
-      if (!generated?.field.isConnected || generated.field.form !== form) return;
-      if (generated.field.value !== generated.value) return;
-      void send({ type: "generated-password-submitted", username: usernameNear(generated.field) }).catch(() => {});
+    // it once the sign-up goes through (see src/autofill/submission.ts). Here: the submit attempt
+    // (submit, a click on a sign-up control, or Enter) on a valid form, and the field going away
+    // afterwards. The background watches the tab for navigation.
+    let lastUsername = "";
+    let stopWatching = () => {};
+    ctx.addEventListener(
+      document,
+      "change",
+      (event) => {
+        // multi-step sign-ups ask for the email on an earlier step
+        if (isUsernameInput(event.target) && event.target.value.trim()) lastUsername = event.target.value.trim();
+      },
+      { capture: true },
+    );
+
+    function submitAttempt() {
+      if (!generated) return;
+      const { field } = generated;
+      if (!field.isConnected || field.value !== generated.value || !formLooksValid(field)) return;
+      const username = usernameNear(field) || lastUsername;
+      void send({ type: "generated-password-submitted", username }).catch(() => {});
+      stopWatching();
+      stopWatching = watchForSuccess(field, () => {
+        void send({ type: "generated-form-gone" }).catch(() => {});
+      });
     }
-    ctx.addEventListener(document, "submit", (event) => generatedFormSubmitted(event.target as HTMLFormElement), {
-      capture: true,
-    });
+    ctx.addEventListener(
+      document,
+      "submit",
+      (event) => {
+        if (generated && event.target === generated.field.form) submitAttempt();
+      },
+      { capture: true },
+    );
     ctx.addEventListener(
       document,
       "click",
       (event) => {
-        const button = (event.target as Element | null)?.closest?.("button, input[type=submit]");
-        if (button instanceof HTMLButtonElement && button.type !== "submit") return;
-        if (button) generatedFormSubmitted((button as HTMLButtonElement | HTMLInputElement).form);
+        if (generated && sendsForm(clickedControl(event.target), generated.field)) submitAttempt();
       },
       { capture: true },
     );
-    ctx.addEventListener(window, "pagehide", () => {
-      if (generated && !generated.saved) generatedFormSubmitted(generated.field.form);
-    });
+    ctx.addEventListener(
+      document,
+      "keydown",
+      (event) => {
+        if (event.key !== "Enter" || !generated || !(event.target instanceof HTMLInputElement)) return;
+        const { field } = generated;
+        if (event.target === field || (field.form && event.target.form === field.form)) submitAttempt();
+      },
+      { capture: true },
+    );
 
     // messages relayed by the background from our menu page; only our extension can send these
     browser.runtime.onMessage.addListener((message: ContentMessage, sender, sendResponse) => {

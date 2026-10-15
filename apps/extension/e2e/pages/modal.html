@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test sign-up dialog</title>
+    <style>
+      body { font: 16px system-ui; padding: 40px; }
+      input { display: block; margin: 8px 0 16px; padding: 6px; width: 260px; }
+    </style>
+  </head>
+  <body>
+    <!-- a sign-up dialog that closes when the account is created, or with its close button -->
+    <div id="dialog" role="dialog">
+      <button id="close" type="button" aria-label="Close">×</button>
+      <form id="signup">
+        <label>Email <input id="email" type="email" autocomplete="email" /></label>
+        <label>Password <input id="new" type="password" autocomplete="new-password" /></label>
+        <button type="submit">Create account</button>
+      </form>
+    </div>
+    <script>
+      const dialog = document.getElementById("dialog");
+      document.getElementById("close").addEventListener("click", () => dialog.remove());
+      document.getElementById("signup").addEventListener("submit", (event) => {
+        event.preventDefault();
+        setTimeout(() => dialog.remove(), 100);
+      });
+    </script>
+  </body>
+</html>

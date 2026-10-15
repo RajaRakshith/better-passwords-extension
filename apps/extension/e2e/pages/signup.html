@@ -9,14 +9,25 @@
     </style>
   </head>
   <body>
-    <form id="signup">
-      <label>Email <input id="email" type="email" autocomplete="email" /></label>
-      <label>Password <input id="new" type="password" autocomplete="new-password" /></label>
+    <!-- ?mode= replace (default): the form is replaced by a welcome message; navigate: a real
+         submit to welcome.html; spa: the URL changes, the form stays; error: the site rejects it -->
+    <form id="signup" action="welcome.html" method="post">
+      <label>Email <input id="email" name="email" type="email" autocomplete="email" /></label>
+      <label>Password <input id="new" name="password" type="password" autocomplete="new-password" /></label>
       <label>Confirm password <input id="confirm" type="password" autocomplete="new-password" /></label>
+      <p id="error" role="alert"></p>
       <button type="submit">Create account</button>
     </form>
     <script>
-      document.getElementById("signup").addEventListener("submit", (event) => event.preventDefault());
+      const mode = new URLSearchParams(location.search).get("mode") ?? "replace";
+      const form = document.getElementById("signup");
+      form.addEventListener("submit", (event) => {
+        if (mode === "navigate") return;
+        event.preventDefault();
+        if (mode === "error") document.getElementById("error").textContent = "That email is already taken.";
+        else if (mode === "spa") history.pushState({}, "", "welcome");
+        else setTimeout(() => form.replaceWith(Object.assign(document.createElement("p"), { textContent: "Welcome!" })), 100);
+      });
     </script>
   </body>
 </html>

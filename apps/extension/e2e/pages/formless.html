@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test sign-up without a form</title>
+    <style>
+      body { font: 16px system-ui; padding: 40px; }
+      input { display: block; margin: 8px 0 16px; padding: 6px; width: 260px; }
+      [role="button"] { display: inline-block; padding: 8px 16px; background: #0a84ff; color: white; }
+    </style>
+  </head>
+  <body>
+    <!-- no <form>: script reads the fields when the "button" is clicked -->
+    <div id="signup">
+      <label>Email <input id="email" type="email" autocomplete="email" /></label>
+      <label>Password <input id="new" type="password" autocomplete="new-password" /></label>
+    </div>
+    <script>
+      // a <div> acting as a button, as many sites do (made here so the markup stays lint-clean)
+      const go = Object.assign(document.createElement("div"), { id: "go", tabIndex: 0, textContent: "Sign up" });
+      go.setAttribute("role", "button");
+      document.getElementById("signup").append(go);
+      document.getElementById("go").addEventListener("click", () => {
+        setTimeout(() => document.getElementById("signup").replaceWith("Welcome!"), 100);
+      });
+    </script>
+  </body>
+</html>

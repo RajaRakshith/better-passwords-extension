@@ -37,7 +37,12 @@ interface GeneratedLogin {
   state: "unsaved" | "saving" | "saved";
   /** The username it was (or is being) saved with. */
   username?: string;
+  /** The latest submit attempt; it's saved once that turns out to have gone through. */
+  attempt?: { username: string; at: number };
 }
+
+/** How long after a submit attempt its success (navigation, the field going away) still counts. */
+const ATTEMPT_WINDOW_MS = 20_000;
 
 export default defineBackground(() => {
   const session = new Session({
@@ -155,22 +160,40 @@ export default defineBackground(() => {
     if (index >= 0) unconfirmed.splice(index, 1);
   }
 
-  /**
-   * The form with a generated password was submitted (or the page left): ask Apple Passwords to
-   * save it with the form's username. A new login confirms the save; an update can't be seen, so
-   * it's assumed and the password stays in the popup's list.
-   */
-  async function saveGenerated(caller: Caller & { kind: "content-script" }, username: string) {
+  /** A submit attempt; it is saved only once it turns out to have gone through. */
+  function recordAttempt(caller: Caller & { kind: "content-script" }, username: string) {
     const generated = generatedByTab.get(caller.tabId);
     if (!generated || fillableUrl(caller.url)?.hostname !== generated.hostname) return;
+    generated.attempt = { username, at: Date.now() };
+  }
+
+  /** The tab navigated, changed URL, or the field went away: did a recent attempt go through? */
+  function attemptSucceeded(tabId: number) {
+    const attempt = generatedByTab.get(tabId)?.attempt;
+    if (!attempt || Date.now() - attempt.at > ATTEMPT_WINDOW_MS) return;
+    void saveGenerated(tabId, attempt.username);
+  }
+  browser.tabs.onUpdated.addListener((tabId, change) => {
+    if (change.url || change.status === "loading") attemptSucceeded(tabId);
+  });
+
+  /**
+   * The sign-up went through: ask Apple Passwords to save the generated password with the form's
+   * username. A new login confirms the save; an update can't be seen, so it's assumed and the
+   * password stays in the popup's list.
+   */
+  async function saveGenerated(tabId: number, username: string) {
+    const generated = generatedByTab.get(tabId);
+    if (!generated) return;
+    delete generated.attempt;
     if (generated.state !== "unsaved" && generated.username === username) return;
     generated.state = "saving";
     generated.username = username;
     const before = await usernamesFor(generated.hostname);
     const client = await session.unlockedClient();
     const { hostname, password } = generated;
-    await client.savePassword({ hostname, username, password }, { tabId: caller.tabId, frameId: 0 });
-    const tab = caller.tabId;
+    await client.savePassword({ hostname, username, password }, { tabId, frameId: 0 });
+    const tab = tabId;
     if (username !== "" && before.includes(username)) return markSaved(tab, generated, username, false);
     const saved = await waitForLogin(() => usernamesFor(hostname), username, before);
     if (generated.username !== username) return; // a newer submit took over
@@ -190,7 +213,11 @@ export default defineBackground(() => {
     if (caller.kind === "content-script") {
       if (request.type === "autofill-status") return autofillStatus(caller, request.kind);
       if (request.type === "generated-password-submitted") {
-        void saveGenerated(caller, request.username);
+        recordAttempt(caller, request.username);
+        return null;
+      }
+      if (request.type === "generated-form-gone") {
+        attemptSucceeded(caller.tabId);
         return null;
       }
       throw new Error("not allowed");
@@ -261,6 +288,7 @@ export default defineBackground(() => {
           .map(({ username, password }) => ({ username, password }));
       }
       case "generated-password-submitted":
+      case "generated-form-gone":
         throw new Error("content scripts only");
       case "fill-from-menu": {
         const tabId = tabOf(caller);
