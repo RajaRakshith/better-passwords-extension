@@ -13,6 +13,7 @@ Include what you found, how to reproduce it, and the impact you expect. Never in
 
 In scope:
 - the extension (all builds)
+- the companion app for Mac (`apps/companion`)
 - `packages/*`
 - `scripts/setup-mac.sh`
 - the release pipeline

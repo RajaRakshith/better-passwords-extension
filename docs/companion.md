@@ -41,6 +41,8 @@ The host sends no arguments. The agent works everything out from what the kernel
 4. **You.** It requires Touch ID, or your login password on Macs without Touch ID.
 5. **What it returns.** It returns only six digits, and only if exactly one code is visible. It re-checks the helpers on every read.
 
+Steps 1 to 3 also guard the contact card: the agent reads it only for a browser running Apple's helper. Any program can run our signed host itself and so pass step 1, but macOS lets only browsers start Apple's helper, so step 3 stops it. Without that, any program could read the "Me" card's emails without Contacts permission.
+
 The host checks the agent too: release builds require our team, and development builds require our identifier. The host sends nothing secret to the agent. A fake agent could at worst supply a wrong code, which fails the SRP handshake.
 
 ## Building and trying it

@@ -58,9 +58,9 @@ To show the menu, the content script opens a top-layer popover holding a closed 
 - the web page can't read the usernames in it
 - the web page can't listen to keys typed into it, which includes the pairing code, typed inline when locked
 
-Every menu gets a random nonce in its URL fragment. The fragment is invisible to the page, because the shadow root is closed. When the user picks a login, the menu asks the background, which fetches the password and relays it to the content script with the nonce. The content script then:
-1. refuses nonces that aren't its current menu's (so a copy of `menu.html` framed by the page is useless),
-2. refuses if the menu is not genuinely visible (see the [threat model](threat-model.md)),
+Every menu gets a random nonce, issued by the background with its answer to the content script, and passed in the menu's URL fragment. The fragment is invisible to the page, because the shadow root is closed. The menu sends its nonce with every request, and the background answers `menu.html` only with a nonce it issued to that tab, so a copy of `menu.html` framed by the page can't ask anything. (Chromium also serves `menu.html` only at a per-session address.) When the user picks a login, the menu asks the background, which fetches the password and relays it to the content script with the nonce. The content script then:
+1. refuses nonces that aren't its current menu's,
+2. refuses unless the menu has been genuinely visible for the last 300 ms (see the [threat model](threat-model.md)),
 3. fills around the field the menu was opened on, within that field's form.
 
 The content script runs in the top frame only. Logins inside cross-origin iframes are a later step.
@@ -87,10 +87,10 @@ Until Apple Passwords confirms a new login, the password is kept in memory and l
 
 ## Your email addresses (with the companion app)
 
-Below Hide My Email, sign-up email fields list the emails on the user's own contact card ("Me" in Contacts), as Safari does. The extension can't read Contacts; the companion app can, once the user allows it in the app's setup window. It answers the extension's `my-emails` request through its native host. Without the app, the menu shows a hint pointing to it, with a ✕ to dismiss it for good.
+Below Hide My Email, sign-up email fields list the emails on the user's own contact card ("Me" in Contacts), as Safari does. The extension can't read Contacts; the companion app can, once the user allows it in the app's setup window. It answers the extension's `my-emails` request through its native host, but only for a browser running Apple's helper (see the [threat model](threat-model.md)); the extension connects to the helper first, which needs no pairing. Without the app, the menu shows a hint pointing to it, with a ✕ to dismiss it for good.
 
 ## Hide My Email (opt-in)
 
 Sign-up email fields get a menu that offers Hide My Email. Until the user turns it on, it's a hint with a ✕ that dismisses it for good (the popup can still turn it on). Once on, the menu shows the address made for this site before, or creates one: "Hide My Email…" proposes a random address ("Try Another" for a new one), and choosing it reserves it with the site as its label, then fills it in.
 
-Apple's helper has no Hide My Email, so this uses icloud.com's web service with the browser's icloud.com sign-in (`src/icloud/hide-my-email.ts`, background only). That service accepts only icloud.com's Origin. While the feature is on, a session rule sets Origin and Referer on requests to iCloud that come from outside any tab, which means our background's own. Turning the feature off removes the rule. See the [threat model](threat-model.md).
+Apple's helper has no Hide My Email, so this uses icloud.com's web service with the browser's icloud.com sign-in (`src/icloud/hide-my-email.ts`, background only). That service accepts only icloud.com's Origin. While the feature is on, a session rule sets Origin and Referer on requests to iCloud that our extension starts outside any tab, which means our background's own. Turning the feature off removes the rule. See the [threat model](threat-model.md).
