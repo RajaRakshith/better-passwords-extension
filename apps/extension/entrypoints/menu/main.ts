@@ -145,24 +145,21 @@ function masked(password: string): string {
   return [...password].map((c, i) => (i < 3 || c === "-" ? c : "•")).join("");
 }
 
-/** A generated password, partly hidden; hovering or focusing the eye shows it, a click keeps it shown. */
+/** A generated password, partly hidden. Hovering or focusing the eye shows it; the eye is part of the row, so clicking it chooses the password. */
 function passwordRow(title: string, password: string, onChoose: () => void): HTMLElement {
   const choice = row(KEY, title, masked(password), onChoose, "detail password");
   const detail = choice.querySelector(".password") as HTMLElement;
   const eye = h("button", { class: "reveal", type: "button", title: "Show password" }, icon(EYE));
   eye.setAttribute("aria-label", `Show ${title.toLowerCase()}`);
-  let pinned = false;
   const update = (shown: boolean) => {
     detail.textContent = shown ? password : masked(password);
-    eye.setAttribute("aria-pressed", String(shown));
   };
   eye.addEventListener("mouseenter", () => update(true));
-  eye.addEventListener("mouseleave", () => update(pinned));
+  eye.addEventListener("mouseleave", () => update(false));
   eye.addEventListener("focus", () => update(true));
-  eye.addEventListener("blur", () => update(pinned));
-  eye.addEventListener("click", () => {
-    pinned = !pinned;
-    update(pinned);
+  eye.addEventListener("blur", () => update(false));
+  eye.addEventListener("click", (event) => {
+    if (deliberate(event)) onChoose();
   });
   update(false);
   return h("div", { class: "choice" }, choice, eye);

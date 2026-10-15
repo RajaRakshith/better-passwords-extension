@@ -50,7 +50,8 @@ test("offers passwords without special characters", async ({ context, siteUrl, h
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
   const preview = await revealed(menu, 1);
   expect(preview).toMatch(/^[a-zA-Z0-9]{20}$/);
-  await choose(menu, "Without Special Characters");
+  // the eye is part of the row: clicking it chooses the password too
+  await menu.locator(".reveal").nth(1).click();
   await expect(page.locator("#new")).toHaveValue(preview);
   // no email typed yet: saved without a username, which the helper allows
   expect(helperSaves()).toEqual([{ hostname: "localhost", username: "", password: preview }]);
