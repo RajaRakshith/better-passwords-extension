@@ -48,3 +48,51 @@ export function isMenuGenuinelyVisible(host: HTMLElement, view: Window = window)
   ];
   return points.every(([x, y]) => view.document.elementsFromPoint(x, y)[0] === host);
 }
+
+/**
+ * Remembers since when the menu has been genuinely visible, checking every frame while it's open.
+ * A page can't see a click inside our frame, but it notices one right after (focus moves to the
+ * frame) and could make a hidden menu visible again before the fill is checked. Requiring the
+ * menu to have stayed visible for a while beforehand defeats that: a menu hidden until the click
+ * never qualifies. Chromium's IntersectionObserver v2 does the same inside the menu page; this
+ * covers browsers without it (Firefox).
+ */
+export class VisibilityWatch {
+  #visibleSince: number | undefined;
+  #running = false;
+
+  constructor(
+    private readonly isVisible: () => boolean,
+    private readonly now: () => number = () => performance.now(),
+    private readonly nextFrame: (callback: () => void) => void = (callback) => requestAnimationFrame(callback),
+  ) {}
+
+  start(): void {
+    this.#visibleSince = undefined;
+    if (this.#running) return;
+    this.#running = true;
+    const tick = () => {
+      if (!this.#running) return;
+      this.#sample();
+      this.nextFrame(tick);
+    };
+    this.nextFrame(tick);
+  }
+
+  stop(): void {
+    this.#running = false;
+    this.#visibleSince = undefined;
+  }
+
+  /** Visible now, and without a break for at least the last `ms`. */
+  steadilyVisible(ms: number): boolean {
+    if (!this.#running) return false;
+    this.#sample();
+    return this.#visibleSince !== undefined && this.now() - this.#visibleSince >= ms;
+  }
+
+  #sample(): void {
+    if (!this.isVisible()) this.#visibleSince = undefined;
+    else this.#visibleSince ??= this.now();
+  }
+}

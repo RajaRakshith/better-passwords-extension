@@ -3,6 +3,7 @@
 // (cross-origin) or the shadow root (closed), and can't style it (inline !important styles).
 
 import type { FieldKind } from "./fields.ts";
+import { isMenuGenuinelyVisible, VisibilityWatch } from "./visibility.ts";
 
 /** "generated": the field holds a strong password we filled in (and saved, unless "-unsaved"). */
 export type MenuMode = "logins" | "generate" | "generated" | "generated-unsaved" | "email" | "locked";
@@ -10,6 +11,8 @@ export type MenuMode = "logins" | "generate" | "generated" | "generated-unsaved"
 const WIDTH = 300;
 const GAP = 4;
 const MAX_HEIGHT = 320;
+/** How long the menu must have been visible, without a break, before it may fill anything. */
+const STEADY_MS = 300;
 
 const HOST_STYLE: Record<string, string> = {
   all: "initial",
@@ -55,6 +58,7 @@ export class MenuHost {
   #height = 48;
   /** Hidden until the menu page reports its size, so an empty frame never shows. */
   #rendered = false;
+  readonly #watch = new VisibilityWatch(() => isMenuGenuinelyVisible(this.#host));
 
   constructor(private readonly menuUrl: string) {
     this.#host = document.createElement("app-autofill-menu");
@@ -95,6 +99,15 @@ export class MenuHost {
     if (this.#host.matches(":popover-open")) this.#host.hidePopover();
     this.#host.showPopover();
     this.position();
+    this.#watch.start();
+  }
+
+  /**
+   * Whether a choice made in the menu may be acted on: it is genuinely visible now and has been
+   * for a while, so the user saw what they clicked (see VisibilityWatch).
+   */
+  isTrustworthy(): boolean {
+    return this.#watch.steadilyVisible(STEADY_MS);
   }
 
   resize(height: number): void {
@@ -131,6 +144,7 @@ export class MenuHost {
   }
 
   close(): void {
+    this.#watch.stop();
     this.#nonce = undefined;
     this.#anchor = undefined;
     if (this.#host.matches(":popover-open")) this.#host.hidePopover();

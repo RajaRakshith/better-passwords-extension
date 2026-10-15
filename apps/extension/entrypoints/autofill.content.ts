@@ -1,7 +1,6 @@
 import { type FieldKind, fieldKind, isPasswordField } from "@/src/autofill/fields.ts";
 import { MenuHost } from "@/src/autofill/menu-host.ts";
 import { isGone, isUsernameInput, watchUntilGone } from "@/src/autofill/submission.ts";
-import { isMenuGenuinelyVisible } from "@/src/autofill/visibility.ts";
 import { FILL_MATCHES } from "@/src/config.ts";
 import { fillCredentials, fillEmail, fillNewPassword, usernameNear } from "@/src/fill.ts";
 import { type ContentMessage, type NewPasswordContext, send } from "@/src/messages.ts";
@@ -210,14 +209,14 @@ export default defineContentScript({
                 : {}),
             },
             username: usernameNear(field),
-            visible: isMenuGenuinelyVisible(menu.element),
+            visible: menu.isTrustworthy(),
           };
           sendResponse(context);
           return false;
         }
         case "menu-fill-email": {
           const anchor = menu.anchor;
-          if (!anchor || !isMenuGenuinelyVisible(menu.element)) {
+          if (!anchor || !menu.isTrustworthy()) {
             sendResponse({ result: "menu-hidden" });
             menu.close();
             return false;
@@ -230,7 +229,7 @@ export default defineContentScript({
         }
         case "menu-fill": {
           const anchor = menu.anchor;
-          if (!anchor || !isMenuGenuinelyVisible(menu.element)) {
+          if (!anchor || !menu.isTrustworthy()) {
             sendResponse({ result: "menu-hidden" });
             menu.close();
             return false;

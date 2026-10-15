@@ -132,6 +132,36 @@ test("refuses to fill when the page makes the menu transparent", async ({ contex
   await expect(page.locator("#pass")).toHaveValue("");
 });
 
+test("refuses to fill when the page reveals a hidden menu only as the click lands", async ({ context, siteUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
+  await page.locator("#pass").click();
+  const menu = await menuFrame(page);
+  await choose(menu, "Unlock to fill passwords");
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(menu.getByText("e2e-user")).toBeVisible();
+
+  // the page keeps the menu invisible, then shows it again the moment focus moves into it
+  await page.evaluate(() => {
+    document.documentElement.style.opacity = "0";
+  });
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    document.documentElement.style.opacity = "1";
+  });
+  // Where the menu page can't track its own visibility (Firefox), the click itself would count,
+  // so send the request it would send. The content script saw the menu hidden moments ago, so it
+  // refuses, and closes the menu.
+  await menu.evaluate(() => {
+    type Runtime = { runtime: { sendMessage(message: unknown): Promise<unknown> } };
+    const { chrome } = globalThis as unknown as { chrome: Runtime };
+    const nonce = new URLSearchParams(location.hash.slice(1)).get("nonce");
+    void chrome.runtime.sendMessage({ type: "fill-from-menu", nonce, username: "e2e-user", menuNonce: nonce });
+  });
+  await expect.poll(() => page.locator("app-autofill-menu").count()).toBe(0);
+  await expect(page.locator("#pass")).toHaveValue("");
+});
+
 test("a page can't frame the menu at its well-known address", async ({ context, siteUrl }) => {
   const page = await context.newPage();
   await page.goto(`${siteUrl}/login.html`);
