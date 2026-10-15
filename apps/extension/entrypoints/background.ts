@@ -296,6 +296,11 @@ export default defineBackground(() => {
   async function contactEmailsState(settings: Settings): Promise<ContactEmailsState> {
     if ((await companion.state()) === "not-installed") return { state: settings.companionEmailsHint ? "hint" : "off" };
     if (!settings.suggestEmails) return { state: "off" };
+    // the app answers only a browser running Apple's helper (anything else could be a program
+    // reading Contacts through it), so make sure ours is: connecting starts it, without pairing
+    if (session.status.state === "disconnected" || session.status.state === "closed") {
+      await session.connect().catch(() => {});
+    }
     try {
       return { state: "ready", emails: await companion.myEmails() };
     } catch (error) {
