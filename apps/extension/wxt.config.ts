@@ -33,7 +33,14 @@ export default defineConfig({
       ],
       // the inline menu reads the page's URL and runs on login pages
       host_permissions: FILL_MATCHES,
-      web_accessible_resources: [{ resources: ["menu.html"], matches: FILL_MATCHES }],
+      // Chromium: reachable only at a per-session URL, so pages can't load (or probe for) the menu
+      web_accessible_resources: [
+        {
+          resources: ["menu.html"],
+          matches: FILL_MATCHES,
+          ...(browser === "firefox" ? {} : { use_dynamic_url: true }),
+        },
+      ],
       action: { default_title: DISPLAY_NAME },
       ...(browser === "firefox"
         ? {

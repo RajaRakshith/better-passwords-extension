@@ -29,10 +29,6 @@ const HOST_STYLE: Record<string, string> = {
   "box-shadow": "0 8px 28px light-dark(rgb(0 0 0 / 0.18), rgb(0 0 0 / 0.5)), 0 1px 4px rgb(0 0 0 / 0.12)",
 };
 
-function randomNonce(): string {
-  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 function createFrame(src: string): HTMLIFrameElement {
   const frame = document.createElement("iframe");
   frame.setAttribute("title", "Apple Passwords Plus");
@@ -83,9 +79,10 @@ export class MenuHost {
     return this.#nonce !== undefined;
   }
 
-  open(anchor: HTMLInputElement, mode: MenuMode, kind: FieldKind): void {
+  /** `nonce` comes from the background, which accepts requests from this menu only with it. */
+  open(anchor: HTMLInputElement, mode: MenuMode, kind: FieldKind, nonce: string): void {
     this.#anchor = anchor;
-    this.#nonce = randomNonce();
+    this.#nonce = nonce;
     this.#height = 48;
     this.#rendered = false;
     // A new iframe every time: changing only the URL fragment of an existing one would not reload

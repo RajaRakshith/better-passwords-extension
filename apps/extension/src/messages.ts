@@ -115,6 +115,8 @@ export interface AutofillStatus {
    * "locked": pairing needed; "none": stay out of the way.
    */
   show: "logins" | "generate" | "email" | "locked" | "none";
+  /** For a menu to show: its nonce, which the background accepts from this tab's menu only. */
+  nonce?: string;
 }
 
 export interface GeneratedPasswords {
@@ -210,8 +212,21 @@ export interface NewPasswordContext {
 /** Wire envelope, so errors cross the message boundary as data instead of being lost. */
 export type Envelope<T> = { ok: true; value: T } | { ok: false; error: string; code?: string };
 
+// The inline menu's nonce, sent with every request it makes (see bindToMenu).
+let menuNonce: string | undefined;
+
+/**
+ * Called by the inline menu: its requests carry the nonce from its URL, which the background
+ * accepts only if it issued that nonce to the content script of the same tab. A copy of menu.html
+ * that a page frames itself has no such nonce, so the background refuses everything it asks.
+ */
+export function bindToMenu(nonce: string): void {
+  menuNonce = nonce;
+}
+
 export async function send<R extends Request>(request: R): Promise<Response<R>> {
-  const reply = (await browser.runtime.sendMessage(request)) as Envelope<Response<R>> | undefined;
+  const message = menuNonce === undefined ? request : { ...request, menuNonce };
+  const reply = (await browser.runtime.sendMessage(message)) as Envelope<Response<R>> | undefined;
   if (!reply) throw new Error("no reply from the background worker");
   if (!reply.ok) throw Object.assign(new Error(reply.error), { code: reply.code });
   return reply.value;

@@ -23,22 +23,27 @@ export default defineContentScript({
     async function offer(field: HTMLInputElement, kind: FieldKind) {
       if (menu.anchor === field || dismissed === field) return;
       const ticket = ++request;
-      const { show } = await send({ type: "autofill-status", kind }).catch(() => ({ show: "none" as const }));
+      const { show, nonce } = await send({ type: "autofill-status", kind }).catch(() => ({
+        show: "none" as const,
+        nonce: undefined,
+      }));
       // the user may have moved on while we asked
       if (ticket !== request || document.activeElement !== field) return;
       // when locked, offer to unlock only where a password is clearly expected
       const unlockHere = kind === "new-password" || isPasswordField(field) || field.autocomplete.includes("username");
-      if (kind === "new-password" && field.value !== "") {
+      if (nonce === undefined) {
+        menu.close();
+      } else if (kind === "new-password" && field.value !== "") {
         // our own password: say it's saved; one the user typed: stay out of the way
         if (show !== "none" && generated?.field.form === field.form && field.value === generated.value) {
-          menu.open(field, generated.saved ? "generated" : "generated-unsaved", kind);
+          menu.open(field, generated.saved ? "generated" : "generated-unsaved", kind, nonce);
         } else {
           menu.close();
         }
       } else if (show === "email" && kind === "signup-email") {
-        menu.open(field, "email", kind);
+        menu.open(field, "email", kind, nonce);
       } else if (show === "logins" || show === "generate" || (show === "locked" && unlockHere)) {
-        menu.open(field, show, kind);
+        menu.open(field, show, kind, nonce);
       } else {
         menu.close();
       }

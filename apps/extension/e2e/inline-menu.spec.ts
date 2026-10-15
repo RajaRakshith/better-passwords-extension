@@ -1,3 +1,4 @@
+import { STORE_EXTENSION_ID } from "../src/config.ts";
 import { choose, expect, menuFrame, PAIRING_CODE, test } from "./fixtures.ts";
 
 test("unlocks from the inline menu and fills the form", async ({ context, siteUrl }) => {
@@ -131,7 +132,21 @@ test("refuses to fill when the page makes the menu transparent", async ({ contex
   await expect(page.locator("#pass")).toHaveValue("");
 });
 
-test("ignores a copy of the menu framed by the page itself", async ({ context, siteUrl }) => {
+test("a page can't frame the menu at its well-known address", async ({ context, siteUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
+  // Chromium serves menu.html only at a per-session address, which pages never learn
+  await page.evaluate((url) => {
+    const frame = document.createElement("iframe");
+    frame.src = `${url}#nonce=forged&mode=logins`;
+    frame.id = "forged";
+    document.body.append(frame);
+  }, `chrome-extension://${STORE_EXTENSION_ID}/menu.html`);
+  await page.waitForTimeout(1_000);
+  await expect(page.frameLocator("#forged").locator("#menu")).toHaveCount(0);
+});
+
+test("refuses everything a copy of the menu without our nonce asks", async ({ context, siteUrl, popupUrl }) => {
   const page = await context.newPage();
   await page.goto(`${siteUrl}/login.html`);
   // unlock through the real menu first, so a fill would otherwise succeed
@@ -141,26 +156,38 @@ test("ignores a copy of the menu framed by the page itself", async ({ context, s
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
   await expect(menu.getByText("e2e-user")).toBeVisible();
 
-  // the page embeds menu.html on its own, with a made-up nonce
-  const menuUrl = menu.url().split("#")[0];
-  await page.evaluate((url) => {
-    const frame = document.createElement("iframe");
-    frame.src = `${url}#nonce=forged&mode=logins`;
-    frame.id = "forged";
-    document.body.append(frame);
-  }, menuUrl);
-  await expect(page.frameLocator("#forged").getByText("e2e-user")).toBeVisible();
+  // a copy of menu.html with a made-up nonce, as a page that found its address could frame it
+  // (Firefox has no per-session address): it lists nothing
+  const forged = await context.newPage();
+  await forged.goto(`chrome-extension://${STORE_EXTENSION_ID}/menu.html#nonce=forged&mode=logins`);
+  await expect(forged.getByText("wasn't opened by Apple Passwords Plus")).toBeVisible();
+  await expect(forged.getByText("e2e-user")).toHaveCount(0);
 
-  // Even if a click there got through, the fill is refused: the content script only answers the
-  // nonce of the menu it opened itself. Send the request as an accepted click would.
-  const forged = page.frames().find((f) => f.url().includes("nonce=forged"));
-  const reply = await forged?.evaluate(() => {
+  // Nor does anything it asks get through, as an accepted click would ask it: no password is
+  // fetched, and no setting changes (turning on Hide My Email would reserve addresses later).
+  const replies = await forged.evaluate(async () => {
     type Runtime = { runtime: { sendMessage(message: unknown): Promise<unknown> } };
     const { chrome } = globalThis as unknown as { chrome: Runtime };
-    return chrome.runtime.sendMessage({ type: "fill-from-menu", nonce: "forged", username: "e2e-user" });
+    const ask = (message: object) => chrome.runtime.sendMessage({ ...message, menuNonce: "forged" });
+    return [
+      await ask({ type: "fill-from-menu", nonce: "forged", username: "e2e-user" }),
+      await ask({ type: "enable-hide-my-email", nonce: "forged" }),
+      await ask({ type: "list-logins" }),
+    ];
   });
-  expect(reply).toEqual({ ok: true, value: { result: "menu-hidden" } });
+  for (const reply of replies) {
+    expect(reply).toEqual({ ok: false, error: "This menu wasn't opened by Apple Passwords Plus." });
+  }
   await expect(page.locator("#pass")).toHaveValue("");
+
+  const popup = await context.newPage();
+  await popup.goto(popupUrl);
+  const settings = await popup.evaluate(() => {
+    type Runtime = { runtime: { sendMessage(message: unknown): Promise<{ value: { hideMyEmail: boolean } }> } };
+    const { chrome } = globalThis as unknown as { chrome: Runtime };
+    return chrome.runtime.sendMessage({ type: "get-settings" });
+  });
+  expect(settings.value.hideMyEmail).toBe(false);
 });
 
 test("a long list of logins scrolls inside the menu", async ({ context, siteUrl }) => {

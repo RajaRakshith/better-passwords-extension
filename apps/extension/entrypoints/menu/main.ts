@@ -1,7 +1,7 @@
 import "./style.css";
 import { DISPLAY_NAME } from "@/src/config.ts";
 import type { EmailSuggestions } from "@/src/messages.ts";
-import { send } from "@/src/messages.ts";
+import { bindToMenu, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { bindCodeInput } from "@/src/ui/code-input.ts";
 import { companionPitch } from "@/src/ui/companion-pitch.ts";
@@ -15,6 +15,7 @@ applySystemAccent();
 
 const params = new URLSearchParams(window.location.hash.slice(1));
 const nonce = params.get("nonce") ?? "";
+bindToMenu(nonce);
 /** The field the menu belongs to: "login", or "new-password" for sign-up and change-password forms. */
 const kind = params.get("kind") ?? "login";
 const panel = document.getElementById("menu") as HTMLElement;

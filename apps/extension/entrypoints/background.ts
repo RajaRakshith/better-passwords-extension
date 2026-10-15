@@ -93,7 +93,30 @@ export default defineBackground(() => {
     return browser.tabs.sendMessage(tabId, message, { frameId: 0 });
   }
 
+  // Nonces of the menus each tab's content script may show, newest last. Only our content script
+  // learns them; menu.html must present one of its tab's (see the onMessage listener).
+  const menuNonces = new Map<number, string[]>();
+  const MENU_NONCES_PER_TAB = 8;
+
+  function issueMenuNonce(tabId: number): string {
+    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join(
+      "",
+    );
+    const nonces = [...(menuNonces.get(tabId) ?? []), nonce].slice(-MENU_NONCES_PER_TAB);
+    menuNonces.set(tabId, nonces);
+    return nonce;
+  }
+
+  function isMenuNonce(tabId: number, nonce: unknown): boolean {
+    return typeof nonce === "string" && (menuNonces.get(tabId)?.includes(nonce) ?? false);
+  }
+
   async function autofillStatus(caller: Caller & { kind: "content-script" }, kind: FieldKind): Promise<AutofillStatus> {
+    const { show } = await menuToShow(caller, kind);
+    return show === "none" ? { show } : { show, nonce: issueMenuNonce(caller.tabId) };
+  }
+
+  async function menuToShow(caller: Caller & { kind: "content-script" }, kind: FieldKind): Promise<AutofillStatus> {
     const url = fillableUrl(caller.url);
     const settings = await getSettings();
     if (!url) return { show: "none" };
@@ -130,6 +153,7 @@ export default defineBackground(() => {
   });
   browser.tabs.onRemoved.addListener((tabId) => {
     generatedByTab.delete(tabId);
+    menuNonces.delete(tabId);
     for (const key of generatedForMenu.keys()) if (key.startsWith(`${tabId}:`)) generatedForMenu.delete(key);
   });
 
@@ -481,10 +505,20 @@ export default defineBackground(() => {
     return { url, credential };
   }
 
-  browser.runtime.onMessage.addListener((request: Request, sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((request: Request & { menuNonce?: unknown }, sender, sendResponse) => {
     if (sender.id !== browser.runtime.id) return false;
     let caller: Caller;
     if (sender.url?.startsWith(browser.runtime.getURL("/"))) {
+      // menu.html is web-accessible, so a page can frame a copy of its own: only a menu our
+      // content script opened, with a nonce we issued to that tab, may ask anything
+      const isMenu = new URL(sender.url).pathname === "/menu.html";
+      if (isMenu && (sender.tab?.id === undefined || !isMenuNonce(sender.tab.id, request.menuNonce))) {
+        sendResponse({
+          ok: false,
+          error: "This menu wasn't opened by Apple Passwords Plus.",
+        } satisfies Envelope<never>);
+        return false;
+      }
       caller = sender.tab?.id === undefined ? { kind: "page" } : { kind: "page", tabId: sender.tab.id };
     } else if (
       sender.tab?.id !== undefined &&
