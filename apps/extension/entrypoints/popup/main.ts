@@ -119,15 +119,6 @@ function showCodeEntry(status: Status, error?: string) {
     input.focus();
   });
 
-  // the code box, with a hint for when Apple's window has the keyboard
-  const field = h(
-    "div",
-    { class: "code-field" },
-    input,
-    h("span", { class: "click-hint", textContent: "Click here to type the code" }),
-  );
-  field.addEventListener("click", () => input.focus());
-
   let touchId: HTMLButtonElement | null = null;
   if (status.touchId) {
     touchId = h("button", { class: "link", textContent: "Enter it for me" });
@@ -141,36 +132,18 @@ function showCodeEntry(status: Status, error?: string) {
   show(
     h("h1", { textContent: "Enter the code shown on your Mac" }),
     h("p", {}, "Your Mac is showing a 6-digit verification code. You only need to do this once per browser session."),
-    field,
+    input,
     errorLine(error),
     h("div", { class: "actions" }, newCode, touchId),
     companionHint,
   );
-  // Apple's code window takes keyboard focus as it appears, while the popup stays open. Try to
-  // take it back as the window shows up; if that's not allowed, the box asks for a click
-  // (see "waiting-for-focus") and takes focus as soon as the popup has it again.
-  const update = () => {
-    if (!input.isConnected) return stop();
-    const focused = document.hasFocus();
-    field.classList.toggle("waiting-for-focus", !focused);
-    if (focused && !input.disabled) input.focus();
+  // Apple's code window can take focus as it appears; take it back when the popup regains it
+  const refocus = () => {
+    if (input.isConnected && !input.disabled) input.focus();
+    else window.removeEventListener("focus", refocus);
   };
-  const reclaim = () => {
-    if (!input.isConnected || document.hasFocus()) return;
-    window.focus();
-    update();
-  };
-  const timers = [0, 150, 400, 800, 1500].map((ms) => setTimeout(reclaim, ms));
-  const interval = setInterval(update, 300);
-  const stop = () => {
-    for (const timer of timers) clearTimeout(timer);
-    clearInterval(interval);
-    window.removeEventListener("focus", update);
-    window.removeEventListener("blur", update);
-  };
-  window.addEventListener("focus", update);
-  window.addEventListener("blur", update);
-  requestAnimationFrame(update);
+  window.addEventListener("focus", refocus);
+  requestAnimationFrame(refocus);
 }
 
 async function showLogins(status: Status, error?: string) {
