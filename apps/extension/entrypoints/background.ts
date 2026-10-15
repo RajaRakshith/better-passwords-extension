@@ -148,8 +148,12 @@ export default defineBackground(() => {
   // Filled passwords Apple Passwords may not have (not saved yet, declined, or an update that
   // can't be confirmed), kept in memory until the session ends for the popup to show.
   const unconfirmed: { hostname: string; username: string; password: string }[] = [];
+  // locking forgets every generated password, like the session key
   session.onChange(({ state }) => {
-    if (state !== "unlocked") unconfirmed.length = 0;
+    if (state === "unlocked") return;
+    unconfirmed.length = 0;
+    generatedByTab.clear();
+    generatedForMenu.clear();
   });
   browser.tabs.onRemoved.addListener((tabId) => {
     generatedByTab.delete(tabId);
