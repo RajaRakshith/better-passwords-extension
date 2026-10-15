@@ -36,8 +36,6 @@ const CHECK =
   "M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19Zm4.03 6.22a.75.75 0 0 0-1.06.03l-4.2 4.5-1.74-1.74a.75.75 0 1 0-1.06 1.06l2.29 2.29a.75.75 0 0 0 1.08-.02l4.72-5.06a.75.75 0 0 0-.03-1.06Z";
 const EYE =
   "M12 5c4.6 0 8.5 2.9 10 7-1.5 4.1-5.4 7-10 7S3.5 16.1 2 12c1.5-4.1 5.4-7 10-7Zm0 1.75c-3.6 0-6.7 2.1-8.1 5.25 1.4 3.15 4.5 5.25 8.1 5.25s6.7-2.1 8.1-5.25C18.7 8.85 15.6 6.75 12 6.75Zm0 1.75a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z";
-const CANCEL =
-  "M6.47 6.47a.75.75 0 0 1 1.06 0L12 10.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L13.06 12l4.47 4.47a.75.75 0 1 1-1.06 1.06L12 13.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L10.94 12 6.47 7.53a.75.75 0 0 1 0-1.06Z";
 const OPEN =
   "M6.5 3.5h11a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3v-11a3 3 0 0 1 3-3Zm0 1.75c-.69 0-1.25.56-1.25 1.25v11c0 .69.56 1.25 1.25 1.25h11c.69 0 1.25-.56 1.25-1.25v-11c0-.69-.56-1.25-1.25-1.25h-11Zm3.25 3.5h5a.75.75 0 0 1 .75.75v5a.75.75 0 0 1-1.5 0v-3.19l-4.47 4.47a.75.75 0 0 1-1.06-1.06l4.47-4.47H9.75a.75.75 0 0 1 0-1.5Z";
 
@@ -126,17 +124,15 @@ async function showLogins(error?: string) {
 }
 
 async function showGenerate(error?: string) {
-  let reply: Awaited<ReturnType<typeof send<{ type: "generate-passwords"; nonce: string }>>>;
+  let passwords: { strong: string; alphanumeric: string };
   try {
-    reply = await send({ type: "generate-passwords", nonce });
+    passwords = await send({ type: "generate-passwords", nonce });
   } catch (e) {
     return render(message(messageOf(e), true));
   }
-  // reopened while a save still waits for the user
-  if ("pending" in reply) return waitForSave();
   render(
-    passwordRow("Strong Password", reply.strong, () => void useGenerated("strong")),
-    passwordRow("Without Special Characters", reply.alphanumeric, () => void useGenerated("alphanumeric")),
+    passwordRow("Strong Password", passwords.strong, () => void useGenerated("strong")),
+    passwordRow("Without Special Characters", passwords.alphanumeric, () => void useGenerated("alphanumeric")),
     error ? message(error, true) : null,
     h("hr", { class: "separator" }),
     openPasswordsRow(false),
@@ -167,65 +163,28 @@ function passwordRow(title: string, password: string, onChoose: () => void): HTM
   return choice;
 }
 
-function showWaiting() {
-  render(
-    message("Click Save in the dialog on your Mac. The password is filled in once it's saved."),
-    h("hr", { class: "separator" }),
-    row(KEY, "Fill In Without Saving", "Not saved in Apple Passwords", () => void fillUnsaved()),
-    row(CANCEL, "Cancel", "", () => void cancelSave()),
-  );
-}
-
-async function fillUnsaved() {
-  try {
-    const { result } = await send({ type: "fill-generated-unsaved", nonce });
-    if (result !== "filled") await showGenerate(saveError(result));
-  } catch (e) {
-    await showGenerate(messageOf(e));
-  }
-}
-
+/** Fills the password in now; Apple Passwords asks to save it when the form is submitted. */
 async function useGenerated(style: "strong" | "alphanumeric") {
-  showWaiting();
-  await afterSave(send({ type: "use-generated-password", nonce, style }));
-}
-
-async function waitForSave() {
-  showWaiting();
-  await afterSave(send({ type: "await-generated-password", nonce }));
-}
-
-async function afterSave(saving: Promise<{ result: string }>) {
   try {
-    const { result } = await saving;
+    const { result } = await send({ type: "use-generated-password", nonce, style });
     // when filled, the content script closes the menu
     if (result === "filled") return;
-    await showGenerate(saveError(result));
+    await showGenerate(
+      result === "menu-hidden"
+        ? "The page tried to hide this menu, so nothing was filled in."
+        : "Couldn't fill in this page.",
+    );
   } catch (e) {
     await showGenerate(messageOf(e));
   }
 }
 
-async function cancelSave() {
-  await send({ type: "cancel-generated-password", nonce }).catch(() => {});
-  await showGenerate();
-}
-
-function saveError(result: string): string {
-  if (result === "not-saved") return "Not saved, so nothing was filled in.";
-  if (result === "menu-hidden") return "The page tried to hide this menu, so nothing was filled in.";
-  return "Couldn't fill in this page.";
-}
-
-/** The field already holds a strong password we generated (and, usually, Apple Passwords saved). */
+/** The field already holds a strong password we generated. */
 function showGeneratedDone(saved: boolean) {
   render(
     saved
       ? row(CHECK, "Strong Password Saved", "In Apple Passwords", () => close())
-      : row(OPEN, "Strong Password, Not Saved", "Save it in the Passwords app", async () => {
-          await send({ type: "open-passwords-app" }).catch(() => {});
-          close();
-        }),
+      : row(KEY, "Strong Password", "You'll be asked to save it when you continue", () => close()),
     row(KEY, "Choose a Different Password", "", () => void showGenerate()),
     h("hr", { class: "separator" }),
     openPasswordsRow(false),

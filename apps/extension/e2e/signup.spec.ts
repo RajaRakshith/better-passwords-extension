@@ -12,51 +12,68 @@ async function revealed(menu: Frame, index: number): Promise<string> {
   return (await detail.textContent()) ?? "";
 }
 
-test("suggests a strong password, saves it, then fills it", async ({ context, siteUrl, helperSaves }) => {
-  const page = await context.newPage();
-  await page.goto(`${siteUrl}/signup.html`);
-  await page.locator("#email").fill("new-user@example.com");
+/** Opens the menu on the new password field and unlocks it. */
+async function unlockedMenu(page: import("@playwright/test").Page): Promise<Frame> {
   await page.locator("#new").click();
-
   const menu = await menuFrame(page);
   await choose(menu, "Unlock to suggest a strong password");
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  return menu;
+}
+
+test("fills a strong password at once, and saves it when the form is submitted", async ({
+  context,
+  siteUrl,
+  helperSaves,
+}) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/signup.html`);
+  await page.locator("#email").fill("new-user@example.com");
+  const menu = await unlockedMenu(page);
   const preview = await revealed(menu, 0);
   expect(preview).toMatch(/^[a-zA-Z0-9]{6}-[a-zA-Z0-9]{6}-[a-zA-Z0-9]{6}$/);
   await choose(menu, "Strong Password");
 
-  // the fake helper "clicked Save" in macOS's prompt; only then is the password filled in
+  // like Safari: filled right away, nothing saved yet
   await expect(page.locator("#new")).toHaveValue(preview);
   await expect(page.locator("#confirm")).toHaveValue(preview);
-  expect(helperSaves()).toEqual([{ hostname: "localhost", username: "new-user@example.com", password: preview }]);
-
-  // back in either field, the menu says it's saved instead of offering new passwords
+  expect(helperSaves()).toEqual([]);
   await page.locator("#email").click();
   await page.locator("#confirm").click();
-  await expect((await menuFrame(page)).getByText("Strong Password Saved")).toBeVisible();
+  await expect((await menuFrame(page)).getByText("You'll be asked to save it when you continue")).toBeVisible();
 
-  // a different email when submitting is saved too
+  // submitting asks Apple Passwords to save it, with the form's username
   await page.locator("#email").fill("renamed@example.com");
   await page.getByRole("button", { name: "Create account" }).click();
   await expect
-    .poll(() => helperSaves().map((save) => save.username))
-    .toEqual(["new-user@example.com", "renamed@example.com"]);
+    .poll(helperSaves)
+    .toEqual([{ hostname: "localhost", username: "renamed@example.com", password: preview }]);
+
+  // once Apple Passwords lists it, the field says so
+  await expect
+    .poll(async () => {
+      await page.locator("#email").click();
+      await page.locator("#new").click();
+      return (await menuFrame(page)).getByText("Strong Password Saved").isVisible();
+    })
+    .toBe(true);
 });
 
-test("offers passwords without special characters", async ({ context, siteUrl, helperSaves }) => {
+test("offers passwords without special characters; the eye chooses like its row", async ({
+  context,
+  siteUrl,
+  helperSaves,
+}) => {
   const page = await context.newPage();
   await page.goto(`${siteUrl}/signup.html`);
-  await page.locator("#new").click();
-  const menu = await menuFrame(page);
-  await choose(menu, "Unlock to suggest a strong password");
-  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  const menu = await unlockedMenu(page);
   const preview = await revealed(menu, 1);
   expect(preview).toMatch(/^[a-zA-Z0-9]{20}$/);
-  // the eye is inside the row: clicking it chooses the password like the rest of the row
   await menu.locator(".reveal").nth(1).click();
   await expect(page.locator("#new")).toHaveValue(preview);
-  // no email typed yet: saved without a username, which the helper allows
-  expect(helperSaves()).toEqual([{ hostname: "localhost", username: "", password: preview }]);
+  // no username in the form: macOS asks for one in its dialog when saving
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect.poll(helperSaves).toEqual([{ hostname: "localhost", username: "", password: preview }]);
 });
 
 test("never offers new passwords on a login form", async ({ context, siteUrl }) => {
@@ -67,83 +84,50 @@ test("never offers new passwords on a login form", async ({ context, siteUrl }) 
   await expect(menu.getByText("Unlock to fill passwords")).toBeVisible();
 });
 
-test("replacing a saved password fills it right away and keeps it for the session", async ({
-  context,
-  siteUrl,
-  helperSaves,
-}) => {
+test("replacing a saved password is saved on submit and assumed done", async ({ context, siteUrl, helperSaves }) => {
   const page = await context.newPage();
   await page.goto(`${siteUrl}/signup.html`);
   // e2e-user already has a saved password for this site
   await page.locator("#email").fill("e2e-user");
-  await page.locator("#new").click();
-  const menu = await menuFrame(page);
-  await choose(menu, "Unlock to suggest a strong password");
-  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  const menu = await unlockedMenu(page);
   const preview = await revealed(menu, 0);
   await choose(menu, "Strong Password");
-
-  // an update can't be confirmed, so it's filled without waiting
   await expect(page.locator("#new")).toHaveValue(preview);
-  expect(helperSaves()).toEqual([{ hostname: "localhost", username: "e2e-user", password: preview }]);
-
-  // (the popup lists it for the session; a popup opened as a tab can't show it, see tabOf)
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect.poll(helperSaves).toEqual([{ hostname: "localhost", username: "e2e-user", password: preview }]);
+  await expect
+    .poll(async () => {
+      await page.locator("#email").click();
+      await page.locator("#new").click();
+      return (await menuFrame(page)).getByText("Strong Password Saved").isVisible();
+    })
+    .toBe(true);
 });
 
 test.describe("when the user doesn't save", () => {
   test.use({ declineSaves: true });
 
-  test("nothing is filled, the wait survives reopening the menu, and Cancel ends it", async ({ context, siteUrl }) => {
-    const page = await context.newPage();
-    await page.goto(`${siteUrl}/signup.html`);
-    await page.locator("#email").fill("new-user@example.com");
-    await page.locator("#new").click();
-    let menu = await menuFrame(page);
-    await choose(menu, "Unlock to suggest a strong password");
-    await menu.getByLabel("Verification code").fill(PAIRING_CODE);
-    await choose(menu, "Strong Password");
-    await expect(menu.getByText("Click Save in the dialog on your Mac")).toBeVisible();
-
-    // leave the field and come back: still waiting
-    await page.locator("#email").click();
-    await page.locator("#new").click();
-    menu = await menuFrame(page);
-    await expect(menu.getByText("Click Save in the dialog on your Mac")).toBeVisible();
-
-    await choose(menu, "Cancel");
-    await expect(menu.getByText("Strong Password").first()).toBeVisible();
-    await expect(page.locator("#new")).toHaveValue("");
-  });
-
-  test("the password can still be filled in without saving", async ({ context, siteUrl, helperSaves }) => {
+  test("the password stays filled, and the field says it isn't saved", async ({ context, siteUrl, helperSaves }) => {
     const page = await context.newPage();
     await page.goto(`${siteUrl}/signup.html`);
     await page.locator("#email").fill("no-save@example.com");
-    await page.locator("#new").click();
-    const menu = await menuFrame(page);
-    await choose(menu, "Unlock to suggest a strong password");
-    await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+    const menu = await unlockedMenu(page);
     const preview = await revealed(menu, 0);
     await choose(menu, "Strong Password");
-    await choose(menu, "Fill In Without Saving");
-    await expect(page.locator("#new")).toHaveValue(preview);
-    await expect(page.locator("#confirm")).toHaveValue(preview);
+    await page.getByRole("button", { name: "Create account" }).click();
+    await page.waitForTimeout(1_500);
     expect(helperSaves()).toEqual([]);
-
-    // back in the field, the menu says it isn't saved
+    await expect(page.locator("#new")).toHaveValue(preview);
     await page.locator("#email").click();
     await page.locator("#new").click();
-    await expect((await menuFrame(page)).getByText("Strong Password, Not Saved")).toBeVisible();
+    await expect((await menuFrame(page)).getByText("You'll be asked to save it when you continue")).toBeVisible();
   });
 });
 
 test("typing a password of one's own closes the suggestions", async ({ context, siteUrl }) => {
   const page = await context.newPage();
   await page.goto(`${siteUrl}/signup.html`);
-  await page.locator("#new").click();
-  const menu = await menuFrame(page);
-  await choose(menu, "Unlock to suggest a strong password");
-  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  const menu = await unlockedMenu(page);
   await expect(menu.getByText("Without Special Characters")).toBeVisible();
   await page.locator("#new").focus();
   await page.keyboard.type("my own password");

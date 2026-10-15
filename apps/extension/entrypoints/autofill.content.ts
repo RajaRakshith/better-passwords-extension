@@ -18,7 +18,7 @@ export default defineContentScript({
     const newPasswordFields = new Map<string, HTMLInputElement>();
     // the last generated password we filled: to recognise it, and to update its username when
     // the form is submitted
-    let generated: { field: HTMLInputElement; value: string; username: string; saved: boolean } | undefined;
+    let generated: { field: HTMLInputElement; value: string; saved: boolean } | undefined;
 
     async function offer(field: HTMLInputElement, kind: FieldKind) {
       if (menu.anchor === field || dismissed === field) return;
@@ -111,14 +111,13 @@ export default defineContentScript({
     ctx.addEventListener(window, "resize", () => menu.position());
     ctx.onInvalidated(() => menu.close());
 
-    // When a form with a generated password is submitted, Apple Passwords should have the final
-    // username. Many sites submit with script, so a click on a submit button counts too.
+    // Like Safari: a generated password is filled right away, and Apple Passwords is asked to save
+    // it when its form is submitted (many sites submit with script, so a click on a submit button
+    // counts too) or when the page is left with it still in the field.
     function generatedFormSubmitted(form: HTMLFormElement | null) {
       if (!generated?.field.isConnected || generated.field.form !== form) return;
-      const username = usernameNear(generated.field);
-      if (!username || username === generated.username) return;
-      generated.username = username;
-      void send({ type: "generated-password-submitted", username }).catch(() => {});
+      if (generated.field.value !== generated.value) return;
+      void send({ type: "generated-password-submitted", username: usernameNear(generated.field) }).catch(() => {});
     }
     ctx.addEventListener(document, "submit", (event) => generatedFormSubmitted(event.target as HTMLFormElement), {
       capture: true,
@@ -133,10 +132,17 @@ export default defineContentScript({
       },
       { capture: true },
     );
+    ctx.addEventListener(window, "pagehide", () => {
+      if (generated && !generated.saved) generatedFormSubmitted(generated.field.form);
+    });
 
     // messages relayed by the background from our menu page; only our extension can send these
     browser.runtime.onMessage.addListener((message: ContentMessage, sender, sendResponse) => {
       if (sender.id !== browser.runtime.id) return false;
+      if (message.type === "generated-password-saved") {
+        if (generated?.value === message.password) generated.saved = true;
+        return false;
+      }
       if (message.type === "menu-fill-new-password") {
         const field = newPasswordFields.get(message.nonce);
         newPasswordFields.delete(message.nonce);
@@ -145,9 +151,7 @@ export default defineContentScript({
           return false;
         }
         const result = fillNewPassword(message.origin, message.password, field);
-        if (result === "filled") {
-          generated = { field, value: message.password, username: usernameNear(field), saved: message.saved };
-        }
+        if (result === "filled") generated = { field, value: message.password, saved: false };
         if (menu.isCurrent(message.nonce)) {
           dismissed = field;
           menu.close();

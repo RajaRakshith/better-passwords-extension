@@ -25,20 +25,16 @@ export type Request =
   | { type: "menu-focus-field"; nonce: string }
   /** Two fresh strong passwords for the new-password field the menu was opened on. */
   | { type: "generate-passwords"; nonce: string }
-  /** Saves the chosen password to Apple Passwords, then fills it once the user confirmed. */
+  /** Fills the chosen password; Apple Passwords is asked to save it when the form is submitted. */
   | { type: "use-generated-password"; nonce: string; style: PasswordStyle }
-  /** Waits for a save the user hasn't answered yet (a reopened menu). */
-  | { type: "await-generated-password"; nonce: string }
   /** Generated passwords for the tab's site whose update Apple Passwords couldn't confirm. */
   | { type: "unconfirmed-passwords"; tabId?: number }
-  | { type: "cancel-generated-password"; nonce: string }
-  /** The user declined (or won't wait for) the Save prompt but wants the password anyway. */
-  | { type: "fill-generated-unsaved"; nonce: string }
+
   /** Opens Apple's Passwords app, searching for the tab's site when there is one. */
   | { type: "open-passwords-app"; tabId?: number }
   // content script → background (the only requests content scripts may send)
   | { type: "autofill-status"; kind: FieldKind }
-  /** A form with a password we generated was submitted, with this username. */
+  /** A form with a password we generated was submitted (or the page left), with this username. */
   | { type: "generated-password-submitted"; username: string };
 
 /** Requests content scripts are allowed to send. */
@@ -92,16 +88,7 @@ export interface GeneratedPasswords {
   alphanumeric: string;
 }
 
-/** A save is waiting for the user to answer macOS's prompt. */
-export interface PendingGeneratedPassword {
-  pending: "waiting";
-  username: string;
-}
-
-/**
- * "not-saved": the user declined macOS's Save prompt (or never answered), so nothing was filled.
- */
-export type NewPasswordResult = "filled" | "not-saved" | "menu-hidden" | "no-fields" | "origin-mismatch";
+export type NewPasswordResult = "filled" | "menu-hidden" | "no-fields" | "origin-mismatch";
 
 /** What each request answers with. Requests not listed answer with the session status. */
 interface Responses {
@@ -112,12 +99,9 @@ interface Responses {
   "get-settings": Settings;
   "set-settings": Settings;
   "autofill-status": AutofillStatus;
-  "generate-passwords": GeneratedPasswords | PendingGeneratedPassword;
+  "generate-passwords": GeneratedPasswords;
   "use-generated-password": { result: NewPasswordResult };
-  "await-generated-password": { result: NewPasswordResult };
   "unconfirmed-passwords": { username: string; password: string }[];
-  "cancel-generated-password": null;
-  "fill-generated-unsaved": { result: NewPasswordResult };
   "menu-resize": null;
   "menu-close": null;
   "menu-focus-field": null;
@@ -137,7 +121,9 @@ export type ContentMessage =
   /** What the background needs before saving: the field's rules, the username, and whether the menu is visible. */
   | { type: "menu-new-password-context"; nonce: string }
   /** Fills a password that Apple Passwords has saved. */
-  | { type: "menu-fill-new-password"; nonce: string; origin: string; password: string; saved: boolean };
+  | { type: "menu-fill-new-password"; nonce: string; origin: string; password: string }
+  /** Apple Passwords has the generated password filled into this page. */
+  | { type: "generated-password-saved"; password: string };
 
 export interface NewPasswordContext {
   rules: FieldRules;

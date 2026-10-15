@@ -29,16 +29,14 @@ const KEEP_ALIVE = "keep-alive";
  */
 const PROBE_TAB = { tabId: 2 ** 31 - 1, frameId: 0 };
 
-interface PendingSave {
-  url: URL;
-  username: string;
+/** A generated password filled into a tab, until Apple Passwords has it. */
+interface GeneratedLogin {
+  hostname: string;
   password: string;
-  /** The menu to fill through; updated when the menu is reopened. */
-  nonce: string;
-  /** The site's usernames before the save. */
-  before: string[];
-  abort: AbortController;
-  outcome?: Promise<NewPasswordResult>;
+  /** "unsaved": not asked yet, or the user declined; "saving": macOS's prompt is up. */
+  state: "unsaved" | "saving" | "saved";
+  /** The username it was (or is being) saved with. */
+  username?: string;
 }
 
 export default defineBackground(() => {
@@ -104,21 +102,17 @@ export default defineBackground(() => {
     return { show: logins.length > 0 ? "logins" : "none" };
   }
 
-  // Passwords generated for open menus (by tab and menu nonce), saves waiting for the user's
-  // answer to macOS's prompt (one per tab), and the last generated password filled per tab.
+  // Passwords generated for open menus (by tab and menu nonce), and the one filled per tab.
   const generatedForMenu = new Map<string, GeneratedPasswords>();
-  const pendingSaves = new Map<number, PendingSave>();
-  const filledByTab = new Map<number, { hostname: string; username: string; password: string }>();
-  // generated passwords that replaced a saved one: Apple's helper can't confirm the update, so
-  // they're kept (in memory, until the session ends) for the popup to show
-  const unconfirmed: { hostname: string; username: string; password: string; at: number }[] = [];
+  const generatedByTab = new Map<number, GeneratedLogin>();
+  // Filled passwords Apple Passwords may not have (not saved yet, declined, or an update that
+  // can't be confirmed), kept in memory until the session ends for the popup to show.
+  const unconfirmed: { hostname: string; username: string; password: string }[] = [];
   session.onChange(({ state }) => {
     if (state !== "unlocked") unconfirmed.length = 0;
   });
   browser.tabs.onRemoved.addListener((tabId) => {
-    pendingSaves.get(tabId)?.abort.abort();
-    pendingSaves.delete(tabId);
-    filledByTab.delete(tabId);
+    generatedByTab.delete(tabId);
     for (const key of generatedForMenu.keys()) if (key.startsWith(`${tabId}:`)) generatedForMenu.delete(key);
   });
 
@@ -137,77 +131,66 @@ export default defineBackground(() => {
   }
 
   /**
-   * Asks Apple Passwords to save a generated password. For a new username, the page gets it once
-   * the login shows up in Apple Passwords. Replacing a saved password can't be seen in the site's
-   * logins (and reading the password back costs a Touch ID prompt), so it's filled right away and
-   * kept in memory until the session ends, in case the user didn't click Update Password.
+   * Fills a generated password right away, like Safari. Apple Passwords is asked to save it when
+   * the form is submitted (see saveGenerated); until it has it, the popup keeps it.
    */
-  async function startSave(tabId: number, nonce: string, password: string): Promise<NewPasswordResult> {
-    if (pendingSaves.has(tabId)) return awaitPendingSave(tabId, nonce);
+  async function fillGenerated(tabId: number, nonce: string, password: string): Promise<NewPasswordResult> {
     const context = await newPasswordContext(tabId, nonce);
     if (!context.visible) return "menu-hidden";
     const url = await tabUrl(tabId);
     if (!url) throw new Error("this page can't be filled");
-    const { username } = context;
-    const before = await usernamesFor(url.hostname);
-    const replaces = before.includes(username);
-    const client = await session.unlockedClient();
-    await client.savePassword({ hostname: url.hostname, username, password }, { tabId, frameId: 0 });
-    const pending: PendingSave = { url, username, password, nonce, before, abort: new AbortController() };
-    if (replaces) {
-      unconfirmed.push({ hostname: url.hostname, username, password, at: Date.now() });
-      return finishSave(tabId, pending);
-    }
-    pendingSaves.set(tabId, pending);
-    return awaitPendingSave(tabId, nonce);
-  }
-
-  function awaitPendingSave(tabId: number, nonce: string): Promise<NewPasswordResult> {
-    const pending = pendingSaves.get(tabId);
-    if (!pending) return Promise.resolve("not-saved");
-    pending.nonce = nonce;
-    pending.outcome ??= waitForLogin(() => usernamesFor(pending.url.hostname), pending.username, pending.before, {
-      signal: pending.abort.signal,
-    }).then((saved) => {
-      if (saved === undefined) return dropSave(tabId, pending);
-      // without a username, it's the one the user typed into macOS's Save dialog
-      pending.username = saved;
-      return finishSave(tabId, pending);
-    });
-    return pending.outcome;
-  }
-
-  function dropSave(tabId: number, pending: PendingSave): NewPasswordResult {
-    if (pendingSaves.get(tabId) === pending) pendingSaves.delete(tabId);
-    return "not-saved";
-  }
-
-  async function finishSave(tabId: number, pending: PendingSave, saved = true): Promise<NewPasswordResult> {
-    if (pendingSaves.get(tabId) === pending) pendingSaves.delete(tabId);
-    const { url, username, password, nonce } = pending;
-    const fill = { type: "menu-fill-new-password", nonce, origin: url.origin, password, saved } as const;
+    const fill = { type: "menu-fill-new-password", nonce, origin: url.origin, password } as const;
     const reply = (await relay(tabId, fill).catch(() => undefined)) as { result: NewPasswordResult } | undefined;
     const result = reply?.result ?? "no-fields";
-    if (result === "filled") filledByTab.set(tabId, { hostname: url.hostname, username, password });
+    if (result !== "filled") return result;
+    const previous = generatedByTab.get(tabId);
+    if (previous) forget(previous.password);
+    generatedByTab.set(tabId, { hostname: url.hostname, password, state: "unsaved" });
+    unconfirmed.push({ hostname: url.hostname, username: context.username, password });
     return result;
   }
 
-  /** The user typed a different username before submitting: save it with the generated password. */
-  async function updateGeneratedUsername(caller: Caller & { kind: "content-script" }, username: string) {
-    const filled = filledByTab.get(caller.tabId);
-    if (!filled || fillableUrl(caller.url)?.hostname !== filled.hostname || filled.username === username) return;
-    const before = await usernamesFor(filled.hostname);
+  function forget(password: string) {
+    const index = unconfirmed.findIndex((entry) => entry.password === password);
+    if (index >= 0) unconfirmed.splice(index, 1);
+  }
+
+  /**
+   * The form with a generated password was submitted (or the page left): ask Apple Passwords to
+   * save it with the form's username. A new login confirms the save; an update can't be seen, so
+   * it's assumed and the password stays in the popup's list.
+   */
+  async function saveGenerated(caller: Caller & { kind: "content-script" }, username: string) {
+    const generated = generatedByTab.get(caller.tabId);
+    if (!generated || fillableUrl(caller.url)?.hostname !== generated.hostname) return;
+    if (generated.state !== "unsaved" && generated.username === username) return;
+    generated.state = "saving";
+    generated.username = username;
+    const before = await usernamesFor(generated.hostname);
     const client = await session.unlockedClient();
-    await client.savePassword({ ...filled, username }, { tabId: caller.tabId, frameId: 0 });
-    const saved = await waitForLogin(() => usernamesFor(filled.hostname), username, before);
-    if (saved !== undefined) filled.username = saved;
+    const { hostname, password } = generated;
+    await client.savePassword({ hostname, username, password }, { tabId: caller.tabId, frameId: 0 });
+    const tab = caller.tabId;
+    if (username !== "" && before.includes(username)) return markSaved(tab, generated, username, false);
+    const saved = await waitForLogin(() => usernamesFor(hostname), username, before);
+    if (generated.username !== username) return; // a newer submit took over
+    if (saved === undefined) generated.state = "unsaved";
+    // without a username, it's the one the user typed into macOS's Save dialog
+    else markSaved(tab, generated, saved, true);
+  }
+
+  function markSaved(tabId: number, generated: GeneratedLogin, username: string, confirmed: boolean) {
+    generated.state = "saved";
+    generated.username = username;
+    if (confirmed) forget(generated.password);
+    void relay(tabId, { type: "generated-password-saved", password: generated.password }).catch(() => {});
   }
 
   async function handle(request: Request, caller: Caller): Promise<unknown> {
     if (caller.kind === "content-script") {
       if (request.type === "autofill-status") return autofillStatus(caller, request.kind);
       if (request.type === "generated-password-submitted") {
-        void updateGeneratedUsername(caller, request.username);
+        void saveGenerated(caller, request.username);
         return null;
       }
       throw new Error("not allowed");
@@ -258,9 +241,6 @@ export default defineBackground(() => {
       case "generate-passwords": {
         const tabId = tabOf(caller);
         const { rules } = await newPasswordContext(tabId, request.nonce);
-        // a menu reopened while a save waits for the user picks up where it left off
-        const pending = pendingSaves.get(tabId);
-        if (pending) return { pending: "waiting", username: pending.username };
         const passwords = {
           strong: generatePassword("strong", rules),
           alphanumeric: generatePassword("alphanumeric", rules),
@@ -272,37 +252,13 @@ export default defineBackground(() => {
         const tabId = tabOf(caller);
         const passwords = generatedForMenu.get(`${tabId}:${request.nonce}`);
         if (!passwords) throw new Error("That password expired. Try again.");
-        return { result: await startSave(tabId, request.nonce, passwords[request.style]) };
+        return { result: await fillGenerated(tabId, request.nonce, passwords[request.style]) };
       }
-      case "await-generated-password":
-        return { result: await awaitPendingSave(tabOf(caller), request.nonce) };
       case "unconfirmed-passwords": {
         const url = await tabUrl(tabOf(caller, request.tabId));
         return unconfirmed
           .filter((entry) => entry.hostname === url?.hostname)
           .map(({ username, password }) => ({ username, password }));
-      }
-      case "fill-generated-unsaved": {
-        const tabId = tabOf(caller);
-        const pending = pendingSaves.get(tabId);
-        if (!pending) return { result: "not-saved" };
-        pending.abort.abort();
-        pendingSaves.delete(tabId);
-        pending.nonce = request.nonce;
-        // not in Apple Passwords: keep it for the popup for the rest of the session
-        unconfirmed.push({
-          hostname: pending.url.hostname,
-          username: pending.username,
-          password: pending.password,
-          at: Date.now(),
-        });
-        return { result: await finishSave(tabId, pending, false) };
-      }
-      case "cancel-generated-password": {
-        const tabId = tabOf(caller);
-        pendingSaves.get(tabId)?.abort.abort();
-        pendingSaves.delete(tabId);
-        return null;
       }
       case "generated-password-submitted":
         throw new Error("content scripts only");
