@@ -42,11 +42,11 @@ export const FIREFOX_EXTENSION_ID = "apple-passwords-plus@applepasswordsplus.org
 export const FILL_MATCHES = ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"];
 
 /**
- * Where to get the Mac app (Touch ID, your emails). The store build will link to its App Store
- * listing and the GitHub build to the landing page's DMG; until those exist, both open its docs.
+ * Where to download the companion app. The store build will link to its App Store listing and
+ * the GitHub build to the landing page's DMG; until those exist, both use the GitHub releases.
  */
-export function macAppUrlFor(_variant: Variant): string {
-  return `${REPO_URL}/blob/main/docs/companion.md`;
+export function companionDownloadUrlFor(_variant: Variant): string {
+  return `${REPO_URL}/releases`;
 }
 
 export function nativeHostFor(variant: Variant): string {

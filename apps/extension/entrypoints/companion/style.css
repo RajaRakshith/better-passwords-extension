@@ -1,0 +1,122 @@
+@import "../../src/ui/tokens.css";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px / 1.5 var(--font);
+}
+
+main {
+  width: min(460px, 100%);
+  padding: 32px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px var(--separator),
+    0 12px 40px rgb(0 0 0 / 8%);
+  text-align: center;
+}
+
+.app-icon {
+  width: 72px;
+  height: 72px;
+}
+
+h1 {
+  margin: 12px 0 4px;
+  font-size: 22px;
+}
+
+.lead {
+  margin: 0 0 22px;
+  color: var(--text-secondary);
+}
+
+.features {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.features li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.features svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.features p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.asks {
+  margin: 0 0 22px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--bg);
+  text-align: left;
+}
+
+.asks h2 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.asks ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px var(--separator);
+}
+
+.button.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: none;
+}
+
+.fine {
+  margin: 18px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}

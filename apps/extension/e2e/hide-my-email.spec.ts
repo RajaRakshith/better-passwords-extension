@@ -4,7 +4,12 @@ import { choose, expect, menuFrame, test } from "./fixtures.ts";
 /** A fake icloud.com for the extension's background, recording what it was asked. */
 async function fakeICloud(
   context: BrowserContext,
-  { signedIn = true, existing, delayMs = 0 }: { signedIn?: boolean; existing?: string; delayMs?: number } = {},
+  {
+    signedIn = true,
+    existing,
+    delayMs = 0,
+    icloudPlus = true,
+  }: { signedIn?: boolean; existing?: string; delayMs?: number; icloudPlus?: boolean } = {},
 ) {
   const seen: { path: string; origin: string | undefined; body?: unknown }[] = [];
   let generated = 0;
@@ -16,11 +21,13 @@ async function fakeICloud(
     const json = (body: unknown, status = 200) =>
       route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     if (pathname === "/setup/ws/1/validate") {
-      return signedIn
+      if (!signedIn) return json({ success: false }, 421);
+      // without iCloud+, the account has no Hide My Email service
+      return icloudPlus
         ? json({
             webservices: { premiummailsettings: { url: "https://p1-maildomainws.icloud.com", status: "active" } },
           })
-        : json({ success: false }, 421);
+        : json({ webservices: { contacts: { url: "https://p1-contactsws.icloud.com", status: "active" } } });
     }
     if (pathname === "/v2/hme/list") {
       const hmeEmails = existing ? [{ hme: existing, label: "localhost", isActive: true }] : [];
@@ -194,4 +201,29 @@ test.describe("when the companion may not read Contacts", () => {
     const menu = await emailMenu(page);
     await expect(menu.getByText("allow Contacts in the companion app")).toBeVisible();
   });
+});
+
+test("without iCloud+, says so once and stops offering Hide My Email", async ({ context, siteUrl }) => {
+  await fakeICloud(context, { icloudPlus: false });
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/signup.html`);
+  const menu = await emailMenu(page);
+  await choose(menu, "Use Hide My Email");
+  await expect(menu.getByText("Hide My Email needs iCloud+")).toBeVisible();
+
+  // turned off: the email field only offers the companion app now (click away to close the menu)
+  await page.mouse.click(5, 5);
+  const again = await emailMenu(page);
+  await expect(again.getByText("Suggest Your Email Addresses")).toBeVisible();
+  await expect(again.getByText(/Hide My Email/)).toHaveCount(0);
+});
+
+test("the email field's companion hint opens the extension's page about the app", async ({ context, siteUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/signup.html`);
+  const menu = await emailMenu(page);
+  const opened = context.waitForEvent("page");
+  await choose(menu, "Suggest Your Email Addresses");
+  const about = await opened;
+  await expect(about).toHaveURL(/\/companion\.html$/);
 });

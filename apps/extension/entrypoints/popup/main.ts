@@ -3,6 +3,7 @@ import { DISPLAY_NAME, REPO_URL, SETUP_COMMAND } from "@/src/config.ts";
 import { type LoginsResult, type Settings, type Status, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { bindCodeInput } from "@/src/ui/code-input.ts";
+import { companionPitch } from "@/src/ui/companion-pitch.ts";
 import { h } from "@/src/ui/h.ts";
 import { icon, OPEN } from "@/src/ui/icons.ts";
 
@@ -159,6 +160,12 @@ function showCodeEntry(status: Status, error?: string) {
     h("div", { class: "actions" }, newCode, touchId),
     companionHint,
   );
+  void companionPitch(() => {
+    void send({ type: "open-companion-page" }).catch(() => {});
+    window.close();
+  }).then((pitch) => {
+    if (pitch && input.isConnected) app.append(pitch);
+  });
   // Apple's code window can take focus as it appears; take it back when the popup regains it
   const refocus = () => {
     if (input.isConnected && !input.disabled) input.focus();

@@ -4,6 +4,7 @@ import type { EmailSuggestions } from "@/src/messages.ts";
 import { send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { bindCodeInput } from "@/src/ui/code-input.ts";
+import { companionPitch } from "@/src/ui/companion-pitch.ts";
 import { h } from "@/src/ui/h.ts";
 import { CANCEL, CHECK, ENVELOPE, EYE, icon, KEY, LOCK, OPEN, PERSON, REFRESH } from "@/src/ui/icons.ts";
 
@@ -234,6 +235,13 @@ function renderEmail(suggestions: EmailSuggestions, error?: string) {
         close();
       }),
     );
+  } else if (hme.state === "needs-icloud-plus") {
+    rows.push(
+      row(ENVELOPE, "Hide My Email needs iCloud+", "Learn about iCloud+", async () => {
+        await send({ type: "open-icloud-plus" }).catch(() => {});
+        close();
+      }),
+    );
   } else if (hme.state === "error") {
     rows.push(message(hme.message, true));
   }
@@ -327,8 +335,16 @@ async function showProposal() {
       row(REFRESH, "Try Another", "", () => void showProposal()),
     );
   } catch (e) {
-    renderEmail({ ...lastSuggestions, hideMyEmail: { state: "ready" } }, messageOf(e));
+    renderEmail(...afterICloudError(e));
   }
+}
+
+/** What the email menu shows after a Hide My Email call failed. */
+function afterICloudError(error: unknown): [EmailSuggestions, string?] {
+  if ((error as { code?: string }).code === "no-icloud-plus") {
+    return [{ ...lastSuggestions, hideMyEmail: { state: "needs-icloud-plus" } }];
+  }
+  return [{ ...lastSuggestions, hideMyEmail: { state: "ready" } }, messageOf(error)];
 }
 
 async function useAddress(address: string, reserve: boolean) {
@@ -340,7 +356,7 @@ async function useAddress(address: string, reserve: boolean) {
       renderEmail({ ...lastSuggestions, hideMyEmail: { state: "ready", address } }, fillError(result));
     }
   } catch (e) {
-    renderEmail({ ...lastSuggestions, hideMyEmail: { state: "ready" } }, messageOf(e));
+    renderEmail(...afterICloudError(e));
   }
 }
 
@@ -433,6 +449,14 @@ function showCodeEntry(error?: string) {
     input.focus();
   });
   render(message("Enter the code shown on your Mac"), input, error ? message(error, true) : null, again);
+  void companionPitch(() => {
+    void send({ type: "open-companion-page" }).catch(() => {});
+    close();
+  }).then((pitch) => {
+    if (!pitch || !input.isConnected) return;
+    panel.append(pitch);
+    reportSize();
+  });
   input.focus();
 }
 

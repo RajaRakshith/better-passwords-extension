@@ -67,6 +67,28 @@ describe("HideMyEmail", () => {
     await expect(new HideMyEmail(icloud.fetchImpl).generate()).rejects.toMatchObject({ code: "signed-out" });
   });
 
+  it("tells when the account has no iCloud+", async () => {
+    const noService = fakeICloud({
+      "/setup/ws/1/validate": () => ({ body: { webservices: { contacts: { url: "x" } } } }),
+    });
+    await expect(new HideMyEmail(noService.fetchImpl).generate()).rejects.toMatchObject({ code: "no-icloud-plus" });
+    const inactive = fakeICloud({
+      "/setup/ws/1/validate": () => ({
+        body: {
+          webservices: { premiummailsettings: { url: "https://p1-maildomainws.icloud.com", status: "inactive" } },
+        },
+      }),
+    });
+    await expect(new HideMyEmail(inactive.fetchImpl).generate()).rejects.toMatchObject({ code: "no-icloud-plus" });
+    const refused = fakeICloud({
+      "/setup/ws/1/validate": signedIn,
+      "/v1/hme/generate": () => ({
+        body: { success: false, error: { errorMessage: "Upgrade to iCloud+ to use this." } },
+      }),
+    });
+    await expect(new HideMyEmail(refused.fetchImpl).generate()).rejects.toMatchObject({ code: "no-icloud-plus" });
+  });
+
   it("forgets an expired session", async () => {
     let expired = false;
     const icloud = fakeICloud({

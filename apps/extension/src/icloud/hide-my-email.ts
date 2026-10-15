@@ -13,8 +13,11 @@ const NOTE = "Created by Apple Passwords Plus";
 export class ICloudError extends Error {
   constructor(
     message: string,
-    /** "signed-out": not signed in to icloud.com in this browser; "failed": anything else. */
-    readonly code: "signed-out" | "failed",
+    /**
+     * "signed-out": not signed in to icloud.com in this browser; "no-icloud-plus": the account
+     * has no Hide My Email (it comes with iCloud+); "failed": anything else.
+     */
+    readonly code: "signed-out" | "no-icloud-plus" | "failed",
   ) {
     super(message);
   }
@@ -76,12 +79,17 @@ export class HideMyEmail {
     if (this.#service && this.now() - this.#service.at < 5 * 60_000) return this.#service.url;
     const response = await this.fetchImpl(`${SETUP_URL}/validate`, { method: "POST", credentials: "include" });
     const body = (await response.json().catch(() => undefined)) as
-      | { webservices?: { premiummailsettings?: { url?: string } } }
+      | { webservices?: Record<string, { url?: string; status?: string } | undefined> }
       | undefined;
-    const url = body?.webservices?.premiummailsettings?.url;
-    if (!response.ok || !url) {
+    if (!response.ok || !body?.webservices) {
       throw new ICloudError("Sign in to iCloud in this browser to use Hide My Email.", "signed-out");
     }
+    // signed in, but the account has no Hide My Email service (no iCloud+)
+    const service = body.webservices.premiummailsettings;
+    if (!service?.url || (service.status !== undefined && service.status !== "active")) {
+      throw new ICloudError("Hide My Email needs iCloud+.", "no-icloud-plus");
+    }
+    const { url } = service;
     this.#service = { url, at: this.now() };
     return url;
   }
@@ -99,7 +107,10 @@ export class HideMyEmail {
     }
     const reply = (await response.json().catch(() => undefined)) as ServiceReply<T> | undefined;
     if (!response.ok || !reply?.success || reply.result === undefined) {
-      throw new ICloudError(reply?.error?.errorMessage || "iCloud couldn't do that. Try again.", "failed");
+      const text = reply?.error?.errorMessage || "iCloud couldn't do that. Try again.";
+      // iCloud's own wording when the account has no subscription
+      const code = /icloud\+|subscri|upgrade/i.test(text) ? "no-icloud-plus" : "failed";
+      throw new ICloudError(code === "no-icloud-plus" ? "Hide My Email needs iCloud+." : text, code);
     }
     return reply.result;
   }

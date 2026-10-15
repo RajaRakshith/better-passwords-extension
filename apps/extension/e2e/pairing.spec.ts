@@ -50,3 +50,25 @@ test("the popup opens the Passwords app", async ({ context, popupUrl, passwordsA
   // the popup's own tab is not a website, so no search is passed
   await expect.poll(passwordsAppLaunches).toEqual([""]);
 });
+
+test("suggests the companion app under the code box, until dismissed", async ({ context, popupUrl }) => {
+  const popup = await context.newPage();
+  await popup.goto(popupUrl);
+  await expect(popup.getByText("Skip this step next time")).toBeVisible();
+
+  // it leads to the extension's own page about the app
+  const opened = context.waitForEvent("page");
+  await popup.getByRole("button", { name: "Get Companion App" }).click();
+  const page = await opened;
+  await expect(page.getByRole("heading", { name: "Companion app for Mac" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Download for Mac" })).toBeVisible();
+
+  const again = await context.newPage();
+  await again.goto(popupUrl);
+  await again.getByRole("button", { name: "Don't suggest the companion app again" }).click();
+  await expect(again.getByText("Skip this step next time")).toHaveCount(0);
+  await again.reload();
+  await expect(again.getByText("Enter the code shown on your Mac")).toBeVisible();
+  await again.waitForTimeout(500);
+  await expect(again.getByText("Skip this step next time")).toHaveCount(0);
+});

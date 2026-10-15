@@ -1,6 +1,6 @@
 import type { FieldKind } from "@/src/autofill/fields.ts";
 import { Companion } from "@/src/companion.ts";
-import { macAppUrlFor, nativeHostFor } from "@/src/config.ts";
+import { nativeHostFor } from "@/src/config.ts";
 import { fillCredentials } from "@/src/fill.ts";
 import { HideMyEmail, headerRule, ICloudError } from "@/src/icloud/hide-my-email.ts";
 import {
@@ -257,6 +257,10 @@ export default defineBackground(() => {
       return address ? { state: "ready", address } : { state: "ready" };
     } catch (error) {
       if (error instanceof ICloudError && error.code === "signed-out") return { state: "signed-out" };
+      if (error instanceof ICloudError && error.code === "no-icloud-plus") {
+        await withoutICloudPlus();
+        return { state: "needs-icloud-plus" };
+      }
       return { state: "error", message: error instanceof Error ? error.message : String(error) };
     }
   }
@@ -271,6 +275,21 @@ export default defineBackground(() => {
       if (code === "needs-contacts") return { state: "needs-contacts" };
       // an older app, or the agent isn't running: offer nothing rather than an error
       return { state: "off" };
+    }
+  }
+
+  /** No iCloud+: turn Hide My Email and its hint off, so sign-up forms stop offering it. */
+  async function withoutICloudPlus() {
+    await saveSettings({ hideMyEmail: false, hideMyEmailHint: false });
+  }
+
+  /** Runs a Hide My Email call, turning the feature off if the account turns out to lack iCloud+. */
+  async function icloud<T>(call: () => Promise<T>): Promise<T> {
+    try {
+      return await call();
+    } catch (error) {
+      if (error instanceof ICloudError && error.code === "no-icloud-plus") await withoutICloudPlus();
+      throw error;
     }
   }
 
@@ -402,12 +421,14 @@ export default defineBackground(() => {
         return null;
       case "generate-hide-my-email":
         tabOf(caller);
-        return { address: await hideMyEmail.generate() };
+        return { address: await icloud(() => hideMyEmail.generate()) };
       case "use-hide-my-email": {
         const tabId = tabOf(caller);
         const url = await tabUrl(tabId);
         if (!url) throw new Error("this page can't be filled");
-        const email = request.reserve ? await hideMyEmail.reserve(request.address, url.hostname) : request.address;
+        const email = request.reserve
+          ? await icloud(() => hideMyEmail.reserve(request.address, url.hostname))
+          : request.address;
         addressCache.set(url.hostname, { address: email, at: Date.now() });
         const reply = (await relay(tabId, {
           type: "menu-fill-email",
@@ -437,7 +458,11 @@ export default defineBackground(() => {
         await companion.openApp();
         return null;
       case "open-companion-page":
-        await browser.tabs.create({ url: macAppUrlFor(__VARIANT__) });
+        // our own page about the app, which links to its download
+        await browser.tabs.create({ url: browser.runtime.getURL("/companion.html") });
+        return null;
+      case "open-icloud-plus":
+        await browser.tabs.create({ url: "https://www.apple.com/icloud/" });
         return null;
       case "open-icloud":
         await browser.tabs.create({ url: "https://www.icloud.com/" });

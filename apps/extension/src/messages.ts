@@ -36,6 +36,7 @@ export type Request =
   /** Fills an address in; a new (generated) one is reserved for the site first. */
   | { type: "use-hide-my-email"; nonce: string; address: string; reserve: boolean }
   | { type: "open-icloud" }
+  | { type: "open-icloud-plus" }
   /** Fills one of the user's own emails (from their contact card) in. */
   | { type: "fill-email"; nonce: string; email: string }
   | { type: "dismiss-companion-emails-hint" }
@@ -78,6 +79,8 @@ export interface Settings {
   companionEmailsHint: boolean;
   /** With the Mac app: suggest the emails on the user's contact card in sign-up email fields. */
   suggestEmails: boolean;
+  /** Mention the companion app under the code box (it skips typing the code) until dismissed. */
+  companionCodeHint: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -89,6 +92,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hideMyEmailHint: true,
   companionEmailsHint: true,
   suggestEmails: true,
+  companionCodeHint: true,
 };
 
 export interface Status extends SessionStatus {
@@ -126,6 +130,8 @@ export type HideMyEmailState =
   | { state: "off" }
   | { state: "hint" }
   | { state: "signed-out" }
+  /** The account has no Hide My Email; it has just been turned off. */
+  | { state: "needs-icloud-plus" }
   | { state: "ready"; address?: string }
   | { state: "error"; message: string };
 
@@ -164,6 +170,7 @@ interface Responses {
   "generate-hide-my-email": { address: string };
   "use-hide-my-email": { result: string };
   "open-icloud": null;
+  "open-icloud-plus": null;
   "fill-email": { result: string };
   "dismiss-companion-emails-hint": null;
   "open-companion-page": null;
