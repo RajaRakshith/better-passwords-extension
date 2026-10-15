@@ -32,6 +32,8 @@ export type Request =
   /** Generated passwords for the tab's site whose update Apple Passwords couldn't confirm. */
   | { type: "unconfirmed-passwords"; tabId?: number }
   | { type: "cancel-generated-password"; nonce: string }
+  /** The user declined (or won't wait for) the Save prompt but wants the password anyway. */
+  | { type: "fill-generated-unsaved"; nonce: string }
   /** Opens Apple's Passwords app, searching for the tab's site when there is one. */
   | { type: "open-passwords-app"; tabId?: number }
   // content script → background (the only requests content scripts may send)
@@ -115,6 +117,7 @@ interface Responses {
   "await-generated-password": { result: NewPasswordResult };
   "unconfirmed-passwords": { username: string; password: string }[];
   "cancel-generated-password": null;
+  "fill-generated-unsaved": { result: NewPasswordResult };
   "menu-resize": null;
   "menu-close": null;
   "menu-focus-field": null;
@@ -134,7 +137,7 @@ export type ContentMessage =
   /** What the background needs before saving: the field's rules, the username, and whether the menu is visible. */
   | { type: "menu-new-password-context"; nonce: string }
   /** Fills a password that Apple Passwords has saved. */
-  | { type: "menu-fill-new-password"; nonce: string; origin: string; password: string };
+  | { type: "menu-fill-new-password"; nonce: string; origin: string; password: string; saved: boolean };
 
 export interface NewPasswordContext {
   rules: FieldRules;

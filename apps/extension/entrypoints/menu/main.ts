@@ -1,10 +1,13 @@
 import "./style.css";
 import { DISPLAY_NAME } from "@/src/config.ts";
 import { send } from "@/src/messages.ts";
+import { applySystemAccent } from "@/src/ui/accent.ts";
 import { h } from "@/src/ui/h.ts";
 
 // The inline menu, shown in an iframe under a login field. It is an extension page, so the web
 // page can't read the usernames shown here or listen to keys typed into the code field.
+
+applySystemAccent();
 
 const params = new URLSearchParams(window.location.hash.slice(1));
 const nonce = params.get("nonce") ?? "";
@@ -168,8 +171,18 @@ function showWaiting() {
   render(
     message("Click Save in the dialog on your Mac. The password is filled in once it's saved."),
     h("hr", { class: "separator" }),
+    row(KEY, "Fill In Without Saving", "Not saved in Apple Passwords", () => void fillUnsaved()),
     row(CANCEL, "Cancel", "", () => void cancelSave()),
   );
+}
+
+async function fillUnsaved() {
+  try {
+    const { result } = await send({ type: "fill-generated-unsaved", nonce });
+    if (result !== "filled") await showGenerate(saveError(result));
+  } catch (e) {
+    await showGenerate(messageOf(e));
+  }
 }
 
 async function useGenerated(style: "strong" | "alphanumeric") {
@@ -204,10 +217,15 @@ function saveError(result: string): string {
   return "Couldn't fill in this page.";
 }
 
-/** The field already holds a strong password we generated and Apple Passwords saved. */
-function showGeneratedDone() {
+/** The field already holds a strong password we generated (and, usually, Apple Passwords saved). */
+function showGeneratedDone(saved: boolean) {
   render(
-    row(CHECK, "Strong Password Saved", "In Apple Passwords", () => close()),
+    saved
+      ? row(CHECK, "Strong Password Saved", "In Apple Passwords", () => close())
+      : row(OPEN, "Strong Password, Not Saved", "Save it in the Passwords app", async () => {
+          await send({ type: "open-passwords-app" }).catch(() => {});
+          close();
+        }),
     row(KEY, "Choose a Different Password", "", () => void showGenerate()),
     h("hr", { class: "separator" }),
     openPasswordsRow(false),
@@ -335,5 +353,5 @@ function messageOf(error: unknown): string {
 const mode = params.get("mode");
 if (mode === "locked") void showLocked();
 else if (mode === "generate") void showGenerate();
-else if (mode === "generated") showGeneratedDone();
+else if (mode === "generated" || mode === "generated-unsaved") showGeneratedDone(mode === "generated");
 else void showLogins();

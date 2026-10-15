@@ -18,7 +18,7 @@ export default defineContentScript({
     const newPasswordFields = new Map<string, HTMLInputElement>();
     // the last generated password we filled: to recognise it, and to update its username when
     // the form is submitted
-    let generated: { field: HTMLInputElement; value: string; username: string } | undefined;
+    let generated: { field: HTMLInputElement; value: string; username: string; saved: boolean } | undefined;
 
     async function offer(field: HTMLInputElement, kind: FieldKind) {
       if (menu.anchor === field || dismissed === field) return;
@@ -31,7 +31,7 @@ export default defineContentScript({
       if (kind === "new-password" && field.value !== "") {
         // our own password: say it's saved; one the user typed: stay out of the way
         if (show !== "none" && generated?.field.form === field.form && field.value === generated.value) {
-          menu.open(field, "generated", kind);
+          menu.open(field, generated.saved ? "generated" : "generated-unsaved", kind);
         } else {
           menu.close();
         }
@@ -145,7 +145,9 @@ export default defineContentScript({
           return false;
         }
         const result = fillNewPassword(message.origin, message.password, field);
-        if (result === "filled") generated = { field, value: message.password, username: usernameNear(field) };
+        if (result === "filled") {
+          generated = { field, value: message.password, username: usernameNear(field), saved: message.saved };
+        }
         if (menu.isCurrent(message.nonce)) {
           dismissed = field;
           menu.close();

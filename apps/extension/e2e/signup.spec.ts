@@ -114,6 +114,27 @@ test.describe("when the user doesn't save", () => {
     await expect(menu.getByText("Strong Password").first()).toBeVisible();
     await expect(page.locator("#new")).toHaveValue("");
   });
+
+  test("the password can still be filled in without saving", async ({ context, siteUrl, helperSaves }) => {
+    const page = await context.newPage();
+    await page.goto(`${siteUrl}/signup.html`);
+    await page.locator("#email").fill("no-save@example.com");
+    await page.locator("#new").click();
+    const menu = await menuFrame(page);
+    await choose(menu, "Unlock to suggest a strong password");
+    await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+    const preview = await revealed(menu, 0);
+    await choose(menu, "Strong Password");
+    await choose(menu, "Fill In Without Saving");
+    await expect(page.locator("#new")).toHaveValue(preview);
+    await expect(page.locator("#confirm")).toHaveValue(preview);
+    expect(helperSaves()).toEqual([]);
+
+    // back in the field, the menu says it isn't saved
+    await page.locator("#email").click();
+    await page.locator("#new").click();
+    await expect((await menuFrame(page)).getByText("Strong Password, Not Saved")).toBeVisible();
+  });
 });
 
 test("typing a password of one's own closes the suggestions", async ({ context, siteUrl }) => {

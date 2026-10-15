@@ -1,7 +1,10 @@
 import "./style.css";
 import { DISPLAY_NAME, REPO_URL, SETUP_COMMAND } from "@/src/config.ts";
 import { type LoginsResult, type Settings, type Status, send } from "@/src/messages.ts";
+import { applySystemAccent } from "@/src/ui/accent.ts";
 import { h } from "@/src/ui/h.ts";
+
+applySystemAccent();
 
 const app = document.getElementById("app") as HTMLElement;
 
@@ -210,7 +213,7 @@ async function unconfirmedPasswords(tabId: number | undefined) {
     h(
       "p",
       { class: "hint" },
-      "New passwords filled in this session. If you didn't click Update Password on your Mac, copy yours from here:",
+      "Passwords filled in this session that Apple Passwords may not have. If you need one, copy it from here:",
     ),
     ...entries.map(({ username, password }) => {
       const copy = h("button", { class: "secondary", textContent: "Copy" });

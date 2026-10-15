@@ -174,12 +174,11 @@ export default defineBackground(() => {
     return "not-saved";
   }
 
-  async function finishSave(tabId: number, pending: PendingSave): Promise<NewPasswordResult> {
+  async function finishSave(tabId: number, pending: PendingSave, saved = true): Promise<NewPasswordResult> {
     if (pendingSaves.get(tabId) === pending) pendingSaves.delete(tabId);
     const { url, username, password, nonce } = pending;
-    const reply = (await relay(tabId, { type: "menu-fill-new-password", nonce, origin: url.origin, password }).catch(
-      () => undefined,
-    )) as { result: NewPasswordResult } | undefined;
+    const fill = { type: "menu-fill-new-password", nonce, origin: url.origin, password, saved } as const;
+    const reply = (await relay(tabId, fill).catch(() => undefined)) as { result: NewPasswordResult } | undefined;
     const result = reply?.result ?? "no-fields";
     if (result === "filled") filledByTab.set(tabId, { hostname: url.hostname, username, password });
     return result;
@@ -272,6 +271,22 @@ export default defineBackground(() => {
         return unconfirmed
           .filter((entry) => entry.hostname === url?.hostname)
           .map(({ username, password }) => ({ username, password }));
+      }
+      case "fill-generated-unsaved": {
+        const tabId = tabOf(caller);
+        const pending = pendingSaves.get(tabId);
+        if (!pending) return { result: "not-saved" };
+        pending.abort.abort();
+        pendingSaves.delete(tabId);
+        pending.nonce = request.nonce;
+        // not in Apple Passwords: keep it for the popup for the rest of the session
+        unconfirmed.push({
+          hostname: pending.url.hostname,
+          username: pending.username,
+          password: pending.password,
+          at: Date.now(),
+        });
+        return { result: await finishSave(tabId, pending, false) };
       }
       case "cancel-generated-password": {
         const tabId = tabOf(caller);
