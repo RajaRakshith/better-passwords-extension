@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isLoginField } from "../src/autofill/fields.ts";
+import { fieldKind, isLoginField } from "../src/autofill/fields.ts";
 
 function field(html: string, selector = "#f"): HTMLInputElement {
   document.body.innerHTML = html;
@@ -34,5 +34,66 @@ describe("isLoginField", () => {
     document.body.innerHTML = `<textarea id="t"></textarea>`;
     expect(isLoginField(document.querySelector("#t"))).toBe(false);
     expect(isLoginField(null)).toBe(false);
+  });
+});
+
+describe("fieldKind", () => {
+  it.each([
+    ["new-password", `<input id="f" type="password" autocomplete="new-password">`, "new-password"],
+    [
+      "password with confirmation",
+      `<form><input type="email"><input id="f" type="password"><input type="password"></form>`,
+      "new-password",
+    ],
+    [
+      "confirmation field",
+      `<form><input type="email"><input type="password"><input id="f" type="password"></form>`,
+      "new-password",
+    ],
+    [
+      "change password: new",
+      `<form><input type="password"><input id="f" type="password"><input type="password"></form>`,
+      "new-password",
+    ],
+    [
+      "change password: current",
+      `<form><input id="f" type="password"><input type="password"><input type="password"></form>`,
+      "login",
+    ],
+    [
+      "sign-up form by its button",
+      `<form><input type="email"><input id="f" type="password"><button>Create account</button></form>`,
+      "new-password",
+    ],
+    ["login form", `<form><input type="email"><input id="f" type="password"><button>Sign in</button></form>`, "login"],
+    [
+      "sign-up email",
+      `<form><input id="f" type="email"><input type="password" autocomplete="new-password"></form>`,
+      "signup-email",
+    ],
+    [
+      "sign-up email marked as username",
+      `<form><input id="f" type="email" autocomplete="username"><input type="password" autocomplete="new-password"></form>`,
+      "signup-email",
+    ],
+    [
+      "email on a register form without a password yet",
+      `<form id="register"><input id="f" type="email" name="email"><button>Continue</button></form>`,
+      "signup-email",
+    ],
+    ["login email", `<form><input id="f" type="email"><input type="password"><button>Log in</button></form>`, "login"],
+  ])("classifies a %s", (_, html, kind) => {
+    expect(fieldKind(field(html))).toBe(kind);
+  });
+
+  it.each([
+    [
+      "chosen username on a sign-up form",
+      `<form><input id="f" name="username"><input type="password" autocomplete="new-password"></form>`,
+    ],
+    ["newsletter email", `<form><input id="f" type="email"><button>Subscribe</button></form>`],
+    ["search box", `<input id="f" type="search">`],
+  ])("ignores a %s", (_, html) => {
+    expect(fieldKind(field(html))).toBeUndefined();
   });
 });

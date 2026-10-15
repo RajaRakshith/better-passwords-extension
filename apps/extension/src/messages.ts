@@ -1,7 +1,9 @@
 // Messages to the background worker, from our extension pages (popup, inline menu) and, for one
 // read-only question, from the autofill content script. Web pages never talk to the background.
 
+import type { FieldKind } from "./autofill/fields.ts";
 import type { CompanionState } from "./companion.ts";
+import type { FieldRules, PasswordStyle } from "./passwords/generate.ts";
 import type { SessionStatus } from "./session/session.ts";
 
 export type Request =
@@ -21,13 +23,22 @@ export type Request =
   | { type: "menu-resize"; nonce: string; height: number }
   | { type: "menu-close"; nonce: string }
   | { type: "menu-focus-field"; nonce: string }
+  /** Two fresh strong passwords for the new-password field the menu was opened on. */
+  | { type: "generate-passwords"; nonce: string }
+  /** Saves the chosen password to Apple Passwords, then fills it once the user confirmed. */
+  | { type: "use-generated-password"; nonce: string; style: PasswordStyle }
   /** Opens Apple's Passwords app, searching for the tab's site when there is one. */
   | { type: "open-passwords-app"; tabId?: number }
-  // content script → background (the only request content scripts may send)
-  | { type: "autofill-status" };
+  // content script → background (the only requests content scripts may send)
+  | { type: "autofill-status"; kind: FieldKind }
+  /** A form with a password we generated was submitted, with this username. */
+  | { type: "generated-password-submitted"; username: string };
 
 /** Requests content scripts are allowed to send. */
-export const CONTENT_SCRIPT_REQUESTS: ReadonlySet<Request["type"]> = new Set(["autofill-status"]);
+export const CONTENT_SCRIPT_REQUESTS: ReadonlySet<Request["type"]> = new Set([
+  "autofill-status",
+  "generated-password-submitted",
+]);
 
 export interface Settings {
   /** End the session when the Mac locks or sleeps. */
@@ -36,9 +47,16 @@ export interface Settings {
   inlineMenu: boolean;
   /** Unlock with Touch ID through the companion app, when it is installed. */
   touchId: boolean;
+  /** Suggest strong passwords on sign-up and change-password forms. */
+  generatePasswords: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { lockOnScreenLock: false, inlineMenu: true, touchId: true };
+export const DEFAULT_SETTINGS: Settings = {
+  lockOnScreenLock: false,
+  inlineMenu: true,
+  touchId: true,
+  generatePasswords: true,
+};
 
 export interface Status extends SessionStatus {
   variant: "store" | "github";
@@ -55,23 +73,40 @@ export interface LoginsResult {
 }
 
 export interface AutofillStatus {
-  /** "logins": saved logins exist for this site; "locked": pairing needed; "none": stay out of the way. */
-  show: "logins" | "locked" | "none";
+  /**
+   * "logins": saved logins exist for this site; "generate": suggest a new password;
+   * "locked": pairing needed; "none": stay out of the way.
+   */
+  show: "logins" | "generate" | "locked" | "none";
 }
 
-export type Response<R extends Request> = R extends { type: "get-status" }
-  ? Status
-  : R extends { type: "list-logins" }
-    ? LoginsResult
-    : R extends { type: "fill" | "fill-from-menu" }
-      ? { result: string }
-      : R extends { type: "get-settings" | "set-settings" }
-        ? Settings
-        : R extends { type: "autofill-status" }
-          ? AutofillStatus
-          : R extends { type: "menu-resize" | "menu-close" | "menu-focus-field" | "open-passwords-app" }
-            ? null
-            : Status;
+export interface GeneratedPasswords {
+  strong: string;
+  alphanumeric: string;
+}
+
+/** "not-saved": the user declined macOS's Save prompt, so nothing was filled. */
+export type NewPasswordResult = "filled" | "not-saved" | "menu-hidden" | "no-fields" | "origin-mismatch";
+
+/** What each request answers with. Requests not listed answer with the session status. */
+interface Responses {
+  "get-status": Status;
+  "list-logins": LoginsResult;
+  fill: { result: string };
+  "fill-from-menu": { result: string };
+  "get-settings": Settings;
+  "set-settings": Settings;
+  "autofill-status": AutofillStatus;
+  "generate-passwords": GeneratedPasswords;
+  "use-generated-password": { result: NewPasswordResult };
+  "menu-resize": null;
+  "menu-close": null;
+  "menu-focus-field": null;
+  "open-passwords-app": null;
+  "generated-password-submitted": null;
+}
+
+export type Response<R extends Request> = R["type"] extends keyof Responses ? Responses[R["type"]] : Status;
 
 /** Messages the background relays to the autofill content script. */
 export type ContentMessage =
@@ -79,7 +114,17 @@ export type ContentMessage =
   | { type: "menu-resize"; nonce: string; height: number }
   | { type: "menu-close"; nonce: string }
   /** Moves focus back to the field, keeping the menu open. */
-  | { type: "menu-focus-field"; nonce: string };
+  | { type: "menu-focus-field"; nonce: string }
+  /** What the background needs before saving: the field's rules, the username, and whether the menu is visible. */
+  | { type: "menu-new-password-context"; nonce: string }
+  /** Fills a password that Apple Passwords has saved. */
+  | { type: "menu-fill-new-password"; nonce: string; origin: string; password: string };
+
+export interface NewPasswordContext {
+  rules: FieldRules;
+  username: string;
+  visible: boolean;
+}
 
 /** Wire envelope, so errors cross the message boundary as data instead of being lost. */
 export type Envelope<T> = { ok: true; value: T } | { ok: false; error: string; code?: string };

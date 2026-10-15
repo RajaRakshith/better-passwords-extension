@@ -80,6 +80,8 @@ type Fixtures = {
   popupUrl: string;
   /** Search URLs of the requests to open the Passwords app that reached the fake helper. */
   passwordsAppLaunches: () => string[];
+  /** Logins the fake helper saved (after the simulated "Save password?" prompt). */
+  helperSaves: () => { hostname: string; username: string; password: string }[];
 };
 
 /**
@@ -92,6 +94,21 @@ export async function choose(menu: Frame, text: string): Promise<void> {
   await expect(item).toBeVisible();
   await menu.page().waitForTimeout(500);
   await item.click();
+}
+
+/** Entries of one type from the fake helper's log. */
+function helperLog(context: BrowserContext, type: string): Record<string, unknown>[] {
+  let text = "";
+  try {
+    text = readFileSync(join(profileDirs.get(context) ?? "", "helper.log"), "utf8");
+  } catch {
+    // nothing logged yet
+  }
+  return text
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .filter((entry) => entry.type === type);
 }
 
 export const test = base.extend<Fixtures, { siteUrl: string }>({
@@ -130,21 +147,16 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
     rmSync(dir, { recursive: true, force: true });
   },
   passwordsAppLaunches: async ({ context }, use) => {
-    const log = join(profileDirs.get(context) ?? "", "helper.log");
-    await use(() => {
-      let text = "";
-      try {
-        text = readFileSync(log, "utf8");
-      } catch {
-        // nothing logged yet
-      }
-      return text
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => JSON.parse(line) as { type: string; url: string })
-        .filter((entry) => entry.type === "launch")
-        .map((entry) => entry.url);
-    });
+    await use(() => helperLog(context, "launch").map((entry) => entry.url as string));
+  },
+  helperSaves: async ({ context }, use) => {
+    await use(() =>
+      helperLog(context, "save").map(({ hostname, username, password }) => ({
+        hostname: hostname as string,
+        username: username as string,
+        password: password as string,
+      })),
+    );
   },
   popupUrl: async ({ context }, use) => {
     if (context.serviceWorkers().length === 0) await context.waitForEvent("serviceworker");

@@ -2,7 +2,9 @@
 // extension iframe. The page can see that the element exists, but can't see into the iframe
 // (cross-origin) or the shadow root (closed), and can't style it (inline !important styles).
 
-export type MenuMode = "logins" | "locked";
+import type { FieldKind } from "./fields.ts";
+
+export type MenuMode = "logins" | "generate" | "locked";
 
 const WIDTH = 300;
 const GAP = 4;
@@ -78,14 +80,14 @@ export class MenuHost {
     return this.#nonce !== undefined;
   }
 
-  open(anchor: HTMLInputElement, mode: MenuMode): void {
+  open(anchor: HTMLInputElement, mode: MenuMode, kind: FieldKind): void {
     this.#anchor = anchor;
     this.#nonce = randomNonce();
     this.#height = 48;
     // A new iframe every time: changing only the URL fragment of an existing one would not reload
     // the menu page, which would keep the previous menu's nonce and size.
     // The nonce ties requests to this menu; a copy of menu.html framed by the page itself has none.
-    this.#frame = createFrame(`${this.menuUrl}#${new URLSearchParams({ nonce: this.#nonce, mode })}`);
+    this.#frame = createFrame(`${this.menuUrl}#${new URLSearchParams({ nonce: this.#nonce, mode, kind })}`);
     this.#shadow.replaceChildren(this.#frame);
     if (!this.#host.isConnected) document.documentElement.append(this.#host);
     // re-entering the top layer puts us above anything the page opened before

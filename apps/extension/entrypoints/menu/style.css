@@ -84,6 +84,11 @@ body {
   color: var(--text-secondary);
 }
 
+.password {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.02em;
+}
+
 .row:hover .detail,
 .row:focus-visible .detail {
   color: inherit;

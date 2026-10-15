@@ -223,6 +223,7 @@ async function footer(status: Status) {
     "div",
     { class: "settings" },
     option("inlineMenu", "Suggest logins in login fields"),
+    option("generatePasswords", "Suggest strong passwords when signing up"),
     status.companion && status.companion !== "not-installed" ? option("touchId", "Unlock with Touch ID") : null,
     // Firefox's idle API never reports "locked", so the option would do nothing there
     h(

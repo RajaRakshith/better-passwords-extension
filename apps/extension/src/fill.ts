@@ -1,6 +1,9 @@
-// Runs inside the page: injected by scripting.executeScript (popup) or called by the autofill content
-// script (inline menu). It must not reference anything outside its own body. It refuses to fill if
-// the page navigated to another origin since the user chose the login, and only touches visible fields.
+import { isNewPasswordField } from "./autofill/fields.ts";
+
+// fillCredentials runs inside the page: injected by scripting.executeScript (popup) or called by the
+// autofill content script (inline menu), so it must not reference anything outside its own body.
+// It refuses to fill if the page navigated to another origin since the user chose the login, and
+// only touches visible fields. The functions after it are used by the content script only.
 
 export type FillResult = "filled" | "origin-mismatch" | "no-fields";
 
@@ -60,4 +63,53 @@ export function fillCredentials(
   if (passwordField) setValue(passwordField, password);
   (passwordField ?? usernameField)?.focus();
   return "filled";
+}
+
+/**
+ * Fills a new password into the field the menu was opened on and the form's other new-password
+ * fields (the confirmation). Called by the content script only after Apple Passwords saved it.
+ */
+export function fillNewPassword(expectedOrigin: string, password: string, anchor: HTMLInputElement): FillResult {
+  if (window.location.origin !== expectedOrigin) return "origin-mismatch";
+  if (!anchor.isConnected || !isNewPasswordField(anchor)) return "no-fields";
+  const scope = anchor.form ?? document;
+  const targets = Array.from(scope.querySelectorAll("input")).filter(
+    (el) => el === anchor || (isNewPasswordField(el) && isFillable(el)),
+  );
+  for (const el of targets) setInputValue(el, password);
+  anchor.focus();
+  return "filled";
+}
+
+/** The username or email typed into the same form as `anchor`, if any. */
+export function usernameNear(anchor: HTMLInputElement): string {
+  const scope = anchor.form ?? document;
+  const fields = Array.from(scope.querySelectorAll("input")).filter(
+    (el) => ["text", "email", "tel", ""].includes(el.type) && isFillable(el) && el.value.trim() !== "",
+  );
+  const score = (el: HTMLInputElement) => {
+    const autocomplete = el.autocomplete.toLowerCase();
+    if (/\busername\b/.test(autocomplete)) return 3;
+    if (/\bemail\b/.test(autocomplete) || el.type === "email") return 2;
+    if (/user|login|e-?mail|account/i.test(`${el.name} ${el.id}`)) return 1;
+    return 0;
+  };
+  const best = fields.filter((el) => score(el) > 0).sort((a, b) => score(b) - score(a))[0];
+  return best?.value.trim() ?? "";
+}
+
+function isFillable(el: HTMLInputElement): boolean {
+  if (el.disabled || el.readOnly || el.type === "hidden") return false;
+  const rect = el.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) return false;
+  const style = window.getComputedStyle(el);
+  return style.visibility !== "hidden" && style.display !== "none" && !(Number.parseFloat(style.opacity) <= 0.05);
+}
+
+function setInputValue(el: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  if (setter) setter.call(el, value);
+  else el.value = value;
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
 }

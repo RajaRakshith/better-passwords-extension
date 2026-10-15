@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fillCredentials } from "../src/fill.ts";
+import { fillCredentials, fillNewPassword, usernameNear } from "../src/fill.ts";
 
 const origin = window.location.origin;
 
@@ -85,5 +85,60 @@ describe("fillCredentials", () => {
     expect(value("#pass-b")).toBe("pw");
     expect(value("#user-a")).toBe("");
     expect(value("#pass-a")).toBe("");
+  });
+});
+
+describe("fillNewPassword", () => {
+  const input = (selector: string) => document.querySelector(selector) as HTMLInputElement;
+
+  it("fills the password and its confirmation", () => {
+    page(`<form><input id="email" type="email"><input id="p1" type="password"><input id="p2" type="password"></form>
+          <form><input id="other" type="password" autocomplete="new-password"></form>`);
+    expect(fillNewPassword(origin, "abc-DEF-123", input("#p1"))).toBe("filled");
+    expect(value("#p1")).toBe("abc-DEF-123");
+    expect(value("#p2")).toBe("abc-DEF-123");
+    expect(value("#email")).toBe("");
+    expect(value("#other")).toBe("");
+  });
+
+  it("never touches the current password on a change-password form", () => {
+    page(
+      `<form><input id="old" type="password"><input id="new" type="password"><input id="again" type="password"></form>`,
+    );
+    expect(fillNewPassword(origin, "x", input("#again"))).toBe("filled");
+    expect(value("#old")).toBe("");
+    expect(value("#new")).toBe("x");
+    expect(value("#again")).toBe("x");
+  });
+
+  it("refuses another origin and login password fields", () => {
+    page(`<form><input id="p" type="password" autocomplete="new-password"></form>`);
+    expect(fillNewPassword("https://elsewhere.example", "x", input("#p"))).toBe("origin-mismatch");
+    page(`<form><input id="p" type="password" autocomplete="current-password"></form>`);
+    expect(fillNewPassword(origin, "x", input("#p"))).toBe("no-fields");
+    expect(value("#p")).toBe("");
+  });
+
+  it("skips hidden confirmation fields", () => {
+    page(`<form><input id="p1" type="password" autocomplete="new-password">
+          <input id="trap" type="password" autocomplete="new-password" data-hidden></form>`);
+    fillNewPassword(origin, "x", input("#p1"));
+    expect(value("#trap")).toBe("");
+  });
+});
+
+describe("usernameNear", () => {
+  it("prefers the username, then the email, of the same form", () => {
+    page(`<form><input name="first" value="Jane"><input type="email" value="jane@example.com">
+          <input id="p" type="password"></form><form><input autocomplete="username" value="elsewhere"></form>`);
+    expect(usernameNear(document.querySelector("#p") as HTMLInputElement)).toBe("jane@example.com");
+    page(`<form><input type="email" value="jane@example.com"><input autocomplete="username" value="jane">
+          <input id="p" type="password"></form>`);
+    expect(usernameNear(document.querySelector("#p") as HTMLInputElement)).toBe("jane");
+  });
+
+  it("is empty when nothing is typed yet", () => {
+    page(`<form><input type="email"><input id="p" type="password"></form>`);
+    expect(usernameNear(document.querySelector("#p") as HTMLInputElement)).toBe("");
   });
 });

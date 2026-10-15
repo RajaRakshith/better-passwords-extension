@@ -8,6 +8,8 @@ import { h } from "@/src/ui/h.ts";
 
 const params = new URLSearchParams(window.location.hash.slice(1));
 const nonce = params.get("nonce") ?? "";
+/** The field the menu belongs to: "login", or "new-password" for sign-up and change-password forms. */
+const kind = params.get("kind") ?? "login";
 const panel = document.getElementById("menu") as HTMLElement;
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -66,7 +68,13 @@ function render(...children: (Node | null)[]) {
   requestAnimationFrame(reportSize);
 }
 
-function row(svgPath: string, title: string, detail: string, onChoose: () => void): HTMLButtonElement {
+function row(
+  svgPath: string,
+  title: string,
+  detail: string,
+  onChoose: () => void,
+  detailClass = "detail",
+): HTMLButtonElement {
   const button = h(
     "button",
     { class: "row", attrs: { role: "option" } },
@@ -75,7 +83,7 @@ function row(svgPath: string, title: string, detail: string, onChoose: () => voi
       "span",
       { class: "text" },
       h("span", { class: "title", textContent: title }),
-      detail ? h("span", { class: "detail", textContent: detail }) : null,
+      detail ? h("span", { class: detailClass, textContent: detail }) : null,
     ),
   );
   button.addEventListener("click", (event) => {
@@ -107,6 +115,50 @@ async function showLogins(error?: string) {
   );
 }
 
+async function showGenerate(error?: string) {
+  let passwords: { strong: string; alphanumeric: string };
+  try {
+    passwords = await send({ type: "generate-passwords", nonce });
+  } catch (e) {
+    return render(message(messageOf(e), true));
+  }
+  render(
+    row(KEY, "Strong Password", passwords.strong, () => void useGenerated("strong"), "detail password"),
+    row(
+      KEY,
+      "Without Special Characters",
+      passwords.alphanumeric,
+      () => void useGenerated("alphanumeric"),
+      "detail password",
+    ),
+    error ? message(error, true) : null,
+    h("hr", { class: "separator" }),
+    openPasswordsRow(false),
+  );
+}
+
+async function useGenerated(style: "strong" | "alphanumeric") {
+  render(message("Click Save in the dialog on your Mac. The password is filled in once it's saved."));
+  try {
+    const { result } = await send({ type: "use-generated-password", nonce, style });
+    if (result === "filled") return;
+    await showGenerate(
+      result === "not-saved"
+        ? "Not saved, so nothing was filled in."
+        : result === "menu-hidden"
+          ? "The page tried to hide this menu, so nothing was filled in."
+          : "Couldn't fill in this page.",
+    );
+  } catch (e) {
+    await showGenerate(messageOf(e));
+  }
+}
+
+/** After unlocking: the menu's real content. */
+function showUnlocked() {
+  return kind === "new-password" ? showGenerate() : showLogins();
+}
+
 function openPasswordsRow(withDetail: boolean) {
   return row(OPEN, "Open Passwords…", withDetail ? "Look up or add a password" : "", async () => {
     await send({ type: "open-passwords-app" }).catch(() => {});
@@ -133,11 +185,15 @@ async function showLocked(error?: string) {
   const status = await send({ type: "get-status" }).catch(() => undefined);
   const touchId = status?.touchId === true;
   render(
-    row(LOCK, touchId ? "Unlock with Touch ID" : "Unlock to fill passwords", DISPLAY_NAME, () =>
+    row(LOCK, touchId ? "Unlock with Touch ID" : unlockTitle(), DISPLAY_NAME, () =>
       touchId ? void unlockWithTouchId() : void startPairing(),
     ),
     error ? message(error, true) : null,
   );
+}
+
+function unlockTitle() {
+  return kind === "new-password" ? "Unlock to suggest a strong password" : "Unlock to fill passwords";
 }
 
 async function startPairing() {
@@ -153,7 +209,7 @@ async function unlockWithTouchId() {
   render(message("Confirm with Touch ID…"));
   try {
     await send({ type: "unlock-with-touch-id" });
-    await showLogins();
+    await showUnlocked();
   } catch (e) {
     // the code is on screen either way, so typing it still works
     showCodeEntry(messageOf(e));
@@ -175,7 +231,7 @@ function showCodeEntry(error?: string) {
     input.disabled = true;
     try {
       await send({ type: "verify-code", code: input.value });
-      await showLogins();
+      await showUnlocked();
     } catch (e) {
       // a wrong code burns the challenge; ask the Mac for a fresh one
       await send({ type: "request-code", fresh: true }).catch(() => {});
@@ -216,5 +272,7 @@ function messageOf(error: unknown): string {
   return text || "Something went wrong.";
 }
 
-if (params.get("mode") === "locked") void showLocked();
+const mode = params.get("mode");
+if (mode === "locked") void showLocked();
+else if (mode === "generate") void showGenerate();
 else void showLogins();
