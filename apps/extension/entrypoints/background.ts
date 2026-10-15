@@ -35,6 +35,8 @@ interface PendingSave {
   password: string;
   /** The menu to fill through; updated when the menu is reopened. */
   nonce: string;
+  /** The site's usernames before the save. */
+  before: string[];
   abort: AbortController;
   outcome?: Promise<NewPasswordResult>;
 }
@@ -147,10 +149,11 @@ export default defineBackground(() => {
     const url = await tabUrl(tabId);
     if (!url) throw new Error("this page can't be filled");
     const { username } = context;
-    const replaces = (await usernamesFor(url.hostname)).includes(username);
+    const before = await usernamesFor(url.hostname);
+    const replaces = before.includes(username);
     const client = await session.unlockedClient();
     await client.savePassword({ hostname: url.hostname, username, password }, { tabId, frameId: 0 });
-    const pending: PendingSave = { url, username, password, nonce, abort: new AbortController() };
+    const pending: PendingSave = { url, username, password, nonce, before, abort: new AbortController() };
     if (replaces) {
       unconfirmed.push({ hostname: url.hostname, username, password, at: Date.now() });
       return finishSave(tabId, pending);
@@ -163,7 +166,7 @@ export default defineBackground(() => {
     const pending = pendingSaves.get(tabId);
     if (!pending) return Promise.resolve("not-saved");
     pending.nonce = nonce;
-    pending.outcome ??= waitForLogin(() => usernamesFor(pending.url.hostname), pending.username, {
+    pending.outcome ??= waitForLogin(() => usernamesFor(pending.url.hostname), pending.username, pending.before, {
       signal: pending.abort.signal,
     }).then((saved) => (saved ? finishSave(tabId, pending) : dropSave(tabId, pending)));
     return pending.outcome;
@@ -188,9 +191,10 @@ export default defineBackground(() => {
   async function updateGeneratedUsername(caller: Caller & { kind: "content-script" }, username: string) {
     const filled = filledByTab.get(caller.tabId);
     if (!filled || fillableUrl(caller.url)?.hostname !== filled.hostname || filled.username === username) return;
+    const before = await usernamesFor(filled.hostname);
     const client = await session.unlockedClient();
     await client.savePassword({ ...filled, username }, { tabId: caller.tabId, frameId: 0 });
-    if (await waitForLogin(() => usernamesFor(filled.hostname), username)) filled.username = username;
+    if (await waitForLogin(() => usernamesFor(filled.hostname), username, before)) filled.username = username;
   }
 
   async function handle(request: Request, caller: Caller): Promise<unknown> {

@@ -241,7 +241,8 @@ export class ApplePasswordsClient {
         ACT: Action.GhostSearch,
         URL: hostname,
       });
-      return (reply.Entries ?? []).map((e) => ({ username: e.USR, sites: e.sites ?? [] }));
+      // a login saved without a username may come back without the field at all
+      return (reply.Entries ?? []).map((e) => ({ username: e.USR ?? "", sites: e.sites ?? [] }));
     });
   }
 
@@ -264,7 +265,7 @@ export class ApplePasswordsClient {
       );
       const entry = reply.Entries?.[0];
       if (!entry || typeof entry.PWD !== "string") return undefined;
-      return { username: entry.USR, password: entry.PWD };
+      return { username: entry.USR ?? "", password: entry.PWD };
     });
   }
 

@@ -192,7 +192,8 @@ export class FakeHelper {
     const matches = this.vault.filter((e) => e.hostname === request.URL);
     let entries: LoginEntry[];
     if (message.cmd === Command.GetLoginNamesForUrl) {
-      entries = matches.map((e) => ({ USR: e.username, sites: [e.hostname] }));
+      // like the real helper may, leave the field out for a login without a username
+      entries = matches.map((e) => ({ ...(e.username ? { USR: e.username } : {}), sites: [e.hostname] }) as LoginEntry);
     } else {
       entries = matches
         .filter((e) => e.username === request.USR)
