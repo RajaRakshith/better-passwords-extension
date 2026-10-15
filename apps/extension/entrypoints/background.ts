@@ -168,7 +168,12 @@ export default defineBackground(() => {
     pending.nonce = nonce;
     pending.outcome ??= waitForLogin(() => usernamesFor(pending.url.hostname), pending.username, pending.before, {
       signal: pending.abort.signal,
-    }).then((saved) => (saved ? finishSave(tabId, pending) : dropSave(tabId, pending)));
+    }).then((saved) => {
+      if (saved === undefined) return dropSave(tabId, pending);
+      // without a username, it's the one the user typed into macOS's Save dialog
+      pending.username = saved;
+      return finishSave(tabId, pending);
+    });
     return pending.outcome;
   }
 
@@ -194,7 +199,8 @@ export default defineBackground(() => {
     const before = await usernamesFor(filled.hostname);
     const client = await session.unlockedClient();
     await client.savePassword({ ...filled, username }, { tabId: caller.tabId, frameId: 0 });
-    if (await waitForLogin(() => usernamesFor(filled.hostname), username, before)) filled.username = username;
+    const saved = await waitForLogin(() => usernamesFor(filled.hostname), username, before);
+    if (saved !== undefined) filled.username = saved;
   }
 
   async function handle(request: Request, caller: Caller): Promise<unknown> {

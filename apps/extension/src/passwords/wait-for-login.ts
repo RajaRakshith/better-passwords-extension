@@ -8,16 +8,17 @@ export interface WaitOptions {
 }
 
 /**
- * Resolves true once the site's usernames show the save, false on timeout or abort. Lookup errors
- * are retried. `before` is the list from before the save: a login without a username may not be
- * listed as such, so for an empty username one more login also counts.
+ * Resolves with the saved login's username once the site's logins show the save, or undefined on
+ * timeout or abort. Lookup errors are retried. `before` is the list from before the save: without
+ * a username, macOS asks the user for one in its Save dialog, so the new login is the one that
+ * wasn't there before.
  */
 export async function waitForLogin(
   lookup: () => Promise<string[]>,
   username: string,
   before: string[],
   { timeoutMs = 120_000, intervalMs = 1_000, signal }: WaitOptions = {},
-): Promise<boolean> {
+): Promise<string | undefined> {
   const deadline = Date.now() + timeoutMs;
   while (!signal?.aborted && Date.now() < deadline) {
     await new Promise<void>((resolve) => {
@@ -28,11 +29,13 @@ export async function waitForLogin(
       };
       signal?.addEventListener("abort", stop, { once: true });
     });
-    if (signal?.aborted) return false;
+    if (signal?.aborted) return undefined;
     const usernames = await lookup().catch(() => undefined);
     if (!usernames) continue;
-    if (usernames.includes(username)) return true;
-    if (username === "" && usernames.length > before.length) return true;
+    if (usernames.includes(username)) return username;
+    if (username === "" && usernames.length > before.length) {
+      return usernames.find((name) => !before.includes(name)) ?? "";
+    }
   }
-  return false;
+  return undefined;
 }
