@@ -192,6 +192,6 @@ test.describe("when the companion may not read Contacts", () => {
     const page = await context.newPage();
     await page.goto(`${siteUrl}/signup.html`);
     const menu = await emailMenu(page);
-    await expect(menu.getByText("allow Contacts in the Apple Passwords Plus app")).toBeVisible();
+    await expect(menu.getByText("allow Contacts in the companion app")).toBeVisible();
   });
 });

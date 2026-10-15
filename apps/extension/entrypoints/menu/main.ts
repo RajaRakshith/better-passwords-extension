@@ -246,7 +246,7 @@ function renderEmail(suggestions: EmailSuggestions, error?: string) {
   } else if (contacts.state === "hint") {
     own.push(companionHintRow());
   } else if (contacts.state === "needs-contacts") {
-    own.push(message("To suggest your email addresses, allow Contacts in the Apple Passwords Plus app."));
+    own.push(message("To suggest your email addresses, allow Contacts in the companion app."));
   }
   if (rows.length > 0 && own.length > 0) rows.push(h("hr", { class: "separator" }));
   rows.push(...own);
@@ -274,15 +274,10 @@ function dismissible(hint: HTMLButtonElement, label: string, onDismiss: () => Pr
 
 /** Advertises the companion app, which lets the menu suggest the emails on the user's contact card. */
 function companionHintRow(): HTMLButtonElement {
-  const hint = row(
-    PERSON,
-    "Suggest Your Email Addresses",
-    "With the free Apple Passwords Plus app for Mac",
-    async () => {
-      await send({ type: "open-companion-page" }).catch(() => {});
-      close();
-    },
-  );
+  const hint = row(PERSON, "Suggest Your Email Addresses", "With the free companion app for Mac", async () => {
+    await send({ type: "open-companion-page" }).catch(() => {});
+    close();
+  });
   return dismissible(hint, "Don't suggest the app again", () => send({ type: "dismiss-companion-emails-hint" }));
 }
 
@@ -378,7 +373,8 @@ async function showLocked(error?: string) {
   const status = await send({ type: "get-status" }).catch(() => undefined);
   const touchId = status?.touchId === true;
   render(
-    row(LOCK, touchId ? "Unlock with Touch ID" : unlockTitle(), DISPLAY_NAME, () =>
+    // with the companion app, Touch ID replaces typing the code; the row says so underneath
+    row(LOCK, unlockTitle(), touchId ? "Touch ID enters the code for you" : DISPLAY_NAME, () =>
       touchId ? void unlockWithTouchId() : void startPairing(),
     ),
     error ? message(error, true) : null,

@@ -51,10 +51,7 @@ async function refresh(error?: string) {
 }
 
 async function unlockWithTouchId(status: Status) {
-  show(
-    h("h1", { textContent: "Unlock with Touch ID" }),
-    h("p", {}, "Confirm with Touch ID, and the code your Mac shows is entered for you."),
-  );
+  show(h("h1", { textContent: "Confirm with Touch ID" }), h("p", {}, "The code your Mac shows is entered for you."));
   try {
     await send({ type: "unlock-with-touch-id" });
     await refresh();
@@ -124,12 +121,12 @@ function showCodeEntry(status: Status, error?: string) {
 
   let touchId: HTMLButtonElement | null = null;
   if (status.touchId) {
-    touchId = h("button", { class: "link", textContent: "Use Touch ID" });
+    touchId = h("button", { class: "link", textContent: "Enter it for me" });
     touchId.addEventListener("click", () => void unlockWithTouchId(status));
   }
   const companionHint =
     status.companion === "needs-setup"
-      ? h("p", { class: "hint" }, "To unlock with Touch ID, finish setup in the Apple Passwords Plus app.")
+      ? h("p", { class: "hint" }, "To skip typing the code, finish setting up the companion app.")
       : null;
 
   show(
@@ -276,7 +273,7 @@ async function footer(status: Status) {
 }
 
 /**
- * What the Mac app adds. Without it (or before its setup is done) the options are shown, greyed
+ * What the companion app adds. Without it (or before its setup is done) the options are shown, greyed
  * out, next to one button that gets it, so they're discoverable but never a switch that does nothing.
  */
 function macAppSection(status: Status, option: Option) {
@@ -289,14 +286,14 @@ function macAppSection(status: Status, option: Option) {
   const options = h(
     "div",
     { class: "options" },
-    option("touchId", "Unlock with Touch ID", undefined, !ready),
-    option("suggestEmails", "Suggest your email addresses", undefined, !ready),
+    option("touchId", "Enter the 6-digit code for me", "after Touch ID", !ready),
+    option("suggestEmails", "Suggest my emails", "from your contact card", !ready),
   );
   if (ready) {
     return h(
       "section",
       { class: "mac-app" },
-      h("div", { class: "actions" }, h("h2", { textContent: "Mac app" }), openApp("Open Mac App…")),
+      h("div", { class: "actions" }, h("h2", { textContent: "Companion app" }), openApp("Open Companion App…")),
       options,
     );
   }
@@ -305,13 +302,13 @@ function macAppSection(status: Status, option: Option) {
     "button",
     { class: "cta" },
     h("img", { src: "/icon/32.png", alt: "" }),
-    installed ? "Finish Setting Up" : "Get the Mac App",
+    installed ? "Finish Setting Up" : "Get Companion App",
   );
   cta.addEventListener("click", () => void openCompanion(installed ? "open-companion-app" : "open-companion-page"));
   return h(
     "section",
     { class: "mac-app unavailable" },
-    h("h2", { textContent: "Mac app" }),
+    h("h2", { textContent: "Companion app" }),
     h("div", { class: "offer" }, options, cta),
   );
 }
