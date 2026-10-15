@@ -110,19 +110,23 @@ body {
   color: var(--danger);
 }
 
+/* like the code macOS shows: two groups of three, large and light */
 .code {
   margin: 2px 4px 4px;
-  padding: 6px;
-  border: 1px solid var(--separator);
-  border-radius: 6px;
-  background: var(--bg);
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--hover);
   color: var(--text);
-  font:
-    600 18px / 1 ui-monospace,
-    "SF Mono",
-    monospace;
-  letter-spacing: 0.35em;
+  font: 300 24px / 1.1 var(--font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
   text-align: center;
+}
+
+.code::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.4;
 }
 
 .code:focus {

@@ -41,6 +41,14 @@ export const FIREFOX_EXTENSION_ID = "apple-passwords-plus@applepasswordsplus.org
 /** Pages where the inline menu runs and passwords may be filled (see src/url-policy.ts). */
 export const FILL_MATCHES = ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"];
 
+/**
+ * Where to get the Mac app (Touch ID, your emails). The store build will link to its App Store
+ * listing and the GitHub build to the landing page's DMG; until those exist, both open its docs.
+ */
+export function macAppUrlFor(_variant: Variant): string {
+  return `${REPO_URL}/blob/main/docs/companion.md`;
+}
+
 export function nativeHostFor(variant: Variant): string {
   return variant === "github" ? APPLE_HOST : STORE_HOST;
 }

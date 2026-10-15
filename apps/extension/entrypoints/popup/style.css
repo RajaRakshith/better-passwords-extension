@@ -86,19 +86,23 @@ code {
   white-space: nowrap;
 }
 
+/* like the code macOS shows: two groups of three, large and light */
 .code {
   width: 100%;
-  padding: 8px;
-  border: 1px solid var(--separator);
-  border-radius: var(--radius);
-  background: var(--surface);
+  padding: 10px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--hover);
   color: var(--text);
-  font:
-    600 22px / 1 ui-monospace,
-    "SF Mono",
-    monospace;
-  letter-spacing: 0.4em;
+  font: 300 30px / 1.1 var(--font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
   text-align: center;
+}
+
+.code::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.4;
 }
 
 .code:focus {
@@ -227,4 +231,60 @@ button.with-icon svg {
 
 .recent li + li {
   border-top: 1px solid var(--separator);
+}
+
+/* the Mac app's options; without the app, greyed out and fading into one button that gets it */
+.mac-app {
+  display: grid;
+  gap: 6px;
+}
+
+.mac-app .options {
+  display: grid;
+  gap: 6px;
+}
+
+.mac-app .offer {
+  position: relative;
+}
+
+.unavailable .options {
+  opacity: 0.45;
+}
+
+.unavailable .offer::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 30%;
+  background: linear-gradient(90deg, transparent, var(--bg) 60%);
+  pointer-events: none;
+}
+
+.cta {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px 6px 7px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #3a8dff, #0060df);
+  color: #fff;
+  font: 500 12px / 1 var(--font);
+  box-shadow: 0 2px 8px rgb(0 96 223 / 30%);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.cta:hover {
+  filter: brightness(1.08);
+}
+
+.cta img {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
 }

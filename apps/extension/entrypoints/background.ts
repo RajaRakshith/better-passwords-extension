@@ -1,6 +1,6 @@
 import type { FieldKind } from "@/src/autofill/fields.ts";
 import { Companion } from "@/src/companion.ts";
-import { nativeHostFor, REPO_URL } from "@/src/config.ts";
+import { macAppUrlFor, nativeHostFor } from "@/src/config.ts";
 import { fillCredentials } from "@/src/fill.ts";
 import { HideMyEmail, headerRule, ICloudError } from "@/src/icloud/hide-my-email.ts";
 import {
@@ -263,6 +263,7 @@ export default defineBackground(() => {
 
   async function contactEmailsState(settings: Settings): Promise<ContactEmailsState> {
     if ((await companion.state()) === "not-installed") return { state: settings.companionEmailsHint ? "hint" : "off" };
+    if (!settings.suggestEmails) return { state: "off" };
     try {
       return { state: "ready", emails: await companion.myEmails() };
     } catch (error) {
@@ -436,7 +437,7 @@ export default defineBackground(() => {
         await companion.openApp();
         return null;
       case "open-companion-page":
-        await browser.tabs.create({ url: `${REPO_URL}/blob/main/docs/companion.md` });
+        await browser.tabs.create({ url: macAppUrlFor(__VARIANT__) });
         return null;
       case "open-icloud":
         await browser.tabs.create({ url: "https://www.icloud.com/" });

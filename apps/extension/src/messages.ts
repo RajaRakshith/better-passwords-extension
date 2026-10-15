@@ -76,6 +76,8 @@ export interface Settings {
   hideMyEmailHint: boolean;
   /** Advertise the companion app (for contact-card emails) until it's installed or dismissed. */
   companionEmailsHint: boolean;
+  /** With the Mac app: suggest the emails on the user's contact card in sign-up email fields. */
+  suggestEmails: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -86,6 +88,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hideMyEmail: false,
   hideMyEmailHint: true,
   companionEmailsHint: true,
+  suggestEmails: true,
 };
 
 export interface Status extends SessionStatus {

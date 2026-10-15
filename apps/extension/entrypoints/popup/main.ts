@@ -2,6 +2,7 @@ import "./style.css";
 import { DISPLAY_NAME, REPO_URL, SETUP_COMMAND } from "@/src/config.ts";
 import { type LoginsResult, type Settings, type Status, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
+import { bindCodeInput } from "@/src/ui/code-input.ts";
 import { h } from "@/src/ui/h.ts";
 import { icon, OPEN } from "@/src/ui/icons.ts";
 
@@ -97,17 +98,15 @@ function showCodeEntry(status: Status, error?: string) {
     class: "code",
     inputMode: "numeric",
     autocomplete: "one-time-code",
-    maxLength: 6,
     ariaLabel: "Verification code",
-    placeholder: "000000",
     autofocus: true,
   });
   const newCode = h("button", { class: "link", textContent: "Show a new code" });
 
-  const submit = async () => {
+  const submit = async (code: string) => {
     input.disabled = true;
     try {
-      await send({ type: "verify-code", code: input.value });
+      await send({ type: "verify-code", code });
       await refresh();
     } catch (e) {
       // a wrong code burns the challenge, so ask the Mac for a fresh one
@@ -116,10 +115,7 @@ function showCodeEntry(status: Status, error?: string) {
     }
   };
 
-  input.addEventListener("input", () => {
-    input.value = input.value.replace(/\D/g, "").slice(0, 6);
-    if (input.value.length === 6) void submit();
-  });
+  bindCodeInput(input, (code) => void submit(code));
   newCode.addEventListener("click", async () => {
     await send({ type: "request-code", fresh: true }).catch((e) => showCodeEntry(status, messageOf(e)));
     input.value = "";
@@ -238,10 +234,12 @@ async function fill(tabId: number, username: string) {
   }
 }
 
+type Option = (key: keyof Settings, label: string, detail?: string, disabled?: boolean) => HTMLElement;
+
 async function footer(status: Status) {
   const settings: Settings = await send({ type: "get-settings" });
-  const option = (key: keyof Settings, label: string, detail?: string) => {
-    const toggle = h("input", { type: "checkbox", checked: settings[key] });
+  const option: Option = (key, label, detail, disabled = false) => {
+    const toggle = h("input", { type: "checkbox", checked: !disabled && settings[key], disabled });
     toggle.addEventListener("change", () => {
       void send({ type: "set-settings", settings: { [key]: toggle.checked } });
     });
@@ -262,10 +260,11 @@ async function footer(status: Status) {
     { class: "settings" },
     h("h2", { textContent: "Suggestions" }),
     option("inlineMenu", "When signing in", "saved passwords"),
-    option("generatePasswords", "When signing up", "strong passwords and your emails"),
+    option("generatePasswords", "When signing up", "strong passwords and emails"),
     option("hideMyEmail", "Hide My Email", "uses icloud.com"),
     h("hr"),
-    touchIdLine(status, option),
+    macAppSection(status, option),
+    h("hr"),
     // Firefox's idle API never reports "locked", so the option would do nothing there
     h(
       "div",
@@ -276,29 +275,50 @@ async function footer(status: Status) {
   );
 }
 
-/** Touch ID needs the Mac app: offer it, help finish its setup, or let it be turned off. */
-function touchIdLine(status: Status, option: (key: keyof Settings, label: string) => HTMLElement) {
-  const link = (label: string, request: { type: "open-companion-app" } | { type: "open-companion-page" }) => {
+/**
+ * What the Mac app adds. Without it (or before its setup is done) the options are shown, greyed
+ * out, next to one button that gets it, so they're discoverable but never a switch that does nothing.
+ */
+function macAppSection(status: Status, option: Option) {
+  const ready = status.companion === "ready";
+  const openApp = (label: string) => {
     const button = h("button", { class: "link", textContent: label });
-    button.addEventListener("click", async () => {
-      await send(request).catch(() => {});
-      window.close();
-    });
+    button.addEventListener("click", () => void openCompanion("open-companion-app"));
     return button;
   };
-  if (status.companion === "ready") {
+  const options = h(
+    "div",
+    { class: "options" },
+    option("touchId", "Unlock with Touch ID", undefined, !ready),
+    option("suggestEmails", "Suggest your email addresses", undefined, !ready),
+  );
+  if (ready) {
     return h(
-      "div",
-      { class: "actions" },
-      option("touchId", "Unlock with Touch ID"),
-      link("Open Mac App…", { type: "open-companion-app" }),
+      "section",
+      { class: "mac-app" },
+      h("div", { class: "actions" }, h("h2", { textContent: "Mac app" }), openApp("Open Mac App…")),
+      options,
     );
   }
-  const label = h("span", { class: "toggle", textContent: "Touch ID" });
-  if (status.companion === "needs-setup") {
-    return h("div", { class: "actions" }, label, link("Finish setting up the Mac app", { type: "open-companion-app" }));
-  }
-  return h("div", { class: "actions" }, label, link("Get the free Mac app", { type: "open-companion-page" }));
+  const installed = status.companion === "needs-setup";
+  const cta = h(
+    "button",
+    { class: "cta" },
+    h("img", { src: "/icon/32.png", alt: "" }),
+    installed ? "Finish Setting Up" : "Get the Mac App",
+  );
+  cta.addEventListener("click", () => void openCompanion(installed ? "open-companion-app" : "open-companion-page"));
+  return h(
+    "section",
+    { class: "mac-app unavailable" },
+    h("h2", { textContent: "Mac app" }),
+    h("div", { class: "offer" }, options, cta),
+  );
+}
+
+async function openCompanion(type: "open-companion-app" | "open-companion-page") {
+  await send({ type }).catch(() => {});
+  window.close();
 }
 
 function messageOf(error: unknown): string {

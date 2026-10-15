@@ -13,7 +13,7 @@ test("pairs with the helper over native messaging and keeps the session", async 
   await expect(popup.getByText("Open a website to see its saved passwords.")).toBeVisible();
 
   // without the Mac app, Touch ID is offered as getting it
-  await expect(popup.getByRole("button", { name: "Get the free Mac app" })).toBeVisible();
+  await expect(popup.getByRole("button", { name: "Get the Mac App" })).toBeVisible();
 
   // reopening must reuse the session instead of asking for a new code
   await popup.reload();

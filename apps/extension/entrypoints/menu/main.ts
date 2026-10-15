@@ -3,6 +3,7 @@ import { DISPLAY_NAME } from "@/src/config.ts";
 import type { EmailSuggestions } from "@/src/messages.ts";
 import { send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
+import { bindCodeInput } from "@/src/ui/code-input.ts";
 import { h } from "@/src/ui/h.ts";
 import { CANCEL, CHECK, ENVELOPE, EYE, icon, KEY, LOCK, OPEN, PERSON, REFRESH } from "@/src/ui/icons.ts";
 
@@ -413,16 +414,12 @@ function showCodeEntry(error?: string) {
     class: "code",
     inputMode: "numeric",
     autocomplete: "one-time-code",
-    maxLength: 6,
     ariaLabel: "Verification code",
-    placeholder: "000000",
   });
-  input.addEventListener("input", async () => {
-    input.value = input.value.replace(/\D/g, "").slice(0, 6);
-    if (input.value.length < 6) return;
+  bindCodeInput(input, async (code) => {
     input.disabled = true;
     try {
-      await send({ type: "verify-code", code: input.value });
+      await send({ type: "verify-code", code });
       await showUnlocked();
     } catch (e) {
       // a wrong code burns the challenge; ask the Mac for a fresh one
