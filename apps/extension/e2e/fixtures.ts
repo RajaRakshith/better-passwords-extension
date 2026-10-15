@@ -35,7 +35,7 @@ function writeHost(dir: string, name: string, script: string) {
 }
 
 /** Registers the fake helper (and optionally the fake companion) inside a fresh profile. */
-function profileWithFakeHelper(companion: CompanionMode, declineSaves: boolean): string {
+function profileWithFakeHelper(companion: CompanionMode, declineSaves: boolean, companionEmails: string): string {
   const dir = mkdtempSync(join(tmpdir(), "app-e2e-"));
   const vault = join(dir, "vault.json");
   writeFileSync(vault, JSON.stringify([{ hostname: "localhost", username: "e2e-user", password: "e2e-pass" }]));
@@ -53,7 +53,7 @@ function profileWithFakeHelper(companion: CompanionMode, declineSaves: boolean):
     writeHost(
       dir,
       COMPANION_HOST,
-      `#!/bin/sh\nexport FAKE_COMPANION_CODE=${PAIRING_CODE} FAKE_COMPANION_RESULT=${companion}\nexec "${bun}" "${fakeCompanion}"\n`,
+      `#!/bin/sh\nexport FAKE_COMPANION_CODE=${PAIRING_CODE} FAKE_COMPANION_RESULT=${companion} FAKE_COMPANION_EMAILS="${companionEmails}"\nexec "${bun}" "${fakeCompanion}"\n`,
     );
   }
   return dir;
@@ -82,6 +82,8 @@ type Fixtures = {
   companion: CompanionMode;
   /** The user answers every "Save password?" prompt with Not Now. */
   declineSaves: boolean;
+  /** The emails on the "Me" card the fake companion reports (comma-separated), or "needs-contacts". */
+  companionEmails: string;
   context: BrowserContext;
   popupUrl: string;
   /** Search URLs of the requests to open the Passwords app that reached the fake helper. */
@@ -142,8 +144,9 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
   ],
   companion: ["none", { option: true }],
   declineSaves: [false, { option: true }],
-  context: async ({ companion, declineSaves }, use) => {
-    const dir = profileWithFakeHelper(companion, declineSaves);
+  companionEmails: ["jane@example.com,jane.work@example.com", { option: true }],
+  context: async ({ companion, declineSaves, companionEmails }, use) => {
+    const dir = profileWithFakeHelper(companion, declineSaves, companionEmails);
     const context = await chromium.launchPersistentContext(join(dir, "profile"), {
       channel: "chromium",
       args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],

@@ -49,7 +49,16 @@ test("advertises Hide My Email on sign-up email fields until dismissed", async (
   await expect(menu.getByText("Use Hide My Email")).toBeVisible();
   // the ✕ dismisses the hint for good, without turning Hide My Email on
   await page.waitForTimeout(500);
-  await menu.getByRole("button", { name: "Don't show again" }).click();
+  await menu.getByRole("button", { name: "Don't suggest Hide My Email again" }).click();
+  await expect.poll(() => page.locator("app-autofill-menu").count()).toBe(0);
+
+  // without the companion app, the other hint remains; dismissed too, the field gets no menu
+  await page.locator("#new").click();
+  const again = await emailMenu(page);
+  await expect(again.getByText("Use Hide My Email")).toHaveCount(0);
+  await expect(again.getByText("Suggest Your Email Addresses")).toBeVisible();
+  await page.waitForTimeout(500);
+  await again.getByRole("button", { name: "Don't suggest the app again" }).click();
   await expect.poll(() => page.locator("app-autofill-menu").count()).toBe(0);
   await page.locator("#new").click();
   await page.locator("#email").click();
@@ -159,4 +168,30 @@ test("shows that it's loading while iCloud answers", async ({ context, siteUrl, 
   await expect(menu.getByText("Loading…")).toBeVisible();
   await expect(menu.getByText("slow@icloud.com")).toBeVisible();
   await expect(menu.getByText("Loading…")).toHaveCount(0);
+});
+
+test.describe("with the companion app", () => {
+  test.use({ companion: "ok" });
+
+  test("suggests the emails on the contact card, below Hide My Email", async ({ context, siteUrl }) => {
+    const page = await context.newPage();
+    await page.goto(`${siteUrl}/signup.html`);
+    const menu = await emailMenu(page);
+    await expect(menu.getByText("Use Hide My Email")).toBeVisible();
+    await expect(menu.getByText("jane.work@example.com")).toBeVisible();
+    await expect(menu.getByText("Suggest Your Email Addresses")).toHaveCount(0);
+    await choose(menu, "jane@example.com");
+    await expect(page.locator("#email")).toHaveValue("jane@example.com");
+  });
+});
+
+test.describe("when the companion may not read Contacts", () => {
+  test.use({ companion: "ok", companionEmails: "needs-contacts" });
+
+  test("says how to allow it", async ({ context, siteUrl }) => {
+    const page = await context.newPage();
+    await page.goto(`${siteUrl}/signup.html`);
+    const menu = await emailMenu(page);
+    await expect(menu.getByText("allow Contacts in the Apple Passwords Plus app")).toBeVisible();
+  });
 });

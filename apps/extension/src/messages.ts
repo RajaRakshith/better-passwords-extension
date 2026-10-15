@@ -36,6 +36,10 @@ export type Request =
   /** Fills an address in; a new (generated) one is reserved for the site first. */
   | { type: "use-hide-my-email"; nonce: string; address: string; reserve: boolean }
   | { type: "open-icloud" }
+  /** Fills one of the user's own emails (from their contact card) in. */
+  | { type: "fill-email"; nonce: string; email: string }
+  | { type: "dismiss-companion-emails-hint" }
+  | { type: "open-companion-page" }
   /** Generated passwords for the tab's site whose update Apple Passwords couldn't confirm. */
   | { type: "unconfirmed-passwords"; tabId?: number }
 
@@ -68,6 +72,8 @@ export interface Settings {
   hideMyEmail: boolean;
   /** Advertise Hide My Email in sign-up email fields until the user turns it on or dismisses it. */
   hideMyEmailHint: boolean;
+  /** Advertise the companion app (for contact-card emails) until it's installed or dismissed. */
+  companionEmailsHint: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -77,6 +83,7 @@ export const DEFAULT_SETTINGS: Settings = {
   generatePasswords: true,
   hideMyEmail: false,
   hideMyEmailHint: true,
+  companionEmailsHint: true,
 };
 
 export interface Status extends SessionStatus {
@@ -117,8 +124,19 @@ export type HideMyEmailState =
   | { state: "ready"; address?: string }
   | { state: "error"; message: string };
 
+/**
+ * The user's own emails, from their contact card through the companion app. "hint": no app yet,
+ * suggest getting it; "needs-contacts": the app may not read Contacts.
+ */
+export type ContactEmailsState =
+  | { state: "off" }
+  | { state: "hint" }
+  | { state: "needs-contacts" }
+  | { state: "ready"; emails: string[] };
+
 export interface EmailSuggestions {
   hideMyEmail: HideMyEmailState;
+  contacts: ContactEmailsState;
 }
 
 export type NewPasswordResult = "filled" | "menu-hidden" | "no-fields" | "origin-mismatch";
@@ -141,6 +159,9 @@ interface Responses {
   "generate-hide-my-email": { address: string };
   "use-hide-my-email": { result: string };
   "open-icloud": null;
+  "fill-email": { result: string };
+  "dismiss-companion-emails-hint": null;
+  "open-companion-page": null;
   "menu-resize": null;
   "menu-close": null;
   "menu-focus-field": null;

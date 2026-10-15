@@ -12,6 +12,22 @@ async function revealed(menu: Frame, index: number): Promise<string> {
   return (await detail.textContent()) ?? "";
 }
 
+// These tests are about passwords: keep the email field's hints (Hide My Email, the companion app)
+// out of the way, as a user who dismissed them would.
+test.beforeEach(async ({ context, popupUrl }) => {
+  const popup = await context.newPage();
+  await popup.goto(popupUrl);
+  await popup.evaluate(() => {
+    type Runtime = { runtime: { sendMessage(message: unknown): Promise<unknown> } };
+    const { chrome } = globalThis as unknown as { chrome: Runtime };
+    return chrome.runtime.sendMessage({
+      type: "set-settings",
+      settings: { hideMyEmailHint: false, companionEmailsHint: false },
+    });
+  });
+  await popup.close();
+});
+
 /** Opens the menu on the new password field and unlocks it. */
 async function unlockedMenu(page: Page): Promise<Frame> {
   await page.locator("#new").click();

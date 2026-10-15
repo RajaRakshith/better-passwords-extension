@@ -35,6 +35,8 @@ const LOCK =
   "M12 2a5 5 0 0 1 5 5v2.5h.5a2 2 0 0 1 2 2V20a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-8.5a2 2 0 0 1 2-2H7V7a5 5 0 0 1 5-5Zm0 1.75A3.25 3.25 0 0 0 8.75 7v2.5h6.5V7A3.25 3.25 0 0 0 12 3.75Z";
 const CHECK =
   "M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19Zm4.03 6.22a.75.75 0 0 0-1.06.03l-4.2 4.5-1.74-1.74a.75.75 0 1 0-1.06 1.06l2.29 2.29a.75.75 0 0 0 1.08-.02l4.72-5.06a.75.75 0 0 0-.03-1.06Z";
+const PERSON =
+  "M12 3.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm0 1.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM4.5 19.25c0-3.2 3.36-5.5 7.5-5.5s7.5 2.3 7.5 5.5a.75.75 0 0 1-1.5 0c0-2.1-2.5-4-6-4s-6 1.9-6 4a.75.75 0 0 1-1.5 0Z";
 const ENVELOPE =
   "M4.5 5h15A2.5 2.5 0 0 1 22 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-15A2.5 2.5 0 0 1 2 16.5v-9A2.5 2.5 0 0 1 4.5 5Zm-.75 2.2v9.3c0 .41.34.75.75.75h15c.41 0 .75-.34.75-.75V7.2l-7.68 5.6a1.1 1.1 0 0 1-1.3 0L3.75 7.2Zm1.45-.45L12 11.7l6.8-4.95H5.2Z";
 const REFRESH =
@@ -232,7 +234,12 @@ function loadingRow(svgPath: string, title: string): HTMLElement {
   );
 }
 
-function renderEmail({ hideMyEmail: hme }: EmailSuggestions, error?: string) {
+// the menu's last answer, so one part can be redrawn without asking again
+let lastSuggestions: EmailSuggestions = { hideMyEmail: { state: "off" }, contacts: { state: "off" } };
+
+function renderEmail(suggestions: EmailSuggestions, error?: string) {
+  lastSuggestions = suggestions;
+  const { hideMyEmail: hme, contacts } = suggestions;
   const rows: (Node | null)[] = [];
   if (hme.state === "hint") {
     rows.push(hintRow());
@@ -259,8 +266,69 @@ function renderEmail({ hideMyEmail: hme }: EmailSuggestions, error?: string) {
     rows.push(message(hme.message, true));
   }
   if (error) rows.push(message(error, true));
+
+  // below Hide My Email: the user's own emails, from their contact card
+  const own: Node[] = [];
+  if (contacts.state === "ready") {
+    for (const email of contacts.emails) {
+      own.push(row(PERSON, email, "From your contact card", () => void fillOwnEmail(email)));
+    }
+  } else if (contacts.state === "hint") {
+    own.push(companionHintRow());
+  } else if (contacts.state === "needs-contacts") {
+    own.push(message("To suggest your email addresses, allow Contacts in the Apple Passwords Plus app."));
+  }
+  if (rows.length > 0 && own.length > 0) rows.push(h("hr", { class: "separator" }));
+  rows.push(...own);
+
   if (rows.length === 0) return close();
   render(...rows);
+}
+
+/** A row with a ✕ that dismisses it for good (without choosing the row). */
+function dismissible(hint: HTMLButtonElement, label: string, onDismiss: () => Promise<unknown>): HTMLButtonElement {
+  const dismiss = h("span", { class: "dismiss", title: "Don't show again" }, icon(CANCEL));
+  dismiss.setAttribute("role", "button");
+  dismiss.setAttribute("aria-label", label);
+  dismiss.addEventListener("click", (event) => {
+    // the ✕ sits inside the row: don't let the click choose the row
+    event.stopPropagation();
+    if (deliberate(event))
+      void onDismiss()
+        .catch(() => {})
+        .finally(close);
+  });
+  hint.append(dismiss);
+  return hint;
+}
+
+/** Advertises the companion app, which lets the menu suggest the emails on the user's contact card. */
+function companionHintRow(): HTMLButtonElement {
+  const hint = row(
+    PERSON,
+    "Suggest Your Email Addresses",
+    "With the free Apple Passwords Plus app for Mac",
+    async () => {
+      await send({ type: "open-companion-page" }).catch(() => {});
+      close();
+    },
+  );
+  return dismissible(hint, "Don't suggest the app again", () => send({ type: "dismiss-companion-emails-hint" }));
+}
+
+async function fillOwnEmail(email: string) {
+  try {
+    const { result } = await send({ type: "fill-email", nonce, email });
+    if (result !== "filled") renderEmail(lastSuggestions, fillError(result));
+  } catch (e) {
+    renderEmail(lastSuggestions, messageOf(e));
+  }
+}
+
+function fillError(result: string): string {
+  return result === "menu-hidden"
+    ? "The page tried to hide this menu, so nothing was filled in."
+    : "Couldn't fill in this page.";
 }
 
 /** Advertises Hide My Email until the user turns it on, or dismisses it for good with the ✕. */
@@ -271,19 +339,7 @@ function hintRow(): HTMLButtonElement {
     "A unique, random address that forwards to your inbox (iCloud+)",
     () => void enableHideMyEmail(),
   );
-  const dismiss = h("span", { class: "dismiss", title: "Don't show again" }, icon(CANCEL));
-  dismiss.setAttribute("role", "button");
-  dismiss.setAttribute("aria-label", "Don't show again");
-  dismiss.addEventListener("click", (event) => {
-    // the ✕ sits inside the row: don't let the click turn Hide My Email on
-    event.stopPropagation();
-    if (deliberate(event))
-      void send({ type: "dismiss-hide-my-email-hint" })
-        .catch(() => {})
-        .finally(close);
-  });
-  hint.append(dismiss);
-  return hint;
+  return dismissible(hint, "Don't suggest Hide My Email again", () => send({ type: "dismiss-hide-my-email-hint" }));
 }
 
 async function enableHideMyEmail() {
@@ -304,7 +360,7 @@ async function showProposal() {
       row(REFRESH, "Try Another", "", () => void showProposal()),
     );
   } catch (e) {
-    renderEmail({ hideMyEmail: { state: "ready" } }, messageOf(e));
+    renderEmail({ ...lastSuggestions, hideMyEmail: { state: "ready" } }, messageOf(e));
   }
 }
 
@@ -314,15 +370,10 @@ async function useAddress(address: string, reserve: boolean) {
     const { result } = await send({ type: "use-hide-my-email", nonce, address, reserve });
     // when filled, the content script closes the menu
     if (result !== "filled") {
-      renderEmail(
-        { hideMyEmail: { state: "ready", address } },
-        result === "menu-hidden"
-          ? "The page tried to hide this menu, so nothing was filled in."
-          : "Couldn't fill in this page.",
-      );
+      renderEmail({ ...lastSuggestions, hideMyEmail: { state: "ready", address } }, fillError(result));
     }
   } catch (e) {
-    renderEmail({ hideMyEmail: { state: "ready" } }, messageOf(e));
+    renderEmail({ ...lastSuggestions, hideMyEmail: { state: "ready" } }, messageOf(e));
   }
 }
 

@@ -11,6 +11,7 @@ interface HostResponse {
   ok: boolean;
   version?: number;
   code?: string;
+  emails?: string[];
   accessibility?: boolean;
   error?: string;
   message?: string;
@@ -65,5 +66,29 @@ export class Companion {
     if (reply?.ok && typeof reply.code === "string" && /^\d{6}$/.test(reply.code)) return reply.code;
     if (reply?.error === "needs-accessibility" || reply?.error === "agent-unavailable") this.#cached = undefined;
     throw new CompanionError(reply?.message ?? "Touch ID didn't work.", reply?.error ?? "failed");
+  }
+
+  #emails: { value: string[]; at: number } | undefined;
+
+  /**
+   * The emails on the user's contact card, for sign-up forms. Cached for ten minutes: the card
+   * rarely changes, and each call starts the host. Throws "needs-contacts" while the app may not
+   * read Contacts, "not-installed" without the app, and "outdated" for an app from before this.
+   */
+  async myEmails(): Promise<string[]> {
+    if (this.#emails && this.now() - this.#emails.at < 10 * 60_000) return this.#emails.value;
+    let reply: HostResponse | undefined;
+    try {
+      reply = (await this.sendNative(COMPANION_HOST, { type: "my-emails" })) as HostResponse | undefined;
+    } catch (error) {
+      throw new CompanionError(error instanceof Error ? error.message : String(error), "not-installed");
+    }
+    if (reply?.ok && Array.isArray(reply.emails)) {
+      const value = reply.emails.filter((email): email is string => typeof email === "string" && email.includes("@"));
+      this.#emails = { value, at: this.now() };
+      return value;
+    }
+    if ((reply?.version ?? 1) < 2) throw new CompanionError("Update the Apple Passwords Plus app.", "outdated");
+    throw new CompanionError(reply?.message ?? "Couldn't read your contact card.", reply?.error ?? "failed");
   }
 }

@@ -63,4 +63,21 @@ describe("Companion", () => {
       message: "Touch ID was cancelled.",
     });
   });
+
+  it("reads the emails on the contact card, and remembers them", async () => {
+    let now = 0;
+    const host = fakeHost(() => ({ ok: true, version: 2, emails: ["jane@example.com", "not-an-email"] }));
+    const companion = new Companion(host.send, () => now);
+    expect(await companion.myEmails()).toEqual(["jane@example.com"]);
+    now = 5 * 60_000;
+    await companion.myEmails();
+    expect(host.calls).toHaveLength(1);
+  });
+
+  it("says when Contacts isn't allowed, or the app is too old", async () => {
+    const denied = fakeHost(() => ({ ok: false, version: 2, error: "needs-contacts", message: "Allow Contacts." }));
+    await expect(new Companion(denied.send).myEmails()).rejects.toMatchObject({ code: "needs-contacts" });
+    const old = fakeHost(() => ({ ok: false, version: 1, message: "unknown request" }));
+    await expect(new Companion(old.send).myEmails()).rejects.toMatchObject({ code: "outdated" });
+  });
 });

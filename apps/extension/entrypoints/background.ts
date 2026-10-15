@@ -1,16 +1,18 @@
 import type { FieldKind } from "@/src/autofill/fields.ts";
 import { Companion } from "@/src/companion.ts";
-import { nativeHostFor } from "@/src/config.ts";
+import { nativeHostFor, REPO_URL } from "@/src/config.ts";
 import { fillCredentials } from "@/src/fill.ts";
 import { HideMyEmail, headerRule, ICloudError } from "@/src/icloud/hide-my-email.ts";
 import {
   type AutofillStatus,
   CONTENT_SCRIPT_REQUESTS,
+  type ContactEmailsState,
   type ContentMessage,
   DEFAULT_SETTINGS,
   type EmailSuggestions,
   type Envelope,
   type GeneratedPasswords,
+  type HideMyEmailState,
   type NewPasswordContext,
   type NewPasswordResult,
   type Request,
@@ -97,7 +99,12 @@ export default defineBackground(() => {
     if (!url || !settings.inlineMenu) return { show: "none" };
     if (kind === "signup-email") {
       // Hide My Email works without Apple Passwords, so no unlocking is needed
-      return { show: settings.hideMyEmail || settings.hideMyEmailHint ? "email" : "none" };
+      const offered =
+        settings.hideMyEmail ||
+        settings.hideMyEmailHint ||
+        settings.companionEmailsHint ||
+        (await companion.state()) !== "not-installed";
+      return { show: offered ? "email" : "none" };
     }
     if (kind === "new-password" && !settings.generatePasswords) return { show: "none" };
     if (session.status.state === "disconnected" || session.status.state === "closed") {
@@ -228,11 +235,17 @@ export default defineBackground(() => {
   // each site's Hide My Email address, remembered for a minute so reopening the menu is instant
   const addressCache = new Map<string, { address: string | undefined; at: number }>();
 
+  /** What sign-up email fields offer: Hide My Email above, the user's own emails below. */
   async function emailSuggestions(tabId: number): Promise<EmailSuggestions> {
     const settings = await getSettings();
-    if (!settings.hideMyEmail) return { hideMyEmail: { state: settings.hideMyEmailHint ? "hint" : "off" } };
+    const [hme, contacts] = await Promise.all([hideMyEmailState(tabId, settings), contactEmailsState(settings)]);
+    return { hideMyEmail: hme, contacts };
+  }
+
+  async function hideMyEmailState(tabId: number, settings: Settings): Promise<HideMyEmailState> {
+    if (!settings.hideMyEmail) return { state: settings.hideMyEmailHint ? "hint" : "off" };
     const url = await tabUrl(tabId);
-    if (!url) return { hideMyEmail: { state: "off" } };
+    if (!url) return { state: "off" };
     try {
       let cached = addressCache.get(url.hostname);
       if (!cached || Date.now() - cached.at > 60_000) {
@@ -240,10 +253,22 @@ export default defineBackground(() => {
         addressCache.set(url.hostname, cached);
       }
       const { address } = cached;
-      return { hideMyEmail: address ? { state: "ready", address } : { state: "ready" } };
+      return address ? { state: "ready", address } : { state: "ready" };
     } catch (error) {
-      if (error instanceof ICloudError && error.code === "signed-out") return { hideMyEmail: { state: "signed-out" } };
-      return { hideMyEmail: { state: "error", message: error instanceof Error ? error.message : String(error) } };
+      if (error instanceof ICloudError && error.code === "signed-out") return { state: "signed-out" };
+      return { state: "error", message: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async function contactEmailsState(settings: Settings): Promise<ContactEmailsState> {
+    if ((await companion.state()) === "not-installed") return { state: settings.companionEmailsHint ? "hint" : "off" };
+    try {
+      return { state: "ready", emails: await companion.myEmails() };
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code === "needs-contacts") return { state: "needs-contacts" };
+      // an older app, or the agent isn't running: offer nothing rather than an error
+      return { state: "off" };
     }
   }
 
@@ -390,6 +415,25 @@ export default defineBackground(() => {
         })) as { result: string } | undefined;
         return { result: reply?.result ?? "no-fields" };
       }
+      case "fill-email": {
+        const tabId = tabOf(caller);
+        const url = await tabUrl(tabId);
+        if (!url) throw new Error("this page can't be filled");
+        const fill = {
+          type: "menu-fill-email",
+          nonce: request.nonce,
+          origin: url.origin,
+          email: request.email,
+        } as const;
+        const reply = (await relay(tabId, fill)) as { result: string } | undefined;
+        return { result: reply?.result ?? "no-fields" };
+      }
+      case "dismiss-companion-emails-hint":
+        await saveSettings({ companionEmailsHint: false });
+        return null;
+      case "open-companion-page":
+        await browser.tabs.create({ url: `${REPO_URL}/blob/main/docs/companion.md` });
+        return null;
       case "open-icloud":
         await browser.tabs.create({ url: "https://www.icloud.com/" });
         return null;
