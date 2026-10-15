@@ -12,6 +12,11 @@ private struct StubAgent: HostRelay.Agent {
     func readPairingCode() async -> Result<String, CompanionError> { codeResult }
 }
 
+private final class Recorder: @unchecked Sendable {
+    private(set) var values: [String] = []
+    func add(_ value: String) { values.append(value) }
+}
+
 private func json(_ response: HostResponse) -> [String: Any] {
     (try? JSONSerialization.jsonObject(with: HostRelay.encode(response))) as? [String: Any] ?? [:]
 }
@@ -45,6 +50,16 @@ private func json(_ response: HostResponse) -> [String: Any] {
         #expect(reply["emails"] as? [String] == ["jane@example.com"])
         let denied = HostRelay(agent: StubAgent(emailsResult: .failure(.needsContacts)))
         #expect(json(await denied.handle(Data(#"{"type":"my-emails"}"#.utf8)))["error"] as? String == "needs-contacts")
+    }
+
+    @Test func opensTheApp() async {
+        let opened = Recorder()
+        let relay = HostRelay(agent: StubAgent()) {
+            opened.add("app")
+            return true
+        }
+        #expect(json(await relay.handle(Data(#"{"type":"open-app"}"#.utf8)))["ok"] as? Bool == true)
+        #expect(opened.values == ["app"])
     }
 
     @Test func rejectsUnknownRequests() async {

@@ -4,7 +4,15 @@
 import CompanionCore
 import Foundation
 
-let relay = HostRelay(agent: XPCAgentClient())
+let relay = HostRelay(agent: XPCAgentClient()) {
+    // `open` finds the installed app by its bundle identifier, wherever it lives
+    let open = Process()
+    open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+    open.arguments = ["-b", Identity.appBundleID]
+    guard (try? open.run()) != nil else { return false }
+    open.waitUntilExit()
+    return open.terminationStatus == 0
+}
 let stdin = FileHandle.standardInput
 let stdout = FileHandle.standardOutput
 var buffer = Data()

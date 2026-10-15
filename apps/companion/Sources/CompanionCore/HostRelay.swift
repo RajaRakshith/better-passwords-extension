@@ -10,8 +10,13 @@ public struct HostRelay: Sendable {
     }
 
     let agent: any Agent
+    let openApp: @Sendable () -> Bool
 
-    public init(agent: any Agent) { self.agent = agent }
+    /// `openApp` brings the app's window up; it doesn't involve the agent.
+    public init(agent: any Agent, openApp: @escaping @Sendable () -> Bool = { false }) {
+        self.agent = agent
+        self.openApp = openApp
+    }
 
     public func handle(_ data: Data) async -> HostResponse {
         guard let request = try? JSONDecoder().decode(HostRequest.self, from: data) else {
@@ -32,6 +37,8 @@ public struct HostRelay: Sendable {
             case .failure(let error):
                 return .failure(error)
             }
+        case .openApp:
+            return HostResponse(ok: openApp())
         case .myEmails:
             switch await agent.myEmails() {
             case .success(let emails):

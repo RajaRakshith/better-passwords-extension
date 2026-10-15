@@ -5,9 +5,54 @@ import SwiftUI
 
 struct SetupView: View {
     @State private var model = SetupModel()
+    /// Once everything is set up, the window shows a finished screen; this brings the steps back.
+    @State private var showingSetup = false
     private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     var body: some View {
+        Group {
+            if model.ready && !showingSetup { done } else { steps }
+        }
+        .padding(24)
+        .frame(width: 480)
+        .onAppear {
+            model.reRegisterIfRebuilt()
+            model.refresh()
+        }
+        .onReceive(timer) { _ in model.refresh() }
+    }
+
+    /// The finished screen: it says plainly that the app works without this window.
+    private var done: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 52))
+                .foregroundStyle(.green)
+            Text("You're all set").font(.title2.bold())
+            Text("Apple Passwords Plus works in the background.\nYou can close this window.")
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 18) {
+                Label("Touch ID unlock", systemImage: "touchid")
+                Label(
+                    model.contactsAllowed ? "Your email addresses" : "Email suggestions off",
+                    systemImage: model.contactsAllowed ? "person.crop.circle" : "person.crop.circle.badge.xmark")
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .padding(.top, 4)
+            HStack {
+                Button("Show Setup") { showingSetup = true }
+                Spacer()
+                Button("Done") { NSApp.keyWindow?.close() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.top, 10)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var steps: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Apple Passwords Plus").font(.title2.bold())
@@ -53,22 +98,15 @@ struct SetupView: View {
 
             Divider()
             HStack {
-                if model.ready {
-                    Label("All set. Click Unlock in the extension.", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                }
-                Spacer()
                 Button("Remove Setup", role: .destructive) { model.removeAll() }
                     .help("Disconnects the browsers and stops the background agent.")
+                Spacer()
+                if model.ready {
+                    Button("Done") { showingSetup = false }
+                        .keyboardShortcut(.defaultAction)
+                }
             }
         }
-        .padding(24)
-        .frame(width: 480)
-        .onAppear {
-            model.reRegisterIfRebuilt()
-            model.refresh()
-        }
-        .onReceive(timer) { _ in model.refresh() }
     }
 
     private var browsersDetail: String {
@@ -80,7 +118,7 @@ struct SetupView: View {
     private var agentDetail: String {
         switch model.agentStatus {
         case .requiresApproval: "Allow Apple Passwords Plus in System Settings → General → Login Items."
-        default: "A small helper that starts only when the extension asks for a code."
+        default: "Starts by itself when the extension needs it, so this window doesn't need to stay open."
         }
     }
 }

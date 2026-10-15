@@ -9,6 +9,8 @@ public struct HostRequest: Codable, Equatable, Sendable {
         case readCode = "read-code"
         /// The emails on the user's contact card.
         case myEmails = "my-emails"
+        /// Brings the app's window up (from the extension's popup).
+        case openApp = "open-app"
     }
 
     public var type: Kind
@@ -26,8 +28,8 @@ public struct HostResponse: Codable, Equatable, Sendable {
     public var error: CompanionError?
     public var message: String?
 
-    /// 1: hello, read-code. 2: adds my-emails.
-    public static let protocolVersion = 2
+    /// 1: hello, read-code. 2: adds my-emails. 3: adds open-app.
+    public static let protocolVersion = 3
 
     public static func failure(_ error: CompanionError) -> HostResponse {
         HostResponse(ok: false, error: error, message: error.message)
