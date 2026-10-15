@@ -77,13 +77,10 @@ The content script runs in the top frame only. Logins inside cross-origin iframe
 
 Password fields on sign-up and change-password forms get a menu with two generated passwords: Apple's style (`xxxxxx-xxxxxx-xxxxxx`) and one without special characters. Both follow the field's `minlength`, `maxlength` and `passwordrules`. They are generated in the background worker, and shown masked until the user hovers the eye.
 
-Like Safari, the chosen password is filled right away, and Apple Passwords is asked to save it only once the sign-up goes through. Apple's helper shows macOS's "Save password?" prompt but never reports the outcome, so the background then looks the login up until it appears.
+Like Safari, the chosen password is filled right away, and Apple Passwords is asked to save it once the page moves on with it. Apple's helper shows macOS's "Save password?" prompt but never reports the outcome, so the background then looks the login up until it appears.
 
-A save needs two signals, so an invalid or rejected form isn't saved (`src/autofill/submission.ts`):
+"Moves on" means the tab navigates or changes URL (watched by the background, so leaving the page can't lose it), or the password field goes away: a dialog closes, or a multi-step form moves on (`src/autofill/submission.ts`). An invalid or rejected form keeps the field and the URL, so nothing is asked then. Otherwise, asking once too often beats missing a save: the prompt has Not Now, and it's asked only once per generated password.
 
-1. **A submit attempt on a valid form.** This is the form's submit event, a click on its submit button or a sign-up-looking control, or Enter in one of its fields. Validity is read from `validity`, which fires no events the page could show errors for.
-2. **Evidence it went through, within 20 seconds.** Either the tab navigates or changes URL (watched by the background, so leaving the page can't lose it), or the password field goes away (a dialog closes, or a multi-step form moves on).
-
-The username is the one in the form, or the last username or email typed on the page (multi-step sign-ups). Without one, macOS asks for it in its dialog, and the new login that appears tells us which name was saved.
+The username is the one in the form, tracked as the user types, or the last username or email typed on the page (multi-step sign-ups). Without one, macOS asks for it in its dialog, and the new login that appears tells us which name was saved.
 
 Until Apple Passwords confirms a new login, the password is kept in memory and listed in the popup with a Copy button for the rest of the session. An update to an existing login can't be confirmed (the list looks the same), so it is assumed and kept listed too.
