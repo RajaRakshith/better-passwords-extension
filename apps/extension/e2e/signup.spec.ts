@@ -5,6 +5,8 @@ import { choose, expect, menuFrame, PAIRING_CODE, test } from "./fixtures.ts";
 async function revealed(menu: Frame, index: number): Promise<string> {
   const detail = menu.locator(".password").nth(index);
   expect(await detail.textContent()).toMatch(/^.{3}[•-]+$/);
+  // the menu resizes as it renders; hover once it has settled, as a person would
+  await menu.page().waitForTimeout(500);
   await menu.locator(".reveal").nth(index).hover();
   await expect(detail).not.toContainText("•");
   return (await detail.textContent()) ?? "";
@@ -50,7 +52,7 @@ test("offers passwords without special characters", async ({ context, siteUrl, h
   await menu.getByLabel("Verification code").fill(PAIRING_CODE);
   const preview = await revealed(menu, 1);
   expect(preview).toMatch(/^[a-zA-Z0-9]{20}$/);
-  // the eye is part of the row: clicking it chooses the password too
+  // the eye is inside the row: clicking it chooses the password like the rest of the row
   await menu.locator(".reveal").nth(1).click();
   await expect(page.locator("#new")).toHaveValue(preview);
   // no email typed yet: saved without a username, which the helper allows

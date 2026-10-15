@@ -124,60 +124,22 @@ body {
   outline-offset: 0;
 }
 
-/* a row with an eye button that reveals its password; the eye is part of the row */
-.choice {
-  position: relative;
-}
-
-.choice .row {
-  padding-right: 36px;
-}
-
-.choice .reveal svg {
-  width: 16px;
-  height: 16px;
-}
-
-.choice:hover .row {
-  background: var(--accent);
-  color: var(--accent-text);
-}
-
-.choice:hover .row svg,
-.choice:hover .row .detail {
-  color: inherit;
-}
-
+/* the eye that reveals a suggested password, inside its row */
 .reveal {
-  position: absolute;
-  top: 50%;
-  right: 6px;
   display: grid;
+  flex: none;
   place-items: center;
   width: 26px;
   height: 26px;
-  padding: 0;
-  border: 0;
+  margin-left: auto;
   border-radius: 6px;
-  background: none;
-  color: var(--text-secondary);
-  transform: translateY(-50%);
-  cursor: default;
 }
 
-/* on the highlighted (blue) row, the eye follows the row's text color */
-.choice:hover .reveal,
-.choice:has(.row:focus-visible) .reveal,
-.reveal:focus-visible {
-  color: var(--accent-text);
-}
-
-.reveal:hover,
-.reveal:focus-visible {
+.reveal:hover {
   background: rgb(255 255 255 / 20%);
-  outline: none;
 }
 
-.reveal:focus-visible {
-  background: var(--accent);
+.row .reveal svg {
+  width: 16px;
+  height: 16px;
 }
