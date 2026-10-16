@@ -15,13 +15,14 @@ globalThis.Kit = (() => {
       });
     const io = new IntersectionObserver(
       (entries) => {
+        // Anything already scrolled past shows at once, so fast scrolls don't leave gaps.
         for (const e of entries)
-          if (e.isIntersecting) {
+          if (e.isIntersecting || e.boundingClientRect.top < 0) {
             e.target.classList.add("in");
             io.unobserve(e.target);
           }
       },
-      { threshold: 0.25 },
+      { threshold: 0.1 },
     );
     els.forEach((e) => {
       io.observe(e);

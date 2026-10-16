@@ -9,7 +9,8 @@
 <meta name="robots" content="index, follow, max-image-preview:large" />
 <meta name="application-name" content="Better Passwords" />
 <meta name="apple-mobile-web-app-title" content="Better Passwords" />
-<meta name="theme-color" content="#ffffff" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#161618" media="(prefers-color-scheme: dark)" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 
@@ -87,16 +88,16 @@
   html, body { height: 100%; overflow: hidden; }
   body { display: flex; flex-direction: column; }
   .nav-chrome { flex: none; }
-  .viewport { flex: 1; min-height: 0; overflow-y: auto; scroll-behavior: smooth; outline: none; }
+  .viewport { flex: 1; min-height: 0; overflow-y: auto; outline: none; }
 
   /* the nav's pinned icon opens a preview of the real popup */
   .pin { position: relative; display: inline-flex; }
-  .nav-pop { right: -4px; top: calc(100% + 6px); width: 300px; max-width: calc(100vw - 24px); font: 13px/1.45 var(--font); letter-spacing: 0; color: #1d1d1f; text-align: left; }
-  .nav-pop .dm-pop-empty { margin: 0 4px 10px; color: #6e6e73; }
-  .nav-pop .preview { margin: 10px -12px -12px; padding: 12px; border-radius: 0 0 12px 12px; background: #f5f5f7; text-align: center; }
-  .nav-pop .preview p { margin: 0 0 8px; font-size: 12px; color: #6e6e73; }
-  .nav-pop .preview-add { display: inline-block; padding: 6px 16px; border-radius: 980px; background: #0071e3; color: #fff; font: 500 13px var(--font); }
-  .nav-pop .preview-add:hover { background: #0077ed; text-decoration: none; }
+  .nav-pop { right: -4px; top: calc(100% + 6px); width: 300px; max-width: calc(100vw - 24px); font: 13px/1.45 var(--font); letter-spacing: 0; color: var(--ui-ink); text-align: left; }
+  .nav-pop .dm-pop-empty { margin: 0 4px 10px; color: var(--ui-muted); }
+  .nav-pop .preview { margin: 10px -12px -12px; padding: 12px; border-radius: 0 0 12px 12px; background: var(--ui-well); text-align: center; }
+  .nav-pop .preview p { margin: 0 0 8px; font-size: 12px; color: var(--ui-muted); }
+  .nav-pop .preview-add { display: inline-block; padding: 6px 16px; border-radius: 980px; background: var(--blue); color: #fff; font: 500 13px var(--font); }
+  .nav-pop .preview-add:hover { background: var(--blue-hover); text-decoration: none; }
   .nav-pop .unlock-btn { margin: 4px 0 2px; padding: 7px 14px; border: 0; border-radius: 8px; background: var(--blue); color: #fff; font: 500 13px var(--font); cursor: pointer; }
 
   /* hero */
@@ -105,15 +106,8 @@
   .hero-title { margin: 0; font: 700 clamp(40px, 5vw, 62px)/1.04 var(--display); letter-spacing: -0.04em; }
   .hero-sub { margin: 14px 0 40px; font-size: 19px; color: var(--muted); }
   .hero-try { position: relative; max-width: 420px; margin: 0 auto; text-align: left; }
-  .hero-try ::part(card) { margin: 0 auto; box-shadow: 0 0 0 1px rgb(0 0 0 / 6%), 0 30px 80px rgb(0 0 0 / 10%); }
+  .hero-try ::part(card) { margin: 0 auto; box-shadow: 0 0 0 1px var(--hair), 0 30px 80px rgb(0 0 0 / 10%); }
   .hero-try ::part(hint) { display: none; }
-  /* one next step at a time, under the card */
-  .try-next { max-width: 30em; min-height: 3em; margin: 22px auto 0; font-size: 17px; color: var(--muted); }
-  .try-next b { color: var(--ink); font-weight: 600; }
-  .try-next button { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--blue); cursor: pointer; }
-  .try-next button:hover { text-decoration: underline; }
-  .try-next.fresh { animation: next-in .5s var(--ease); }
-  @keyframes next-in { from { opacity: 0; transform: translateY(6px); } }
   .nav-chrome .nc-ico.ours.glow { box-shadow: 0 0 0 3px rgb(0 113 227 / 35%); animation: glow 1.2s ease-in-out infinite; }
   @keyframes glow { 50% { box-shadow: 0 0 0 6px rgb(0 113 227 / 18%); } }
   .hero-ctas { margin-top: 48px; }
@@ -122,9 +116,9 @@
   /* the browser tour */
   .tour-cap { margin: 0 0 22px; text-align: center; font: 600 19px var(--display); color: var(--muted); }
   .tour-cap b { color: var(--ink); }
-  .orb { position: absolute; z-index: 15; width: 26px; height: 26px; margin: -13px 0 0 -13px; padding: 0; border: 0; border-radius: 50%; background: radial-gradient(circle, #fff 0 24%, #0a84ff 26% 62%, transparent 64%); cursor: pointer; }
+  .orb { position: absolute; z-index: 15; width: 26px; height: 26px; margin: -13px 0 0 -13px; padding: 0; border: 0; border-radius: 50%; background: radial-gradient(circle, #fff 0 18%, #0a84ff 20% 62%, transparent 64%); cursor: pointer; }
   .orb::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 50%; background: rgb(10 132 255 / 30%); animation: orb-pulse 2.8s ease-out infinite; }
-  @keyframes orb-pulse { from { transform: scale(1); opacity: .7; } 60%, to { transform: scale(2); opacity: 0; } }
+  @keyframes orb-pulse { from { transform: scale(1); opacity: .7; } 60%, to { transform: scale(2.6); opacity: 0; } }
   .orb[hidden] { display: none; }
   .tour-note { margin: 22px 0 0; text-align: center; font-size: 14px; color: var(--muted); min-height: 20px; }
 
@@ -135,17 +129,18 @@
   .flow-node b { margin-top: 12px; font: 600 17px var(--display); }
   .flow-node small { font-size: 14px; color: var(--muted); }
   .flow-tile { display: grid; place-items: center; width: 76px; height: 76px; border-radius: 19px; }
-  .flow-tile.mac { background: linear-gradient(180deg, #fbfbfd, #ececf0); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%); color: #1d1d1f; }
+  .flow-tile.mac { background: linear-gradient(180deg, var(--tile-1), var(--tile-2)); box-shadow: inset 0 0 0 1px var(--hair); color: var(--ink); }
+  .flow-tile.mac circle { fill: var(--tile-hole); }
   .flow-tile.mac svg { width: 54px; height: 54px; }
   .flow-tile.ours img { width: 76px; height: 76px; }
-  .flow-tile.page { width: 150px; align-content: center; gap: 7px; padding: 0 14px; background: #fff; box-shadow: 0 0 0 1px var(--line), 0 12px 30px rgb(0 0 0 / 6%); }
-  .flow-tile.page i { width: 100%; padding: 5px 8px; border: 1px solid #d2d2d7; border-radius: 6px; font: 11px/1.2 var(--font); font-style: normal; text-align: left; color: #1d1d1f; background: #e8f0fe; }
+  .flow-tile.page { width: 150px; align-content: center; gap: 7px; padding: 0 14px; background: var(--card); box-shadow: 0 0 0 1px var(--line), 0 12px 30px rgb(0 0 0 / 6%); }
+  .flow-tile.page i { width: 100%; padding: 5px 8px; border: 1px solid var(--ui-field-line); border-radius: 6px; font: 11px/1.2 var(--font); font-style: normal; text-align: left; color: var(--ui-ink); background: var(--fill-bg); }
   .flow-tile.page .dots { letter-spacing: 1px; }
-  .flow-link { position: relative; flex: 1; max-width: 200px; height: 2px; margin-top: 37px; background: linear-gradient(90deg, #d2d2d7, #0071e3); border-radius: 2px; }
+  .flow-link { position: relative; flex: 1; max-width: 200px; height: 2px; margin-top: 37px; background: linear-gradient(90deg, var(--line), var(--blue)); border-radius: 2px; }
   .flow-link span { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); white-space: nowrap; font-size: 13px; color: var(--muted); }
-  .flow-link::after { content: ""; position: absolute; top: -4px; left: 0; width: 10px; height: 10px; border-radius: 50%; background: #0071e3; box-shadow: 0 0 0 4px rgb(0 113 227 / 18%); opacity: 0; }
+  .flow-link::after { content: ""; position: absolute; top: -4px; left: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 4px rgb(0 113 227 / 18%); opacity: 0; }
   /* each line fades between what it connects: grey Mac → blue extension → grey page */
-  .flow-node + .flow-link + .flow-node + .flow-link { background: linear-gradient(90deg, #0071e3, #d2d2d7); }
+  .flow-node + .flow-link + .flow-node + .flow-link { background: linear-gradient(90deg, var(--blue), var(--line)); }
   .flow.in .flow-link::after { animation: flow-go 1.1s var(--ease) .5s both; }
   .flow.in .flow-link + .flow-node + .flow-link::after { animation-delay: 1.5s; }
   @keyframes flow-go { 0% { left: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: calc(100% - 10px); opacity: 0; } }
@@ -154,27 +149,27 @@
   .points { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin: 64px 0 0; padding: 0; list-style: none; }
   .points li { display: grid; grid-template-columns: 24px 1fr; align-content: start; gap: 4px 12px; }
   .points span { grid-column: 2; }
-  .points svg { width: 24px; height: 24px; margin-top: 1px; color: var(--blue); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .points svg { width: 24px; height: 24px; margin-top: 1px; color: var(--link); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .points b { font: 600 18px var(--display); }
   .points span { font-size: 16px; line-height: 1.5; color: var(--muted); }
   .repo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 40px; padding: 16px 20px; border-radius: 16px; box-shadow: 0 0 0 1px var(--line); color: var(--ink); font-size: 15px; }
   .repo-bar:hover { text-decoration: none; background: var(--alt); }
-  .repo-bar > svg { width: 24px; height: 24px; flex: none; }
+  .repo-bar > svg { width: 24px; height: 24px; flex: none; fill: currentColor; }
   .repo-name { font-size: 16px; } .repo-name b { font-weight: 600; }
   .repo-meta { display: flex; gap: 16px; margin-left: auto; color: var(--muted); font-size: 14px; }
   .repo-meta i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: -1px; }
-  .repo-go { color: var(--blue); font-weight: 500; }
-  @media (prefers-reduced-motion: reduce) { .flow.in .flow-link::after, .try-next.fresh, .orb::before { animation: none; } }
+  .repo-go { color: var(--link); font-weight: 500; }
+  @media (prefers-reduced-motion: reduce) { .flow.in .flow-link::after, .orb::before { animation: none; } }
 
   .closing .h2 { margin: 0 auto 12px; }
 
   @media (max-width: 900px) {
     .hero { padding-top: 32px; }
     .flow { flex-direction: column; align-items: center; }
-    .flow-link { flex: none; width: 2px; height: 48px; margin: 10px 0; background: linear-gradient(180deg, #d2d2d7, #0071e3); }
+    .flow-link { flex: none; width: 2px; height: 48px; margin: 10px 0; background: linear-gradient(180deg, var(--line), var(--blue)); }
     .flow-link span { left: 14px; bottom: 50%; transform: translateY(50%); }
     .flow-link::after { display: none; }
-    .flow-node + .flow-link + .flow-node + .flow-link { background: linear-gradient(180deg, #0071e3, #d2d2d7); }
+    .flow-node + .flow-link + .flow-node + .flow-link { background: linear-gradient(180deg, var(--blue), var(--line)); }
     .points { grid-template-columns: 1fr; gap: 24px; margin-top: 48px; }
     .repo-meta { margin-left: 0; }
   }
@@ -213,7 +208,6 @@
     <div class="hero-try">
       <div id="demo"></div>
     </div>
-    <p class="try-next" id="try-next" aria-live="polite"></p>
     <div class="ctas hero-ctas">
       <a class="add big" data-add href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Add to Chrome</span></a>
       <a class="other" data-other href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Also for Firefox</span></a>
@@ -338,14 +332,14 @@
 
   <section class="closing">
     <div class="wrap center">
-      <img class="reveal" src="icon.svg" alt="" width="64" height="64" style="margin-bottom:24px" />
-      <h2 class="h2 reveal d1">Now try it on a real site.</h2>
-      <p class="lede reveal d1">Free and open source. It works with the Apple Passwords you already have.</p>
-      <div class="ctas reveal d2" style="margin-top:32px">
+      <img src="icon.svg" alt="" width="64" height="64" style="margin-bottom:24px" />
+      <h2 class="h2">Now try it on a real site.</h2>
+      <p class="lede">Free and open source. It works with the Apple Passwords you already have.</p>
+      <div class="ctas" style="margin-top:32px">
         <a class="add big" data-add href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Add to Chrome</span></a>
         <a class="other" data-other href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Also for Firefox</span></a>
       </div>
-      <p class="note reveal d2" data-note>Mac only (macOS 14 or later). Works in Chrome, Edge, Brave, Arc and Firefox.</p>
+      <p class="note" data-note>Mac only (macOS 14 or later). Works in Chrome, Edge, Brave, Arc and Firefox.</p>
     </div>
   </section>
 </main>
@@ -398,39 +392,9 @@
     place();
     addEventListener("resize", place);
 
-    // One next step under the card, moving along as the visitor tries things.
-    const next = document.getElementById("try-next");
-    let step = "";
-    const say = (key, html) => {
-      if (step === key) return;
-      step = key;
-      next.innerHTML = html;
-      next.classList.remove("fresh");
-      void next.offsetWidth;
-      next.classList.add("fresh");
-    };
-    const toSignup = () => say("signup", 'Now <button type="button" data-signup>create an account</button> for a private email and a strong password.');
-    next.addEventListener("click", (e) => { if (e.target.closest("[data-signup]")) demo.setMode("signup"); });
-    demoEl.addEventListener("demo:fill", (e) => {
-      const kind = e.detail.kind;
-      if (demo.mode === "signin") toSignup();
-      else if (kind === "hme" || kind === "me") say("strong", "Next, click the password field for a strong password.");
-      else if (kind === "strong") say("submit", "Create the account, and Passwords offers to save it.");
-    });
-    demoEl.addEventListener("demo:mode", (e) => {
-      if (e.detail.mode === "signup" && ["", "start", "signup"].includes(step)) say("hme", "Click the email field for a private address from Hide My Email.");
-      else if (e.detail.mode === "signin" && step === "hme") say("start", "Click the email field to see your saved logins.");
-    });
-    demoEl.addEventListener("demo:submit", (e) => {
-      if (e.detail.mode === "signin") return toSignup();
-      say("toolbar", "That's the extension. Its icon is up in the toolbar: open it.");
-      navExt.classList.add("glow");
-    });
-    navExt.addEventListener("click", () => {
-      navExt.classList.remove("glow");
-      if (step === "toolbar") say("done", "That's all. Set it up for real below.");
-    });
-    if (!step) say("start", "Click the email field to see your saved logins.");
+    // After creating an account, the toolbar icon glows until it's opened.
+    demoEl.addEventListener("demo:submit", (e) => { if (e.detail.mode === "signup") navExt.classList.add("glow"); });
+    navExt.addEventListener("click", () => { navExt.classList.remove("glow"); });
 
     addEventListener("keydown", (e) => { if (e.key === "Escape" && !navPop.hidden) { navPop.hidden = true; navExt.setAttribute("aria-expanded", "false"); navExt.focus(); } });
   })();
