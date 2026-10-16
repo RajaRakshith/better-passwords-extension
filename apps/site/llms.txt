@@ -1,0 +1,20 @@
+# Better Passwords
+
+> A free, open-source browser extension for macOS that fills logins from Apple Passwords (iCloud Passwords, iCloud Keychain) in Chrome, Edge, Brave, Arc and Firefox. It is an alternative to Apple's own iCloud Passwords extension. Not affiliated with or endorsed by Apple Inc.
+
+How it differs from Apple's iCloud Passwords extension:
+
+- Pairs once per browser session. Apple's extension asks for a new six-digit code from the Mac each time the browser puts it to sleep.
+- Unlocks with Touch ID instead of the six-digit code, through an optional, free companion Mac app.
+- Suggests strong passwords right in sign-up fields, instead of opening the Passwords app.
+- Offers Hide My Email addresses (iCloud+) and the emails from your contact card in sign-up forms.
+- Mac only (macOS 14 or later). Apple's extension also runs on Windows with iCloud for Windows.
+
+Privacy: passwords stay in Apple Passwords on the Mac. The extension asks the password helper built into macOS for the login the user picks, over Apple's own encrypted pairing, fills it, and stores nothing. There are no accounts, no servers and no analytics. Hide My Email talks to the user's iCloud account, and only once it is turned on.
+
+## Links
+
+- [Website](https://betterpasswords.app/)
+- [Source code (MIT)](https://github.com/fanckush/better-passwords-extension)
+- [Privacy policy](https://github.com/fanckush/better-passwords-extension/blob/main/PRIVACY.md)
+- [Threat model](https://github.com/fanckush/better-passwords-extension/blob/main/docs/threat-model.md)

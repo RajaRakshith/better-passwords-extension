@@ -1278,6 +1278,7 @@ section.alt {
 
 /* comparison card: both products get the same treatment; the rows carry the differences */
 .vs {
+  display: block;
   max-width: 940px;
   margin: 0 auto;
   padding: 4px 0 8px;
@@ -1286,6 +1287,17 @@ section.alt {
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 5%),
     0 24px 60px rgb(0 0 0 / 6%);
+}
+/* A real table for search engines and screen readers, laid out as a grid of rows. */
+.vs thead,
+.vs tbody {
+  display: block;
+}
+:where(.vs) th,
+:where(.vs) td {
+  padding: 0;
+  text-align: left;
+  font-weight: inherit;
 }
 .vs-r {
   display: grid;
@@ -1405,7 +1417,7 @@ section.alt {
   .vs-label {
     grid-column: 1 / -1;
   }
-  .vs-head > span:first-child {
+  .vs-head > :first-child {
     display: none;
   }
   .vs-prod {

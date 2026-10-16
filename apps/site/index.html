@@ -3,9 +3,83 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Better Passwords</title>
-<meta name="description" content="Apple Passwords. Hide My Email. One extension for Chrome and Firefox. Free and open source." />
+<title>iCloud Passwords extension for Chrome &amp; Firefox – Better Passwords</title>
+<meta name="description" content="Use Apple Passwords (iCloud Keychain) in Chrome, Arc, Brave, Edge and Firefox on Mac. Touch ID instead of six-digit codes, plus Hide My Email. Free, open source." />
+<link rel="canonical" href="https://betterpasswords.app/" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="application-name" content="Better Passwords" />
+<meta name="apple-mobile-web-app-title" content="Better Passwords" />
+<meta name="theme-color" content="#ffffff" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Better Passwords" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:url" content="https://betterpasswords.app/" />
+<meta property="og:title" content="Better Passwords: iCloud Passwords, but better" />
+<meta property="og:description" content="Your Apple Passwords in Chrome, Arc, Brave, Edge and Firefox on Mac. Unlock with Touch ID, sign up with Hide My Email. Free and open source." />
+<meta property="og:image" content="https://betterpasswords.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Better Passwords: iCloud Passwords, but better. For Chrome and Firefox on Mac." />
+<meta name="twitter:card" content="summary_large_image" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://betterpasswords.app/#website",
+      "url": "https://betterpasswords.app/",
+      "name": "Better Passwords",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://betterpasswords.app/#app",
+      "name": "Better Passwords",
+      "url": "https://betterpasswords.app/",
+      "description": "A browser extension that fills logins from Apple Passwords (iCloud Keychain) in Chrome, Edge, Brave, Arc and Firefox on macOS. An open-source alternative to Apple's iCloud Passwords extension: it pairs once per browser session, unlocks with Touch ID through an optional companion Mac app, suggests strong passwords in the field, and offers Hide My Email addresses in sign-up forms.",
+      "applicationCategory": "BrowserApplication",
+      "applicationSubCategory": "Password manager",
+      "operatingSystem": "macOS 14 or later",
+      "browserRequirements": "Chrome, Edge, Brave, Arc or Firefox",
+      "featureList": [
+        "Fills logins from Apple Passwords (iCloud Keychain)",
+        "Unlock with Touch ID instead of a six-digit code",
+        "Pairs once per browser session",
+        "Strong password suggestions in sign-up forms",
+        "Hide My Email addresses in sign-up forms (iCloud+)",
+        "No accounts, servers or tracking"
+      ],
+      "keywords": "iCloud Passwords extension, iCloud Passwords for Chrome, Apple Passwords extension, iCloud Keychain for Chrome, Apple Passwords for Firefox, Hide My Email extension, Touch ID password autofill",
+      "image": "https://betterpasswords.app/og.png",
+      "screenshot": "https://betterpasswords.app/og.png",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "license": "https://opensource.org/licenses/MIT",
+      "author": { "@type": "Person", "name": "fanckush", "url": "https://github.com/fanckush", "sameAs": ["https://github.com/fanckush"] },
+      "sameAs": ["https://github.com/fanckush/better-passwords-extension"]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://betterpasswords.app/#faq",
+      "mainEntity": [
+        { "@type": "Question", "name": "What is Hide My Email?", "acceptedAnswer": { "@type": "Answer", "text": "An iCloud+ feature that gives each site its own random address that forwards to your inbox. If a site sells or leaks it, you turn that one address off. Safari offers it in sign-up forms; this brings it to Chrome, using your iCloud sign-in in this browser." } },
+        { "@type": "Question", "name": "Is this from Apple?", "acceptedAnswer": { "@type": "Answer", "text": "No. It's an independent, open-source extension that works with the Apple Passwords already on your Mac." } },
+        { "@type": "Question", "name": "Is it safe?", "acceptedAnswer": { "@type": "Answer", "text": "Your passwords stay in Apple Passwords. The extension asks your Mac for the one you pick, fills it, and keeps nothing. There are no accounts, no servers and no tracking, and anyone can read the code." } },
+        { "@type": "Question", "name": "How do I set it up?", "acceptedAnswer": { "@type": "Answer", "text": "Add the extension from your browser's store, then open the companion Mac app. It connects Chrome to Apple Passwords and turns on Touch ID. Unlock once, and turn on Hide My Email from the toolbar if you have iCloud+. Needs macOS 14 (Sonoma) or later." } },
+        { "@type": "Question", "name": "What are the six digits?", "acceptedAnswer": { "@type": "Answer", "text": "When an extension connects to Apple Passwords, your Mac shows a six-digit code and you type it into the browser, to prove the browser is yours. Apple's extension needs a new one whenever Chrome puts it to sleep. This extension keeps the connection open for the browser session. With the optional companion app, Touch ID enters the code for you." } },
+        { "@type": "Question", "name": "Do I need the companion app?", "acceptedAnswer": { "@type": "Answer", "text": "It's the easy way, and it's what adds Touch ID and your contact card's emails. Without it, run this once in Terminal: curl -fsSL https://github.com/fanckush/better-passwords-extension/raw/main/scripts/setup-mac.sh | sh" } },
+        { "@type": "Question", "name": "Does it cost anything?", "acceptedAnswer": { "@type": "Answer", "text": "No. The extension and the companion app are free. Hide My Email is part of iCloud+, which you pay Apple for." } },
+        { "@type": "Question", "name": "Does it work on Windows?", "acceptedAnswer": { "@type": "Answer", "text": "Not yet. It's Mac only for now, because it works with the Apple Passwords helper built into macOS. If you'd use it on Windows, open an issue to ask for it." } }
+      ]
+    }
+  ]
+}
+</script>
 <link rel="stylesheet" href="assets/shared.css" />
 <style>
   /* Browser-style navigation and an interactive sign-in preview. */
@@ -49,9 +123,8 @@
   .tour-cap { margin: 0 0 22px; text-align: center; font: 600 19px var(--display); color: var(--muted); }
   .tour-cap b { color: var(--ink); }
   .orb { position: absolute; z-index: 15; width: 26px; height: 26px; margin: -13px 0 0 -13px; padding: 0; border: 0; border-radius: 50%; background: radial-gradient(circle, #fff 0 24%, #0a84ff 26% 62%, transparent 64%); cursor: pointer; }
-  .orb::before, .orb::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 50%; background: rgb(10 132 255 / 45%); animation: orb-pulse 1.8s ease-out infinite; }
-  .orb::after { animation-delay: .9s; }
-  @keyframes orb-pulse { from { transform: scale(1); opacity: .85; } to { transform: scale(3.2); opacity: 0; } }
+  .orb::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 50%; background: rgb(10 132 255 / 30%); animation: orb-pulse 2.8s ease-out infinite; }
+  @keyframes orb-pulse { from { transform: scale(1); opacity: .7; } 60%, to { transform: scale(2); opacity: 0; } }
   .orb[hidden] { display: none; }
   .tour-note { margin: 22px 0 0; text-align: center; font-size: 14px; color: var(--muted); min-height: 20px; }
 
@@ -91,7 +164,7 @@
   .repo-meta { display: flex; gap: 16px; margin-left: auto; color: var(--muted); font-size: 14px; }
   .repo-meta i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: -1px; }
   .repo-go { color: var(--blue); font-weight: 500; }
-  @media (prefers-reduced-motion: reduce) { .flow.in .flow-link::after, .try-next.fresh { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .flow.in .flow-link::after, .try-next.fresh, .orb::before { animation: none; } }
 
   .closing .h2 { margin: 0 auto 12px; }
 
@@ -148,7 +221,69 @@
     <p class="note center" data-note>Free and open source. Mac only (macOS 14 or later). Works in Chrome, Edge, Brave, Arc and Firefox.</p>
   </header>
 
-  <section class="alt" id="compare" data-common="compare"></section>
+  <section class="alt" id="compare">
+    <div class="wrap">
+      <h2 class="h2 center reveal">Already using Apple's extension?</h2>
+      <p class="lede center reveal d1" style="max-width:32em;margin:0 auto 48px">Both use the same Apple Passwords, so switching loses nothing.</p>
+      <table class="vs reveal d2" aria-label="Apple's iCloud Passwords extension compared with Better Passwords">
+        <thead>
+          <tr class="vs-r vs-head">
+            <td></td>
+            <th class="vs-prod" scope="col"><svg class="vs-icon" viewBox="0 0 128 128" aria-hidden="true"><defs><linearGradient id="vs-them" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c7c7cc"/><stop offset="1" stop-color="#8e8e93"/></linearGradient></defs><rect x="4" y="4" width="120" height="120" rx="28" fill="url(#vs-them)"/><g fill="#fff"><circle cx="46" cy="64" r="22"/><rect x="60" y="58" width="48" height="12" rx="4"/><rect x="88" y="66" width="10" height="16" rx="3"/><rect x="72" y="66" width="10" height="11" rx="3"/></g><circle cx="40" cy="64" r="8" fill="#aaaab0"/></svg><div><b>iCloud Passwords</b><small>Apple's extension</small></div></th>
+            <th class="vs-prod" scope="col"><svg class="vs-icon" viewBox="0 0 128 128" aria-hidden="true"><defs><linearGradient id="vs-us" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a8dff"/><stop offset="1" stop-color="#0060df"/></linearGradient></defs><rect x="4" y="4" width="120" height="120" rx="28" fill="url(#vs-us)"/><g fill="#fff"><circle cx="46" cy="64" r="22"/><rect x="60" y="58" width="48" height="12" rx="4"/><rect x="88" y="66" width="10" height="16" rx="3"/><rect x="72" y="66" width="10" height="11" rx="3"/></g><circle cx="40" cy="64" r="8" fill="#1774f0"/><path d="M96 22v14M89 29h14" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg><div><b>Better Passwords</b><small>This extension</small></div></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="vs-r">
+            <th class="vs-label" scope="row">Made by</th>
+            <td class="vs-v"><p>Apple</p></td>
+            <td class="vs-v"><p>An indie developer, <a href="https://github.com/fanckush" target="_blank" rel="noopener">@fanckush</a></p></td>
+          </tr>
+          <tr class="vs-r">
+            <th class="vs-label" scope="row">Fills your Apple Passwords</th>
+            <td class="vs-v"><p>Yes</p></td>
+            <td class="vs-v"><p>Yes</p></td>
+          </tr>
+          <tr class="vs-r">
+            <th class="vs-label" scope="row">Strong passwords for sign-ups</th>
+            <td class="vs-v"><p>Opens the Passwords app</p></td>
+            <td class="vs-v win"><p>Suggested right in the field</p></td>
+          </tr>
+          <tr class="vs-r">
+            <th class="vs-label" scope="row">Hide My Email in sign-up forms</th>
+            <td class="vs-v none">Not available</td>
+            <td class="vs-v win"><p>Yes, with iCloud+</p></td>
+          </tr>
+          <tr class="vs-r">
+            <th class="vs-label" scope="row">Your own emails in sign-up forms</th>
+            <td class="vs-v none">Not available</td>
+            <td class="vs-v win"><p>From your contact card*</p></td>
+          </tr>
+          <tr class="vs-r">
+            <th class="vs-label" scope="row">Unlocks with</th>
+            <td class="vs-v"><span class="vs-tiles"><span class="vs-tile outline"><svg class="six" viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="10.6">481</text><text x="12" y="19.4">927</text></svg></span></span><p>Six digits from your Mac</p></td>
+            <td class="vs-v win"><span class="vs-tiles"><span class="vs-tile outline"><svg class="six" viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="10.6">481</text><text x="12" y="19.4">927</text></svg></span><span class="vs-plus" aria-hidden="true">+</span><span class="vs-tile filled"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 0 0-8 8M12 4a8 8 0 0 1 8 8v1M7.5 19.5A10 10 0 0 0 8 12a4 4 0 0 1 8 0v1.5M12 12v2.5a10 10 0 0 1-2 5.5M16 17a14 14 0 0 1-.8 3"/></svg></span></span><p>Six digits, or Touch ID*</p></td>
+          </tr>
+          <tr class="vs-r">
+            <th class="vs-label" scope="row">How often</th>
+            <td class="vs-v"><p>Each time <span data-browser>Chrome</span> puts it to sleep</p></td>
+            <td class="vs-v win"><p>Once, until you quit <span data-browser>Chrome</span></p></td>
+          </tr>
+          <tr class="vs-r">
+            <th class="vs-label" scope="row">Windows</th>
+            <td class="vs-v win"><p>Yes, with iCloud for Windows</p></td>
+            <td class="vs-v"><p>Mac only for now. <a href="https://github.com/fanckush/better-passwords-extension/issues/new?title=Windows%20support" target="_blank" rel="noopener">Ask for Windows</a></p></td>
+          </tr>
+          <tr class="vs-r">
+            <th class="vs-label" scope="row">Price</th>
+            <td class="vs-v"><p>Free</p></td>
+            <td class="vs-v win"><p>Free and open source</p></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="vs-foot reveal">* Needs the free companion Mac app.</p>
+    </div>
+  </section>
 
   <section id="privacy">
     <div class="wrap">
@@ -185,7 +320,21 @@
     </div>
   </section>
 
-  <section class="alt" id="faq" data-common="faq"></section>
+  <section class="alt" id="faq">
+    <div class="wrap">
+      <h2 class="h2 center reveal" style="margin-bottom:48px">Questions</h2>
+      <div class="faq">
+        <details><summary>What is Hide My Email?</summary><p>An iCloud+ feature that gives each site its own random address that forwards to your inbox. If a site sells or leaks it, you turn that one address off. Safari offers it in sign-up forms; this brings it to <span data-browser>Chrome</span>, using your iCloud sign-in in this browser.</p></details>
+        <details><summary>Is this from Apple?</summary><p>No. It's an independent, open-source extension that works with the Apple Passwords already on your Mac.</p></details>
+        <details><summary>Is it safe?</summary><p>Your passwords stay in Apple Passwords. The extension asks your Mac for the one you pick, fills it, and keeps nothing. There are no accounts, no servers and no tracking, and anyone can read the code.</p></details>
+        <details><summary>How do I set it up?</summary><p>Add the extension from your browser's store, then open the companion Mac app. It connects <span data-browser>Chrome</span> to Apple Passwords and turns on Touch ID. Unlock once, and turn on Hide My Email from the toolbar if you have iCloud+. Needs macOS 14 (Sonoma) or later.</p></details>
+        <details><summary>What are the six digits?</summary><p>When an extension connects to Apple Passwords, your Mac shows a six-digit code and you type it into the browser, to prove the browser is yours. Apple's extension needs a new one whenever <span data-browser>Chrome</span> puts it to sleep. This extension keeps the connection open for the browser session. With the optional companion app, Touch ID enters the code for you.</p></details>
+        <details><summary>Do I need the companion app?</summary><p>It's the easy way, and it's what adds Touch ID and your contact card's emails. Without it, run this once in Terminal:</p><pre>curl -fsSL https://github.com/fanckush/better-passwords-extension/raw/main/scripts/setup-mac.sh | sh</pre></details>
+        <details><summary>Does it cost anything?</summary><p>No. The extension and the companion app are free. Hide My Email is part of iCloud+, which you pay Apple for.</p></details>
+        <details><summary>Does it work on Windows?</summary><p>Not yet. It's Mac only for now, because it works with the Apple Passwords helper built into macOS. If you'd use it on Windows, <a href="https://github.com/fanckush/better-passwords-extension/issues/new?title=Windows%20support" target="_blank" rel="noopener">open an issue</a> to ask for it.</p></details>
+      </div>
+    </div>
+  </section>
 
   <section class="closing">
     <div class="wrap center">
@@ -200,10 +349,14 @@
     </div>
   </section>
 </main>
-<footer class="foot" data-common="footer"></footer>
+<footer class="foot">
+  <div class="wrap">
+    <p><a href="https://github.com/fanckush/better-passwords-extension">Source code</a><a href="https://github.com/fanckush/better-passwords-extension/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/fanckush/better-passwords-extension/blob/main/SECURITY.md">Security</a></p>
+    <p>Better Passwords is not affiliated with or endorsed by Apple Inc. Apple, iCloud, iCloud+, Safari and Touch ID are trademarks of Apple Inc.</p>
+  </div>
+</footer>
 </div>
 
-<script src="assets/common.js"></script>
 <script src="assets/browser.js"></script>
 <script src="assets/kit.js"></script>
 <script>
