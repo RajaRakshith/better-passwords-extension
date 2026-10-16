@@ -38,6 +38,7 @@
           ${[
             ["Made by", "Apple", "An independent developer"],
             ["Fills your Apple Passwords", "Yes", "Yes"],
+            ["Strong passwords for sign-ups", "Opens the Passwords app", "Suggested right in the field", "us"],
             ["Hide My Email in sign-up forms", null, "Yes, with iCloud+", "us"],
             [
               "Unlocks with",

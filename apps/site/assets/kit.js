@@ -227,6 +227,16 @@ globalThis.Kit = (() => {
   }
   const wait = (ms) => new Promise((r) => setTimeout(r, reduce ? 0 : ms));
   let uid = 0;
+  // The demo's styles, copied from shared.css into its shadow root.
+  let sheet;
+  const demoSheet = () => {
+    if (!sheet) {
+      sheet = new CSSStyleSheet();
+      const src = [...document.styleSheets].find((s) => s.href?.endsWith("/shared.css"));
+      sheet.replaceSync(src ? [...src.cssRules].map((r) => r.cssText).join("\n") : "");
+    }
+    return sheet;
+  };
 
   // The interactive browser: a pretend site with a sign-in page and, optionally, a create-account page.
   // Options: locked (start locked), mode ("signin" | "signup"), switchable (show both), hint.
@@ -248,26 +258,33 @@ globalThis.Kit = (() => {
     } = {},
   ) {
     const id = `dm${++uid}`;
-    root.classList.add("dm");
-    root.classList.toggle("frameless", frameless);
+    // A closed shadow root keeps the pretend fields out of reach of real password managers
+    // (Apple's included), so they don't offer to fill the demo. The page can still add its own
+    // elements to the card: children of root show up at the end of it.
+    const shadow = root.attachShadow({ mode: "closed" });
+    shadow.adoptedStyleSheets = [demoSheet()];
+    const box = document.createElement("div");
+    box.className = frameless ? "dm frameless" : "dm";
+    shadow.append(box);
     const CARD = `
-            <form class="dm-form" novalidate>
+            <div class="dm-form">
               ${switchable ? `<div class="dm-switch" role="tablist" aria-label="Page"><button type="button" role="tab" data-m="signin">Sign in</button><button type="button" role="tab" data-m="signup">Create account</button></div>` : ""}
               <div class="dm-h"></div>
-              <label class="dm-l" for="${id}-email">Email</label>
-              <input class="dm-email" id="${id}-email" type="text" role="combobox" aria-expanded="false" aria-controls="${id}-menu" aria-autocomplete="list" placeholder="you@example.com" autocomplete="off" />
+              <label class="dm-l" for="${id}-a">Email</label>
+              <input class="dm-email" id="${id}-a" type="text" role="combobox" aria-expanded="false" aria-controls="${id}-menu" aria-autocomplete="list" placeholder="you@example.com" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" data-protonpass-ignore="true" />
               <p class="dm-err" hidden>Enter your email.</p>
-              <div class="dm-hint">${hint}</div>
-              <label class="dm-l" for="${id}-pass">Password</label>
-              <div class="dm-pass-wrap"><input class="dm-pass" id="${id}-pass" type="password" role="combobox" aria-expanded="false" aria-controls="${id}-menu" aria-autocomplete="list" autocomplete="off" /><button type="button" class="dm-eye" aria-label="Show password" aria-pressed="false">${EYE}</button></div>
+              <div class="dm-hint" part="hint">${hint}</div>
+              <label class="dm-l" for="${id}-b">Password</label>
+              <div class="dm-pass-wrap"><input class="dm-pass masked" id="${id}-b" type="text" role="combobox" aria-expanded="false" aria-controls="${id}-menu" aria-autocomplete="list" spellcheck="false" autocapitalize="off" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" data-protonpass-ignore="true" /><button type="button" class="dm-eye" aria-label="Show password" aria-pressed="false">${EYE}</button></div>
               <p class="dm-err" hidden>Enter a password.</p>
-              <button class="dm-submit" type="submit"><span class="dm-spin" aria-hidden="true"></span><span class="dm-submit-label"></span></button>
+              <button class="dm-submit" type="button"><span class="dm-spin" aria-hidden="true"></span><span class="dm-submit-label"></span></button>
               <div class="dm-menu" id="${id}-menu" hidden></div>
-            </form>
-            <div class="dm-success" role="status" hidden></div>`;
-    root.innerHTML =
+            </div>
+            <div class="dm-success" role="status" hidden></div>
+            <slot></slot>`;
+    box.innerHTML =
       (frameless
-        ? `<div class="dm-card"><div class="dm-site"><span aria-hidden="true"></span>example.com</div>${CARD}</div>`
+        ? `<div class="dm-card" part="card"><div class="dm-site"><span aria-hidden="true"></span>example.com</div>${CARD}</div>`
         : `
       <div class="dm-win">
         <div class="dm-bar">
@@ -279,7 +296,7 @@ globalThis.Kit = (() => {
         </div>
         <div class="dm-page">
           <div class="dm-site"><span aria-hidden="true"></span>example.com</div>
-          <div class="dm-card">${CARD}
+          <div class="dm-card" part="card">${CARD}
           </div>
         </div>
       </div>`) +
@@ -296,7 +313,7 @@ globalThis.Kit = (() => {
         <div class="dm-save-actions"><button type="button" data-save="no">Not Now</button><button type="button" data-save="yes" class="primary">Save Password</button></div>
       </div>`;
 
-    const $ = (s) => root.querySelector(s);
+    const $ = (s) => box.querySelector(s);
     const email = $(".dm-email"),
       pass = $(".dm-pass"),
       menu = $(".dm-menu"),
@@ -304,7 +321,7 @@ globalThis.Kit = (() => {
     const form = $(".dm-form"),
       success = $(".dm-success"),
       submit = $(".dm-submit"),
-      errs = [...root.querySelectorAll(".dm-err")];
+      errs = [...box.querySelectorAll(".dm-err")];
     const ext = toolbarButton ?? $(".dm-ext"),
       popup = popupEl ?? $(".dm-popup"),
       ask = $(".dm-ask"),
@@ -521,7 +538,7 @@ globalThis.Kit = (() => {
       used.add(kind);
       clearErrors();
       emit("demo:fill", { kind });
-      if (mode === "signup" && kind !== "strong" && !pass.value && document.activeElement === email)
+      if (mode === "signup" && kind !== "strong" && !pass.value && shadow.activeElement === email)
         setTimeout(() => pass.focus(), 350);
     }
 
@@ -612,12 +629,12 @@ globalThis.Kit = (() => {
 
     const eye = $(".dm-eye");
     const showPass = (on) => {
-      pass.type = on ? "text" : "password";
+      pass.classList.toggle("masked", !on);
       eye.innerHTML = on ? EYE_OFF : EYE;
       eye.setAttribute("aria-pressed", String(on));
       eye.setAttribute("aria-label", on ? "Hide password" : "Show password");
     };
-    eye.addEventListener("click", () => showPass(pass.type === "password"));
+    eye.addEventListener("click", () => showPass(pass.classList.contains("masked")));
     function setMode(m) {
       mode = m;
       reset();
@@ -630,7 +647,7 @@ globalThis.Kit = (() => {
       $(".dm-submit-label").textContent = m === "signin" ? "Sign in" : "Create account";
       const url = $(".dm-url");
       if (url) url.textContent = m === "signin" ? "example.com/login" : "example.com/signup";
-      root.querySelectorAll(".dm-switch button").forEach((b) => {
+      box.querySelectorAll(".dm-switch button").forEach((b) => {
         b.setAttribute("aria-selected", String(b.dataset.m === m));
       });
       emit("demo:mode", { mode: m });
@@ -684,7 +701,7 @@ globalThis.Kit = (() => {
           if (e.key === "ArrowDown") {
             openMenu(f);
             e.preventDefault();
-          }
+          } else if (e.key === "Enter") send(e);
           return;
         }
         if (e.key === "Escape") return closeMenu();
@@ -701,16 +718,20 @@ globalThis.Kit = (() => {
         }
       });
     }
-    form.addEventListener("submit", send);
-    root.querySelectorAll(".dm-switch button").forEach((b) => {
+    submit.addEventListener("click", send);
+    box.querySelectorAll(".dm-switch button").forEach((b) => {
       b.addEventListener("click", () => setMode(b.dataset.m));
     });
     ext.addEventListener("click", (e) => {
       e.stopPropagation();
       setPopup(popup.hidden);
     });
+    // Outside the shadow root, a click in the card reports root as its target.
     document.addEventListener("pointerdown", (e) => {
       if (!popup.contains(e.target) && !ext.contains(e.target)) setPopup(false);
+      if (e.target !== root) closeMenu();
+    });
+    shadow.addEventListener("pointerdown", (e) => {
       if (!menu.contains(e.target) && e.target !== email && e.target !== pass) closeMenu();
     });
     // A setting changed (here or in another popup): the next menu reflects it.

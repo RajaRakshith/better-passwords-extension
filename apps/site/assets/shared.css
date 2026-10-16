@@ -829,6 +829,10 @@ svg.fp {
 .dm-pass-wrap .dm-pass {
   padding-right: 40px;
 }
+/* A text field drawn as dots, so password managers don't treat the demo as a real login. */
+.dm-pass.masked {
+  -webkit-text-security: disc;
+}
 .dm-eye {
   position: absolute;
   right: 6px;
