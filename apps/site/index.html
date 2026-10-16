@@ -9,7 +9,11 @@
 <link rel="stylesheet" href="assets/shared.css" />
 <style>
   /* Browser-style navigation and an interactive sign-in preview. */
-  .grad { background: linear-gradient(100deg, #0071e3 5%, #7a5cff 55%, #bf5af2 95%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  /* Like a browser window: the toolbar stays put, and only the page under it scrolls (and bounces). */
+  html, body { height: 100%; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  .nav-chrome { flex: none; }
+  .viewport { flex: 1; min-height: 0; overflow-y: auto; scroll-behavior: smooth; outline: none; }
 
   /* the nav's pinned icon opens a preview of the real popup */
   .pin { position: relative; display: inline-flex; }
@@ -22,35 +26,24 @@
   .nav-pop .unlock-btn { margin: 4px 0 2px; padding: 7px 14px; border: 0; border-radius: 8px; background: var(--blue); color: #fff; font: 500 13px var(--font); cursor: pointer; }
 
   /* hero */
-  .hero { padding-top: 56px; padding-bottom: 96px; text-align: center; }
+  .hero { padding-top: 56px; padding-bottom: 80px; text-align: center; }
   .hero-name { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 18px; font: 600 17px var(--display); letter-spacing: -0.01em; }
-  .hero-title { margin: 0; font: 700 clamp(44px, 6.4vw, 84px)/1.02 var(--display); letter-spacing: -0.05em; }
-  .hero-title { margin-bottom: 40px; }
-  .hero-grid { display: grid; grid-template-columns: 1fr minmax(0, 420px) 1fr; gap: 48px; align-items: center; text-align: left; }
-  .hero-try { position: relative; }
+  .hero-title { margin: 0; font: 700 clamp(40px, 5vw, 62px)/1.04 var(--display); letter-spacing: -0.04em; }
+  .hero-sub { margin: 14px 0 40px; font-size: 19px; color: var(--muted); }
+  .hero-try { position: relative; max-width: 420px; margin: 0 auto; text-align: left; }
   .hero-try ::part(card) { margin: 0 auto; box-shadow: 0 0 0 1px rgb(0 0 0 / 6%), 0 30px 80px rgb(0 0 0 / 10%); }
   .hero-try ::part(hint) { display: none; }
-  .hero-feats { justify-self: end; display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; font: 500 16px/1.3 var(--font); }
-  .hero-feats li { white-space: nowrap; display: flex; align-items: center; gap: 12px; opacity: 0; transform: translateX(-12px); animation: feat-in .7s var(--ease) forwards; }
-  .hero-feats li:nth-child(2) { animation-delay: .12s; } .hero-feats li:nth-child(3) { animation-delay: .24s; } .hero-feats li:nth-child(4) { animation-delay: .36s; } .hero-feats li:nth-child(5) { animation-delay: .48s; } .hero-feats li:nth-child(6) { animation-delay: .6s; }
-  @keyframes feat-in { to { opacity: 1; transform: none; } }
-  .hf-ico { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(160deg, #3a8dff, #6a4cf0); color: #fff; }
-  .hf-ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-  .try-hints { justify-self: start; display: grid; gap: 20px; max-width: 260px; margin: 0; padding: 0; list-style: none; counter-reset: t; }
-  .try-hints li { counter-increment: t; display: grid; grid-template-columns: 26px 1fr; gap: 2px 10px; font-size: 15px; }
-  .try-hints li::before { content: counter(t); grid-row: span 2; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--alt); font: 600 13px var(--font); color: var(--muted); }
-  .try-hints b { font-weight: 600; }
-  .try-hints span { color: var(--muted); }
-  /* the card's own way into the extension, tied to the toolbar icon */
-  .card-ext { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 18px; padding: 10px 12px; border: 0; border-radius: 11px; background: rgb(0 113 227 / 8%); color: #0071e3; font: 500 14px var(--font); text-align: left; cursor: pointer; }
-  .card-ext:hover { background: rgb(0 113 227 / 13%); }
-  .card-ext img { width: 24px; height: 24px; }
-  .card-ext { white-space: nowrap; }
+  /* one next step at a time, under the card */
+  .try-next { max-width: 30em; min-height: 3em; margin: 22px auto 0; font-size: 17px; color: var(--muted); }
+  .try-next b { color: var(--ink); font-weight: 600; }
+  .try-next button { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--blue); cursor: pointer; }
+  .try-next button:hover { text-decoration: underline; }
+  .try-next.fresh { animation: next-in .5s var(--ease); }
+  @keyframes next-in { from { opacity: 0; transform: translateY(6px); } }
   .nav-chrome .nc-ico.ours.glow { box-shadow: 0 0 0 3px rgb(0 113 227 / 35%); animation: glow 1.2s ease-in-out infinite; }
   @keyframes glow { 50% { box-shadow: 0 0 0 6px rgb(0 113 227 / 18%); } }
   .hero-ctas { margin-top: 48px; }
   .hero-ctas { justify-content: center; }
-  .hero .pretend { margin-top: 4px; }
 
   /* the browser tour */
   .tour-cap { margin: 0 0 22px; text-align: center; font: 600 19px var(--display); color: var(--muted); }
@@ -62,37 +55,55 @@
   .orb[hidden] { display: none; }
   .tour-note { margin: 22px 0 0; text-align: center; font-size: 14px; color: var(--muted); min-height: 20px; }
 
-  /* open source */
-  .oss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
-  .trust { list-style: none; margin: 36px 0 0; padding: 0; }
-  .trust li { display: grid; grid-template-columns: 28px 1fr; gap: 14px; padding: 16px 0; border-top: 1px solid var(--line); }
-  .trust svg { width: 24px; height: 24px; color: var(--blue); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-top: 2px; }
-  .trust b { display: block; font-weight: 600; }
-  .trust span { color: var(--muted); font-size: 17px; }
-  .repo { padding: 28px; border-radius: 24px; background: #fff; box-shadow: 0 0 0 1px var(--line), 0 30px 70px rgb(0 0 0 / 8%); font: 15px/1.5 var(--font); letter-spacing: 0; }
-  .repo-h { display: flex; align-items: center; gap: 10px; font-size: 19px; }
-  .repo-h svg { width: 26px; height: 26px; }
-  .repo-h a { color: #0969da; } .repo-h b { font-weight: 600; }
-  .badge { margin-left: 4px; padding: 1px 9px; border: 1px solid #d0d7de; border-radius: 980px; font-size: 12px; color: #57606a; }
-  .repo p { margin: 14px 0 16px; color: #57606a; }
-  .topics { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
-  .topics span { padding: 2px 10px; border-radius: 980px; background: #ddf4ff; color: #0969da; font-size: 12px; font-weight: 500; }
-  .repo-meta { display: flex; flex-wrap: wrap; gap: 18px; padding-top: 16px; border-top: 1px solid #d0d7de; color: #57606a; font-size: 13px; }
+  /* privacy: where a login travels */
+  .priv-lede { max-width: 30em; margin: 0 auto 48px; }
+  .flow { display: flex; align-items: flex-start; justify-content: center; }
+  .flow-node { flex: none; width: 170px; display: grid; justify-items: center; text-align: center; }
+  .flow-node b { margin-top: 12px; font: 600 17px var(--display); }
+  .flow-node small { font-size: 14px; color: var(--muted); }
+  .flow-tile { display: grid; place-items: center; width: 76px; height: 76px; border-radius: 19px; }
+  .flow-tile.mac { background: linear-gradient(180deg, #fbfbfd, #ececf0); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%); color: #1d1d1f; }
+  .flow-tile.mac svg { width: 54px; height: 54px; }
+  .flow-tile.ours img { width: 76px; height: 76px; }
+  .flow-tile.page { width: 150px; align-content: center; gap: 7px; padding: 0 14px; background: #fff; box-shadow: 0 0 0 1px var(--line), 0 12px 30px rgb(0 0 0 / 6%); }
+  .flow-tile.page i { width: 100%; padding: 5px 8px; border: 1px solid #d2d2d7; border-radius: 6px; font: 11px/1.2 var(--font); font-style: normal; text-align: left; color: #1d1d1f; background: #e8f0fe; }
+  .flow-tile.page .dots { letter-spacing: 1px; }
+  .flow-link { position: relative; flex: 1; max-width: 200px; height: 2px; margin-top: 37px; background: linear-gradient(90deg, #d2d2d7, #0071e3); border-radius: 2px; }
+  .flow-link span { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); white-space: nowrap; font-size: 13px; color: var(--muted); }
+  .flow-link::after { content: ""; position: absolute; top: -4px; left: 0; width: 10px; height: 10px; border-radius: 50%; background: #0071e3; box-shadow: 0 0 0 4px rgb(0 113 227 / 18%); opacity: 0; }
+  /* each line fades between what it connects: grey Mac → blue extension → grey page */
+  .flow-node + .flow-link + .flow-node + .flow-link { background: linear-gradient(90deg, #0071e3, #d2d2d7); }
+  .flow.in .flow-link::after { animation: flow-go 1.1s var(--ease) .5s both; }
+  .flow.in .flow-link + .flow-node + .flow-link::after { animation-delay: 1.5s; }
+  @keyframes flow-go { 0% { left: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: calc(100% - 10px); opacity: 0; } }
+  .flow-none { display: flex; align-items: center; justify-content: center; gap: 10px; width: fit-content; margin: 32px auto 0; padding: 8px 16px; border-radius: 980px; background: var(--alt); font-size: 15px; color: var(--muted); }
+  .flow-none svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .points { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin: 64px 0 0; padding: 0; list-style: none; }
+  .points li { display: grid; grid-template-columns: 24px 1fr; align-content: start; gap: 4px 12px; }
+  .points span { grid-column: 2; }
+  .points svg { width: 24px; height: 24px; margin-top: 1px; color: var(--blue); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .points b { font: 600 18px var(--display); }
+  .points span { font-size: 16px; line-height: 1.5; color: var(--muted); }
+  .repo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 40px; padding: 16px 20px; border-radius: 16px; box-shadow: 0 0 0 1px var(--line); color: var(--ink); font-size: 15px; }
+  .repo-bar:hover { text-decoration: none; background: var(--alt); }
+  .repo-bar > svg { width: 24px; height: 24px; flex: none; }
+  .repo-name { font-size: 16px; } .repo-name b { font-weight: 600; }
+  .repo-meta { display: flex; gap: 16px; margin-left: auto; color: var(--muted); font-size: 14px; }
   .repo-meta i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: -1px; }
-  .repo-actions { display: flex; gap: 10px; margin-top: 20px; }
-  .gh-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; border: 1px solid #d0d7de; background: #f6f8fa; color: #24292f; font-weight: 600; font-size: 14px; }
-  .gh-btn:hover { text-decoration: none; background: #eef1f4; }
-  .gh-btn.dark { background: #24292f; border-color: #24292f; color: #fff; }
-  .gh-btn svg { width: 16px; height: 16px; }
+  .repo-go { color: var(--blue); font-weight: 500; }
+  @media (prefers-reduced-motion: reduce) { .flow.in .flow-link::after, .try-next.fresh { animation: none; } }
 
-  .closing .h2 { margin: 0 auto; }
+  .closing .h2 { margin: 0 auto 12px; }
 
   @media (max-width: 900px) {
     .hero { padding-top: 32px; }
-    .hero-grid { grid-template-columns: 1fr; gap: 32px; }
-    .hero-try { order: -1; }
-    .hero-feats, .try-hints { justify-self: stretch; max-width: none; }
-    .oss-grid { grid-template-columns: 1fr; gap: 24px; }
+    .flow { flex-direction: column; align-items: center; }
+    .flow-link { flex: none; width: 2px; height: 48px; margin: 10px 0; background: linear-gradient(180deg, #d2d2d7, #0071e3); }
+    .flow-link span { left: 14px; bottom: 50%; transform: translateY(50%); }
+    .flow-link::after { display: none; }
+    .flow-node + .flow-link + .flow-node + .flow-link { background: linear-gradient(180deg, #0071e3, #d2d2d7); }
+    .points { grid-template-columns: 1fr; gap: 24px; margin-top: 48px; }
+    .repo-meta { margin-left: 0; }
   }
 </style>
 </head>
@@ -120,84 +131,77 @@
   </div>
 </nav>
 
+<div class="viewport" id="viewport" tabindex="-1">
 <main>
   <header class="hero wrap" id="tour">
     <p class="hero-name"><img src="icon.svg" alt="" width="28" height="28" />Better Passwords</p>
-    <p class="note center">A browser companion for Apple Passwords.</p>
-    <h1 class="hero-title">Just try it.</h1>
-    <div class="hero-grid">
-      <ul class="hero-feats" aria-label="What's in it">
-        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M15 12v2"/></svg></span>Your Apple Passwords, in login fields</li>
-        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg></span>Hide My Email in sign-ups</li>
-        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="8" rx="2.5"/><path d="M7 12h.01M10.5 12h.01M14 12h.01M17.5 12h.01"/></svg></span>Strong passwords, saved</li>
-        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 0 0-8 8M12 4a8 8 0 0 1 8 8v1M7.5 19.5A10 10 0 0 0 8 12a4 4 0 0 1 8 0v1.5M12 12v2.5a10 10 0 0 1-2 5.5M16 17a14 14 0 0 1-.8 3"/></svg></span>Touch ID instead of six digits</li>
-        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg></span>Your emails, from Contacts</li>
-        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 5l-3 14"/></svg></span>Free and open source</li>
-      </ul>
-      <div class="hero-try">
-        <div id="demo"></div>
-      </div>
-      <ol class="try-hints" aria-label="Things to try">
-        <li><b>Sign in</b><span>Click the email field and pick a saved login.</span></li>
-        <li><b>Create account</b><span>Get a private address from Hide My Email, and a strong password.</span></li>
-        <li><b>The extension</b><span>Open it from the card, or from its icon in the toolbar.</span></li>
-      </ol>
+    <h1 class="hero-title">iCloud Passwords,<br />but better.</h1>
+    <p class="hero-sub">Try it on the pretend site below.</p>
+    <div class="hero-try">
+      <div id="demo"></div>
     </div>
+    <p class="try-next" id="try-next" aria-live="polite"></p>
     <div class="ctas hero-ctas">
       <a class="add big" data-add href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Add to Chrome</span></a>
       <a class="other" data-other href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Also for Firefox</span></a>
     </div>
-    <p class="note center" data-note>Free and open source. For Mac only (macOS 14 or later). Works in Chrome, Firefox, Edge, Brave and Arc.</p>
-    <p class="note center pretend">A pretend site: nothing you type here is real or sent anywhere.</p>
+    <p class="note center" data-note>Free and open source. Mac only (macOS 14 or later). Works in Chrome, Edge, Brave, Arc and Firefox.</p>
   </header>
 
   <section class="alt" id="compare" data-common="compare"></section>
 
   <section id="privacy">
-    <div class="wrap oss-grid">
-      <div>
-        <h2 class="h2 reveal">Private by design.</h2>
-        <ul class="trust reveal d2">
-          <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6Z"/></svg><div><b>Your passwords stay with Apple</b><span>Each login comes from the password helper built into macOS, over Apple's own encrypted pairing, straight into the page.</span></div></li>
-          <li><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M6 18 18 6"/></svg><div><b>No backend or tracking</b><span>We run no backend. Hide My Email connects to Apple only when you turn it on.</span></div></li>
-          <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg><div><b>Open source</b><span>The extension and the companion app are public on <a href="https://github.com/fanckush/better-passwords-extension" target="_blank" rel="noopener">GitHub</a> under the MIT license, so anyone can check what they do.</span></div></li>
-          <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5Z"/><path d="M14 4v5h5M8.5 13h7M8.5 16.5h5"/></svg><div><b>The risks, written down</b><span>A <a href="https://github.com/fanckush/better-passwords-extension/blob/main/docs/threat-model.md" target="_blank" rel="noopener">threat model</a> lists what it defends against and what it doesn't.</span></div></li>
-        </ul>
-      </div>
-      <div class="repo reveal d1">
-        <div class="repo-h">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56l-.02-1.96c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.7 5.41-5.27 5.69.41.36.78 1.06.78 2.14l-.01 3.18c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
-          <span><a href="https://github.com/fanckush" target="_blank" rel="noopener">fanckush</a> / <a href="https://github.com/fanckush/better-passwords-extension" target="_blank" rel="noopener"><b>better-passwords-extension</b></a></span>
-          <span class="badge">Public</span>
+    <div class="wrap">
+      <h2 class="h2 center reveal">Your passwords stay with Apple.</h2>
+      <p class="lede center reveal d1 priv-lede">The extension asks your Mac for the login you pick, fills it in, and keeps nothing.</p>
+      <div class="flow reveal d2" role="img" aria-label="A login goes from Apple Passwords on your Mac, through the extension, into the page, with no server of ours in between.">
+        <div class="flow-node">
+          <span class="flow-tile mac"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3.6000000000000005 9a5.2 5.2 0 1 1 10.4 0a5.2 5.2 0 1 1 -10.4 0ZM7.300000000000001 12h3v14.5a1.5 1.5 0 0 1 -3 0ZM9.8 19.5h2.8v2.2h-2.8ZM9.8 23.2h2v2.2h-2Z" fill="#b4b4b9"/><circle cx="8.2" cy="7.6" r="1.5" fill="#f4f4f7"/><path d="M10.8 9a5.2 5.2 0 1 1 10.4 0a5.2 5.2 0 1 1 -10.4 0ZM14.5 12h3v14.5a1.5 1.5 0 0 1 -3 0ZM17 18.6h2.2v2.2h-2.2ZM17 22h3v2.2h-3Z" fill="#8e8e93"/><circle cx="15.4" cy="7.6" r="1.5" fill="#f4f4f7"/><path d="M18.0 9a5.2 5.2 0 1 1 10.4 0a5.2 5.2 0 1 1 -10.4 0ZM21.7 12h3v14.5a1.5 1.5 0 0 1 -3 0ZM24.2 20.6h3v2.2h-3ZM24.2 24h2.2v2.2h-2.2Z" fill="#5c5c61"/><circle cx="22.6" cy="7.6" r="1.5" fill="#f4f4f7"/></svg></span>
+          <b>Apple Passwords</b><small>on your Mac</small>
         </div>
-        <p>Apple Passwords. Without the friction. A Chrome and Firefox extension for Apple Passwords and Hide My Email on macOS.</p>
-        <div class="topics"><span>chrome-extension</span><span>firefox-addon</span><span>apple-passwords</span><span>hide-my-email</span><span>macos</span></div>
-        <div class="repo-meta"><span><i style="background:#3178c6"></i>TypeScript</span><span><i style="background:#f05138"></i>Swift</span><span>MIT license</span></div>
-        <div class="repo-actions">
-          <a class="gh-btn dark" href="https://github.com/fanckush/better-passwords-extension" target="_blank" rel="noopener">View on GitHub</a>
-          <a class="gh-btn" href="https://github.com/fanckush/better-passwords-extension" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .67.42l1.88 3.8 4.2.61a.75.75 0 0 1 .41 1.28l-3.04 2.96.72 4.19a.75.75 0 0 1-1.09.79L8 12.33 4.25 14.3a.75.75 0 0 1-1.09-.79l.72-4.19L.84 6.36a.75.75 0 0 1 .41-1.28l4.2-.61L7.33.67A.75.75 0 0 1 8 .25Z"/></svg>Star</a>
+        <div class="flow-link"><span>Apple's encrypted pairing</span></div>
+        <div class="flow-node">
+          <span class="flow-tile ours"><img src="icon.svg" alt="" /></span>
+          <b>Better Passwords</b><small>in <span data-browser>Chrome</span></small>
+        </div>
+        <div class="flow-link"><span>Filled in place</span></div>
+        <div class="flow-node">
+          <span class="flow-tile page"><i>jane@example.com</i><i class="dots">••••••••••</i></span>
+          <b>The page</b><small>you're signing in to</small>
         </div>
       </div>
+      <p class="flow-none reveal d2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.5 4.3 4.3 0 0 0 7 18Z"/><path d="M4 4l16 16"/></svg>No server of ours in between. We don't run one.</p>
+      <ul class="points">
+        <li class="reveal"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M6 18 18 6"/></svg><b>No tracking</b><span>No accounts, no analytics. Hide My Email talks to Apple, and only once you turn it on.</span></li>
+        <li class="reveal d1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg><b>Open source</b><span>The extension and the companion app are MIT-licensed, so anyone can check what they do.</span></li>
+        <li class="reveal d2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10l4 4v12H5Z"/><path d="M14 4v5h5M8.5 13h7M8.5 16.5h5"/></svg><b>The risks, written down</b><span>A <a href="https://github.com/fanckush/better-passwords-extension/blob/main/docs/threat-model.md" target="_blank" rel="noopener">threat model</a> lists what it defends against, and what it doesn't.</span></li>
+      </ul>
+      <a class="repo-bar reveal" href="https://github.com/fanckush/better-passwords-extension" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56l-.02-1.96c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.7 5.41-5.27 5.69.41.36.78 1.06.78 2.14l-.01 3.18c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
+        <span class="repo-name">fanckush / <b>better-passwords-extension</b></span>
+        <span class="repo-meta"><span><i style="background:#3178c6"></i>TypeScript</span><span><i style="background:#f05138"></i>Swift</span><span>MIT license</span></span>
+        <span class="repo-go">View the source</span>
+      </a>
     </div>
   </section>
-
-  <section id="install" data-common="install"></section>
 
   <section class="alt" id="faq" data-common="faq"></section>
 
   <section class="closing">
     <div class="wrap center">
-      <img class="reveal" src="icon.svg" alt="" width="96" height="96" style="margin-bottom:28px" />
-      <h2 class="h2 reveal d1">Apple Passwords. Hide My Email.<br /><span class="grad">One extension for <span data-browser>Chrome</span>.</span></h2>
-      <div class="ctas reveal d2" style="margin-top:36px">
+      <img class="reveal" src="icon.svg" alt="" width="64" height="64" style="margin-bottom:24px" />
+      <h2 class="h2 reveal d1">Now try it on a real site.</h2>
+      <p class="lede reveal d1">Free and open source. It works with the Apple Passwords you already have.</p>
+      <div class="ctas reveal d2" style="margin-top:32px">
         <a class="add big" data-add href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Add to Chrome</span></a>
         <a class="other" data-other href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Also for Firefox</span></a>
       </div>
-      <p class="note reveal d2" data-note>Free. For Mac only (macOS 14 or later). Works in Chrome, Firefox, Edge, Brave and Arc.</p>
+      <p class="note reveal d2" data-note>Mac only (macOS 14 or later). Works in Chrome, Edge, Brave, Arc and Firefox.</p>
     </div>
   </section>
 </main>
 <footer class="foot" data-common="footer"></footer>
+</div>
 
 <script src="assets/common.js"></script>
 <script src="assets/browser.js"></script>
@@ -205,6 +209,8 @@
 <script>
   (() => {
     Kit.reveal();
+    // Keyboard scrolling (space, arrows) goes to the page from the start.
+    document.getElementById("viewport").focus({ preventScroll: true });
 
 
     // The demo lives in the hero; the nav's pinned icon is its extension button.
@@ -218,16 +224,6 @@
       switchable: true, frameless: true, toolbarButton: navExt, popupEl: navPop,
       popupFooter: () => `<div class="preview"><p>This is a preview. Set up the extension in ${browserName} to use it for real.</p><a class="preview-add" href="${storeHref()}">Get the extension</a></div>`,
     });
-    const cardExt = document.createElement("button");
-    cardExt.type = "button";
-    cardExt.className = "card-ext";
-    cardExt.innerHTML = '<img src="icon.svg" alt="" />Open the extension';
-    demoEl.append(cardExt);
-    cardExt.addEventListener("click", (e) => { e.stopPropagation(); navExt.classList.remove("glow"); if (navPop.hidden) navExt.click(); });
-    cardExt.addEventListener("pointerenter", () => navExt.classList.add("glow"));
-    cardExt.addEventListener("pointerleave", () => navExt.classList.remove("glow"));
-    cardExt.addEventListener("focus", () => navExt.classList.add("glow"));
-    cardExt.addEventListener("blur", () => navExt.classList.remove("glow"));
     const orb = document.createElement("button");
     orb.type = "button";
     orb.className = "orb";
@@ -248,6 +244,40 @@
     ["demo:fill", "demo:mode", "demo:submit", "demo:ask"].forEach((ev) => { demoEl.addEventListener(ev, done); });
     place();
     addEventListener("resize", place);
+
+    // One next step under the card, moving along as the visitor tries things.
+    const next = document.getElementById("try-next");
+    let step = "";
+    const say = (key, html) => {
+      if (step === key) return;
+      step = key;
+      next.innerHTML = html;
+      next.classList.remove("fresh");
+      void next.offsetWidth;
+      next.classList.add("fresh");
+    };
+    const toSignup = () => say("signup", 'Now <button type="button" data-signup>create an account</button> for a private email and a strong password.');
+    next.addEventListener("click", (e) => { if (e.target.closest("[data-signup]")) demo.setMode("signup"); });
+    demoEl.addEventListener("demo:fill", (e) => {
+      const kind = e.detail.kind;
+      if (demo.mode === "signin") toSignup();
+      else if (kind === "hme" || kind === "me") say("strong", "Next, click the password field for a strong password.");
+      else if (kind === "strong") say("submit", "Create the account, and Passwords offers to save it.");
+    });
+    demoEl.addEventListener("demo:mode", (e) => {
+      if (e.detail.mode === "signup" && ["", "start", "signup"].includes(step)) say("hme", "Click the email field for a private address from Hide My Email.");
+      else if (e.detail.mode === "signin" && step === "hme") say("start", "Click the email field to see your saved logins.");
+    });
+    demoEl.addEventListener("demo:submit", (e) => {
+      if (e.detail.mode === "signin") return toSignup();
+      say("toolbar", "That's the extension. Its icon is up in the toolbar: open it.");
+      navExt.classList.add("glow");
+    });
+    navExt.addEventListener("click", () => {
+      navExt.classList.remove("glow");
+      if (step === "toolbar") say("done", "That's all. Set it up for real below.");
+    });
+    if (!step) say("start", "Click the email field to see your saved logins.");
 
     addEventListener("keydown", (e) => { if (e.key === "Escape" && !navPop.hidden) { navPop.hidden = true; navExt.setAttribute("aria-expanded", "false"); navExt.focus(); } });
   })();

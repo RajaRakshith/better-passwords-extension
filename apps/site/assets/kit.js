@@ -277,6 +277,11 @@ globalThis.Kit = (() => {
               <label class="dm-l" for="${id}-b">Password</label>
               <div class="dm-pass-wrap"><input class="dm-pass masked" id="${id}-b" type="text" role="combobox" aria-expanded="false" aria-controls="${id}-menu" aria-autocomplete="list" spellcheck="false" autocapitalize="off" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" data-protonpass-ignore="true" /><button type="button" class="dm-eye" aria-label="Show password" aria-pressed="false">${EYE}</button></div>
               <p class="dm-err" hidden>Enter a password.</p>
+              <div class="dm-repeat" hidden>
+                <label class="dm-l" for="${id}-c">Repeat password</label>
+                <input class="dm-pass2 masked" id="${id}-c" type="text" spellcheck="false" autocapitalize="off" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" data-protonpass-ignore="true" />
+                <p class="dm-err" hidden>Enter the same password again.</p>
+              </div>
               <button class="dm-submit" type="button"><span class="dm-spin" aria-hidden="true"></span><span class="dm-submit-label"></span></button>
               <div class="dm-menu" id="${id}-menu" hidden></div>
             </div>
@@ -316,6 +321,8 @@ globalThis.Kit = (() => {
     const $ = (s) => box.querySelector(s);
     const email = $(".dm-email"),
       pass = $(".dm-pass"),
+      pass2 = $(".dm-pass2"),
+      repeat = $(".dm-repeat"),
       menu = $(".dm-menu"),
       hintEl = $(".dm-hint");
     const form = $(".dm-form"),
@@ -533,6 +540,8 @@ globalThis.Kit = (() => {
         pass.value = "correct-horse-battery";
       } else if (kind === "strong") {
         pass.value = value;
+        pass2.value = value;
+        flash(pass, pass2);
         recent.unshift({ user: email.value || "example.com", pw: value });
       } else email.value = value;
       used.add(kind);
@@ -542,25 +551,34 @@ globalThis.Kit = (() => {
         setTimeout(() => pass.focus(), 350);
     }
 
+    // The fields the site checks: sign-up also asks for the password twice.
+    const fields = () => (mode === "signup" ? [email, pass, pass2] : [email, pass]);
     const clearErrors = () =>
-      errs.forEach((e, i) => {
-        if ([email, pass][i].value) {
-          e.hidden = true;
-          [email, pass][i].classList.remove("invalid");
+      [email, pass, pass2].forEach((f, i) => {
+        if (f.value) {
+          errs[i].hidden = true;
+          f.classList.remove("invalid");
         }
+      });
+    // Fields lit up the moment they're filled, like the browser's own autofill.
+    const flash = (...fs) =>
+      fs.forEach((f) => {
+        f.classList.remove("filled");
+        void f.offsetWidth;
+        f.classList.add("filled");
       });
 
     // The site's own submit: check the fields, a moment of "Signing in…", then the signed-in page.
     async function send(e) {
       e?.preventDefault();
       if (busy) return;
-      const missing = [email, pass].filter((f) => !f.value.trim());
-      [email, pass].forEach((f, i) => {
-        const bad = missing.includes(f);
-        errs[i].hidden = !bad;
-        f.classList.toggle("invalid", bad);
+      const bad = fields().filter((f) => !f.value.trim() || (f === pass2 && f.value !== pass.value));
+      fields().forEach((f, i) => {
+        errs[i].hidden = !bad.includes(f);
+        f.classList.toggle("invalid", bad.includes(f));
       });
-      if (missing.length) return;
+      errs[2].textContent = pass2.value ? "The passwords don't match." : "Enter the same password again.";
+      if (bad.length) return;
       busy = true;
       closeMenu();
       submit.classList.add("busy");
@@ -616,12 +634,13 @@ globalThis.Kit = (() => {
     function reset() {
       email.value = "";
       pass.value = "";
+      pass2.value = "";
       used = new Set();
       errs.forEach((e) => {
         e.hidden = true;
       });
-      [email, pass].forEach((f) => {
-        f.classList.remove("invalid");
+      [email, pass, pass2].forEach((f) => {
+        f.classList.remove("invalid", "filled");
       });
       hme = hideMyEmail();
       strong = strongPassword();
@@ -630,6 +649,7 @@ globalThis.Kit = (() => {
     const eye = $(".dm-eye");
     const showPass = (on) => {
       pass.classList.toggle("masked", !on);
+      pass2.classList.toggle("masked", !on);
       eye.innerHTML = on ? EYE_OFF : EYE;
       eye.setAttribute("aria-pressed", String(on));
       eye.setAttribute("aria-label", on ? "Hide password" : "Show password");
@@ -640,6 +660,7 @@ globalThis.Kit = (() => {
       reset();
       showPass(false);
       eye.hidden = m !== "signup";
+      repeat.hidden = m !== "signup";
       closeMenu();
       form.hidden = false;
       success.hidden = true;
@@ -689,6 +710,10 @@ globalThis.Kit = (() => {
       if (open) renderPopup();
     };
 
+    pass2.addEventListener("input", clearErrors);
+    pass2.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") send(e);
+    });
     for (const f of [email, pass]) {
       f.addEventListener("focus", () => openMenu(f));
       f.addEventListener("click", () => openMenu(f));
@@ -771,8 +796,10 @@ globalThis.Kit = (() => {
 
   // Mark the navigation tab for the section currently on screen.
   function nav() {
+    // The page may scroll inside a .viewport under a fixed toolbar, like a browser window.
+    const scroller = document.querySelector(".viewport");
     const onScroll = (fn) => {
-      addEventListener("scroll", fn, { passive: true });
+      (scroller ?? window).addEventListener("scroll", fn, { passive: true });
       fn();
     };
     const watchSections = (links, mark) => {
@@ -793,7 +820,7 @@ globalThis.Kit = (() => {
         io.observe(el);
       });
       onScroll(() => {
-        if (scrollY < innerHeight * 0.4) mark(null);
+        if ((scroller ? scroller.scrollTop : scrollY) < innerHeight * 0.4) mark(null);
       });
     };
 

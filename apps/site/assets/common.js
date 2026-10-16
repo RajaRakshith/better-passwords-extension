@@ -27,8 +27,8 @@
   const blocks = {
     compare: `
       <div class="wrap">
-        <h2 class="h2 center reveal">Your passwords.<br />More ways to use them.</h2>
-        <p class="lede center reveal d1" style="max-width:32em;margin:0 auto 56px">Both fill your Apple Passwords. Here's what's different.</p>
+        <h2 class="h2 center reveal">Already using Apple's extension?</h2>
+        <p class="lede center reveal d1" style="max-width:32em;margin:0 auto 48px">Both use the same Apple Passwords, so switching loses nothing.</p>
         <div class="vs reveal d2" role="table" aria-label="Apple's iCloud Passwords extension compared with Better Passwords">
           <div class="vs-r vs-head" role="row">
             <span role="columnheader"></span>
@@ -36,10 +36,15 @@
             <div class="vs-prod" role="columnheader">${appIcon("vs-us", "#3a8dff", "#0060df", "#1774f0", true)}<div><b>Better Passwords</b><small>This extension</small></div></div>
           </div>
           ${[
-            ["Made by", "Apple", "An independent developer"],
+            [
+              "Made by",
+              "Apple",
+              'An indie developer, <a href="https://github.com/fanckush" target="_blank" rel="noopener">@fanckush</a>',
+            ],
             ["Fills your Apple Passwords", "Yes", "Yes"],
             ["Strong passwords for sign-ups", "Opens the Passwords app", "Suggested right in the field", "us"],
             ["Hide My Email in sign-up forms", null, "Yes, with iCloud+", "us"],
+            ["Your own emails in sign-up forms", null, "From your contact card*", "us"],
             [
               "Unlocks with",
               { tiles: [["outline", SIX]], text: "Six digits from your Mac" },
@@ -53,7 +58,12 @@
               "us",
             ],
             ["How often", `Each time ${B} puts it to sleep`, `Once, until you quit ${B}`, "us"],
-            ["Windows", "Yes, with iCloud for Windows", "No, Mac only", "them"],
+            [
+              "Windows",
+              "Yes, with iCloud for Windows",
+              `Mac only for now. <a href="https://github.com/fanckush/better-passwords-extension/issues/new?title=Windows%20support" target="_blank" rel="noopener">Ask for Windows</a>`,
+              "them",
+            ],
             ["Price", "Free", "Free and open source", "us"],
           ]
             .map(
@@ -73,19 +83,7 @@
             )
             .join("")}
         </div>
-        <p class="vs-foot reveal">* Touch ID needs the free companion Mac app.</p>
-      </div>`,
-
-    install: `
-      <div class="wrap">
-        <h2 class="h2 reveal">Set up in two minutes.</h2>
-        <p class="lede reveal d1" style="margin-bottom:64px">Then forget it's there.</p>
-        <ol class="steps">
-          <li class="reveal"><h3 class="h3">Add the extension</h3><p>Store listings are coming soon. Chromium users can download the extension ZIP from <a href="https://github.com/fanckush/better-passwords-extension/releases">GitHub releases</a> and load it unpacked. For Firefox, follow the <a href="https://github.com/fanckush/better-passwords-extension#setup">installation guide</a>; a source ZIP is not an installable add-on.</p><a class="add" href="https://github.com/fanckush/better-passwords-extension#setup">Installation guide</a></li>
-          <li class="reveal d1"><h3 class="h3">Connect your browser</h3><p>Use the optional <a href="https://github.com/fanckush/better-passwords-extension/releases">companion Mac app</a> to connect ${B} and enable Touch ID and contact email suggestions. Or use the <a href="https://github.com/fanckush/better-passwords-extension#setup">one-time setup script</a> without the app.</p></li>
-          <li class="reveal d2"><h3 class="h3">Unlock once</h3><p>Touch the sensor, or type the six digits your Mac shows. Turn on Hide My Email from the toolbar.</p></li>
-        </ol>
-        <p class="note reveal" style="margin-top:56px">Needs a Mac with macOS 14 (Sonoma) or later, and Passwords turned on in iCloud. Hide My Email needs an iCloud+ plan.</p>
+        <p class="vs-foot reveal">* Needs the free companion Mac app.</p>
       </div>`,
 
     faq: `
@@ -99,7 +97,7 @@
           <details><summary>What are the six digits?</summary><p>When an extension connects to Apple Passwords, your Mac shows a six-digit code and you type it into the browser, to prove the browser is yours. Apple's extension needs a new one whenever ${B} puts it to sleep. This extension keeps the connection open for the browser session. With the optional companion app, Touch ID enters the code for you.</p></details>
           <details><summary>Do I need the companion app?</summary><p>It's the easy way, and it's what adds Touch ID and your contact card's emails. Without it, run this once in Terminal:</p><pre>curl -fsSL https://github.com/fanckush/better-passwords-extension/raw/main/scripts/setup-mac.sh | sh</pre></details>
           <details><summary>Does it cost anything?</summary><p>No. The extension and the companion app are free. Hide My Email is part of iCloud+, which you pay Apple for.</p></details>
-          <details><summary>Does it work on Windows?</summary><p>No, it's Mac only. It works with the Apple Passwords helper built into macOS.</p></details>
+          <details><summary>Does it work on Windows?</summary><p>Not yet. It's Mac only for now, because it works with the Apple Passwords helper built into macOS. If you'd use it on Windows, <a href="https://github.com/fanckush/better-passwords-extension/issues/new?title=Windows%20support" target="_blank" rel="noopener">open an issue</a> to ask for it.</p></details>
         </div>
       </div>`,
 

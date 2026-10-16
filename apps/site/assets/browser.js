@@ -1,14 +1,18 @@
 // Browser logos and setup buttons for the visitor's browser.
 // Markup hooks:
-//   <a data-add>      primary button. Gets the setup link, `Get for <Browser>`, and the logo.
-//   <a data-other>    secondary setup link for the other browser.
+//   <a data-add>      primary button. Gets the store link, `Get for <Browser>`, and the logo.
+//   <a data-other>    secondary store link for the other browser.
 //   [data-browser]    replaced with the browser's name, for headlines.
 //   [data-note]       replaced with a line for Safari or non-Mac visitors; left alone otherwise.
 // Preview another browser with ?browser=firefox|chrome|edge|brave|arc|safari|windows.
 
 (() => {
-  // Store listings are not published yet. All install buttons lead to real setup instructions.
-  const INSTALL_URL = "#install";
+  // Store listings. Placeholders until the extension is published: swap in the real listing URLs.
+  // Every Chromium browser (Edge, Brave, Arc…) installs from the Chrome Web Store.
+  const STORE = {
+    chrome: "https://chromewebstore.google.com/detail/better-passwords/EXTENSION_ID",
+    firefox: "https://addons.mozilla.org/firefox/addon/better-passwords/",
+  };
 
   const SPRITE = `
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -94,15 +98,15 @@
   };
 
   document.querySelectorAll("a[data-add]").forEach((a) => {
-    a.href = INSTALL_URL;
+    a.href = firefox ? STORE.firefox : STORE.chrome;
     const label = a.querySelector("[data-label]");
     if (label) label.textContent = `Get for ${name}`;
     setIcon(a, logo);
   });
   document.querySelectorAll("a[data-other]").forEach((a) => {
-    a.href = INSTALL_URL;
+    a.href = firefox ? STORE.chrome : STORE.firefox;
     const label = a.querySelector("[data-label]");
-    if (label) label.textContent = firefox ? "Chrome setup" : "Firefox setup";
+    if (label) label.textContent = firefox ? "Also for Chrome" : "Also for Firefox";
     setIcon(a, firefox ? "logo-chrome" : "logo-firefox");
   });
 

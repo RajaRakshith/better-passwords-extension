@@ -301,8 +301,8 @@ button.nc-ico[aria-expanded="true"] {
 }
 .h2 {
   margin: 0 0 16px;
-  font: 700 clamp(36px, 5.6vw, 72px) / 1.04 var(--display);
-  letter-spacing: -0.04em;
+  font: 700 clamp(30px, 3.6vw, 46px) / 1.08 var(--display);
+  letter-spacing: -0.03em;
   text-wrap: balance;
 }
 .h3 {
@@ -312,7 +312,7 @@ button.nc-ico[aria-expanded="true"] {
 }
 .lede {
   margin: 0;
-  font: 500 clamp(19px, 2vw, 24px) / 1.4 var(--display);
+  font: 500 clamp(17px, 1.6vw, 20px) / 1.45 var(--display);
   color: var(--muted);
   letter-spacing: -0.015em;
   text-wrap: pretty;
@@ -349,7 +349,7 @@ button.nc-ico[aria-expanded="true"] {
   text-decoration: none;
 }
 .add {
-  padding: 12px 24px 12px 12px;
+  padding: 8px 24px 8px 8px;
   font-size: 18px;
 }
 .add svg[data-logo] {
@@ -361,7 +361,7 @@ button.nc-ico[aria-expanded="true"] {
   color: var(--ink);
 }
 .add.big {
-  padding: 15px 30px 15px 14px;
+  padding: 9px 28px 9px 9px;
   font-size: 20px;
 }
 .add.big svg[data-logo] {
@@ -383,6 +383,14 @@ button.nc-ico[aria-expanded="true"] {
   content: "›";
   font-size: 1.15em;
   line-height: 1;
+  transition: transform 0.2s var(--ease);
+}
+/* a button-like link: no underline, the chevron moves instead */
+.other:hover {
+  text-decoration: none;
+}
+.other:hover::after {
+  transform: translateX(3px);
 }
 .note {
   margin: 18px 0 0;
@@ -500,7 +508,7 @@ svg.fp {
   letter-spacing: 0.02em;
 }
 
-/* frameless demo: the page is the browser, so macOS panels sit at the top right of the screen */
+/* frameless demo: the page is the browser, so macOS panels sit at the top right, just under its toolbar */
 .dm.frameless .dm-card {
   padding-top: 20px;
 }
@@ -509,8 +517,9 @@ svg.fp {
 }
 .dm.frameless .dm-mac {
   position: fixed;
-  top: 62px;
+  top: 92px;
   right: 16px;
+  z-index: 100;
 }
 
 /* ---------- interactive browser demo ---------- */
@@ -813,7 +822,8 @@ svg.fp {
   margin: 14px 0 6px;
 }
 .dm-email,
-.dm-pass {
+.dm-pass,
+.dm-pass2 {
   width: 100%;
   height: 40px;
   padding: 0 12px;
@@ -829,8 +839,22 @@ svg.fp {
 .dm-pass-wrap .dm-pass {
   padding-right: 40px;
 }
+.dm-pass.filled,
+.dm-pass2.filled {
+  animation: dm-filled 1.6s ease-out;
+}
+@keyframes dm-filled {
+  from {
+    background: #e8f0fe;
+    border-color: #8ab4f8;
+  }
+}
+.dm-repeat[hidden] {
+  display: none;
+}
 /* A text field drawn as dots, so password managers don't treat the demo as a real login. */
-.dm-pass.masked {
+.dm-pass.masked,
+.dm-pass2.masked {
   -webkit-text-security: disc;
 }
 .dm-eye {
@@ -891,7 +915,8 @@ svg.fp {
   background: rgb(0 0 0 / 6%);
 }
 .dm-email:focus,
-.dm-pass:focus {
+.dm-pass:focus,
+.dm-pass2:focus {
   outline: none;
   border-color: var(--blue);
   box-shadow: 0 0 0 3.5px rgb(0 113 227 / 25%);
@@ -906,13 +931,13 @@ svg.fp {
   height: 40px;
   border: 0;
   border-radius: 8px;
-  background: linear-gradient(135deg, #ff7a3d, #ff3d6e);
-  color: #fff;
+  background: #fff0ea;
+  color: #e2481f;
   font: 600 15px var(--font);
   cursor: pointer;
 }
 .dm-submit:hover {
-  filter: brightness(1.05);
+  background: #ffe6dc;
 }
 .dm-submit.busy {
   filter: saturate(0.8);
@@ -923,8 +948,8 @@ svg.fp {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid rgb(255 255 255 / 40%);
-  border-top-color: #fff;
+  border: 2px solid rgb(226 72 31 / 25%);
+  border-top-color: #e2481f;
   animation: dm-spin 0.8s linear infinite;
 }
 .dm-submit.busy .dm-spin {
@@ -944,7 +969,8 @@ svg.fp {
   display: none;
 }
 .dm-email.invalid,
-.dm-pass.invalid {
+.dm-pass.invalid,
+.dm-pass2.invalid {
   border-color: #d70015;
 }
 .dm-success {
@@ -1244,7 +1270,7 @@ svg.fp {
 
 /* ---------- shared content blocks ---------- */
 section {
-  padding: 140px 0;
+  padding: 96px 0;
 }
 section.alt {
   background: var(--alt);
@@ -1312,19 +1338,6 @@ section.alt {
 }
 .vs-v.win p {
   font-weight: 600;
-}
-.vs-v.win p::after {
-  content: "";
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  margin-left: 8px;
-  vertical-align: -2px;
-  border-radius: 50%;
-  background:
-    #1d9d55
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.3 7 10.7l4.6-5' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
-    center / 100% no-repeat;
 }
 .vs-v.none {
   font-size: 16px;
@@ -1557,14 +1570,10 @@ ol.steps .add svg[data-logo] {
 }
 
 footer.foot {
-  padding: 28px 0 56px;
+  padding: 36px 0 48px;
   background: var(--alt);
   color: var(--muted);
   font-size: 12px;
-}
-footer.foot .wrap {
-  border-top: 1px solid var(--line);
-  padding-top: 20px;
 }
 footer.foot p {
   margin: 0 0 6px;
@@ -1577,7 +1586,7 @@ footer.foot a {
 
 @media (max-width: 900px) {
   section {
-    padding: 96px 0;
+    padding: 64px 0;
   }
   .feats,
   ol.steps {
