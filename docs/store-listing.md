@@ -27,7 +27,7 @@ The product name is **Better Passwords**. Use the separate compatibility line:
 >
 > Your passwords stay where they are. Every request goes to the password helper built into macOS, over Apple's own encrypted pairing. The extension stores nothing and talks to no server.
 >
-> Requires macOS 14 or later, signed in to iCloud with Passwords turned on, and a one-time setup command (or the companion app): https://github.com/fanckush/apple-passwords-plus#setup
+> Requires macOS 14 or later, signed in to iCloud with Passwords turned on, and a one-time setup command (or the companion app): https://github.com/fanckush/better-passwords-extension#setup
 >
 > Free and open source (MIT). Not affiliated with or endorsed by Apple Inc.
 
@@ -51,7 +51,7 @@ The product name is **Better Passwords**. Use the separate compatibility line:
 
 **Data usage:** Declare **Authentication information** (passwords and usernames are read to fill them). Certify that data is not sold, not used for unrelated purposes, and not used for creditworthiness. Password lookup and filling are local; opt-in Hide My Email sends requests and site labels to the user's iCloud account.
 
-**Privacy policy URL:** `https://github.com/fanckush/apple-passwords-plus/blob/main/PRIVACY.md`
+**Privacy policy URL:** `https://github.com/fanckush/better-passwords-extension/blob/main/PRIVACY.md`
 
 ## Firefox Add-ons
 

@@ -2,7 +2,7 @@
 
 export const DISPLAY_NAME = "Better Passwords";
 
-export const REPO_URL = "https://github.com/fanckush/apple-passwords-plus";
+export const REPO_URL = "https://github.com/fanckush/better-passwords-extension";
 export const SETUP_COMMAND = `curl -fsSL ${REPO_URL}/raw/main/scripts/setup-mac.sh | sh`;
 
 /** Our own registration of Apple's helper, written by scripts/setup-mac.sh or the companion app. */

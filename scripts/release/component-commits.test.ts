@@ -14,7 +14,7 @@ function context(messages: string[]) {
     commits: messages.map((m) => commit(m)),
     logger,
     cwd: process.cwd(),
-    options: { repositoryUrl: "https://github.com/fanckush/apple-passwords-plus" },
+    options: { repositoryUrl: "https://github.com/fanckush/better-passwords-extension" },
     lastRelease: { gitTag: "v1.0.0", version: "1.0.0" },
     nextRelease: { gitTag: "v1.1.0", version: "1.1.0" },
   };

@@ -20,6 +20,6 @@ Better Passwords (the browser extension and the optional Mac companion app) coll
 
 ## Contact
 
-Questions: open an issue at https://github.com/fanckush/apple-passwords-plus. For security reports, see [SECURITY.md](SECURITY.md).
+Questions: open an issue at https://github.com/fanckush/better-passwords-extension. For security reports, see [SECURITY.md](SECURITY.md).
 
 Last updated: October 2026.

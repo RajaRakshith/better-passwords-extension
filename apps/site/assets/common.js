@@ -80,8 +80,8 @@
         <h2 class="h2 reveal">Set up in two minutes.</h2>
         <p class="lede reveal d1" style="margin-bottom:64px">Then forget it's there.</p>
         <ol class="steps">
-          <li class="reveal"><h3 class="h3">Add the extension</h3><p>Store listings are coming soon. Chromium users can download the extension ZIP from <a href="https://github.com/fanckush/apple-passwords-plus/releases">GitHub releases</a> and load it unpacked. For Firefox, follow the <a href="https://github.com/fanckush/apple-passwords-plus#setup">installation guide</a>; a source ZIP is not an installable add-on.</p><a class="add" href="https://github.com/fanckush/apple-passwords-plus#setup">Installation guide</a></li>
-          <li class="reveal d1"><h3 class="h3">Connect your browser</h3><p>Use the optional <a href="https://github.com/fanckush/apple-passwords-plus/releases">companion Mac app</a> to connect ${B} and enable Touch ID and contact email suggestions. Or use the <a href="https://github.com/fanckush/apple-passwords-plus#setup">one-time setup script</a> without the app.</p></li>
+          <li class="reveal"><h3 class="h3">Add the extension</h3><p>Store listings are coming soon. Chromium users can download the extension ZIP from <a href="https://github.com/fanckush/better-passwords-extension/releases">GitHub releases</a> and load it unpacked. For Firefox, follow the <a href="https://github.com/fanckush/better-passwords-extension#setup">installation guide</a>; a source ZIP is not an installable add-on.</p><a class="add" href="https://github.com/fanckush/better-passwords-extension#setup">Installation guide</a></li>
+          <li class="reveal d1"><h3 class="h3">Connect your browser</h3><p>Use the optional <a href="https://github.com/fanckush/better-passwords-extension/releases">companion Mac app</a> to connect ${B} and enable Touch ID and contact email suggestions. Or use the <a href="https://github.com/fanckush/better-passwords-extension#setup">one-time setup script</a> without the app.</p></li>
           <li class="reveal d2"><h3 class="h3">Unlock once</h3><p>Touch the sensor, or type the six digits your Mac shows. Turn on Hide My Email from the toolbar.</p></li>
         </ol>
         <p class="note reveal" style="margin-top:56px">Needs a Mac with macOS 14 (Sonoma) or later, and Passwords turned on in iCloud. Hide My Email needs an iCloud+ plan.</p>
@@ -96,7 +96,7 @@
           <details><summary>Is it safe?</summary><p>Your passwords stay in Apple Passwords. The extension asks your Mac for the one you pick, fills it, and keeps nothing. There are no accounts, no servers and no tracking, and anyone can read the code.</p></details>
           <details><summary>How do I set it up?</summary><p>Add the extension from your browser's store, then open the companion Mac app. It connects ${B} to Apple Passwords and turns on Touch ID. Unlock once, and turn on Hide My Email from the toolbar if you have iCloud+. Needs macOS 14 (Sonoma) or later.</p></details>
           <details><summary>What are the six digits?</summary><p>When an extension connects to Apple Passwords, your Mac shows a six-digit code and you type it into the browser, to prove the browser is yours. Apple's extension needs a new one whenever ${B} puts it to sleep. This extension keeps the connection open for the browser session. With the optional companion app, Touch ID enters the code for you.</p></details>
-          <details><summary>Do I need the companion app?</summary><p>It's the easy way, and it's what adds Touch ID and your contact card's emails. Without it, run this once in Terminal:</p><pre>curl -fsSL https://github.com/fanckush/apple-passwords-plus/raw/main/scripts/setup-mac.sh | sh</pre></details>
+          <details><summary>Do I need the companion app?</summary><p>It's the easy way, and it's what adds Touch ID and your contact card's emails. Without it, run this once in Terminal:</p><pre>curl -fsSL https://github.com/fanckush/better-passwords-extension/raw/main/scripts/setup-mac.sh | sh</pre></details>
           <details><summary>Does it cost anything?</summary><p>No. The extension and the companion app are free. Hide My Email is part of iCloud+, which you pay Apple for.</p></details>
           <details><summary>Does it work on Windows?</summary><p>No, it's Mac only. It works with the Apple Passwords helper built into macOS.</p></details>
         </div>
@@ -104,7 +104,7 @@
 
     footer: `
       <div class="wrap">
-        <p><a href="https://github.com/fanckush/apple-passwords-plus">Source code</a><a href="https://github.com/fanckush/apple-passwords-plus/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/fanckush/apple-passwords-plus/blob/main/SECURITY.md">Security</a></p>
+        <p><a href="https://github.com/fanckush/better-passwords-extension">Source code</a><a href="https://github.com/fanckush/better-passwords-extension/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/fanckush/better-passwords-extension/blob/main/SECURITY.md">Security</a></p>
         <p>Better Passwords is not affiliated with or endorsed by Apple Inc. Apple, iCloud, iCloud+, Safari and Touch ID are trademarks of Apple Inc.</p>
       </div>`,
   };

@@ -31,7 +31,7 @@ Requirements: macOS 14 (Sonoma) or later, signed in to iCloud with Passwords tur
 ### 1. Install the extension
 
 - **Browser stores:** Chrome Web Store and Firefox Add-ons listings are coming soon.
-- **GitHub (Chromium browsers):** download `better-passwords-<version>-chrome.zip` from the [latest release](https://github.com/fanckush/apple-passwords-plus/releases), unzip it, then open `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**. These installs need manual updates.
+- **GitHub (Chromium browsers):** download `better-passwords-<version>-chrome.zip` from the [latest release](https://github.com/fanckush/better-passwords-extension/releases), unzip it, then open `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**. These installs need manual updates.
 - **Firefox:** use the Firefox Add-ons listing once published, or an explicitly signed XPI if provided. The Firefox ZIP is a submission package; the sources ZIP is for reviewers. Neither should be presented as a directly installable release. Contributors can test a local build using Firefox's temporary add-on loading.
 
 All downloads use the same Better Passwords identity and setup. Apple's iCloud Passwords extension can remain installed; avoid enabling two competing autofill menus if they get in your way.
@@ -43,7 +43,7 @@ Install the optional [companion Mac app](docs/companion.md), open **Better Passw
 Or run the setup script without the companion app:
 
 ```sh
-curl -fsSL https://github.com/fanckush/apple-passwords-plus/raw/main/scripts/setup-mac.sh | sh
+curl -fsSL https://github.com/fanckush/better-passwords-extension/raw/main/scripts/setup-mac.sh | sh
 ```
 
 The script lets the extension reach Apple's built-in password helper. It writes one small file per browser and needs no admin rights. [Read it](scripts/setup-mac.sh) first, and undo it any time with `--uninstall`.
