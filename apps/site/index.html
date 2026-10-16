@@ -1,206 +1,257 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Apple Passwords Plus</title>
-    <meta
-      name="description"
-      content="A browser extension that fills logins from Apple Passwords on your Mac, without asking for a 6-digit code every few hours."
-    />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'" />
-    <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <header class="top">
-      <a class="brand" href="./">
-        <img src="icon.svg" alt="" width="28" height="28" />
-        Apple Passwords Plus
-      </a>
-      <nav>
-        <a href="#how">How it works</a>
-        <a href="#install">Install</a>
-        <a href="https://github.com/fanckush/apple-passwords-plus">GitHub</a>
-      </nav>
-    </header>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Apple Passwords Plus</title>
+<meta name="description" content="Apple Passwords. Hide My Email. One extension for Chrome and Firefox. Free and open source." />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="assets/shared.css" />
+<style>
+  /* Browser-style navigation and an interactive sign-in preview. */
+  .grad { background: linear-gradient(100deg, #0071e3 5%, #7a5cff 55%, #bf5af2 95%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-    <main>
-      <section class="hero">
-        <div class="hero-text">
-          <h1>Apple Passwords,<br />without the codes.</h1>
-          <p class="lead">
-            Fill logins from Apple Passwords in Chrome, Brave, Edge, Arc, Helium and Firefox on your Mac. Pair once
-            per browser launch instead of typing a 6-digit code every few hours, or unlock with Touch ID.
-          </p>
-          <div class="cta">
-            <a class="button primary" href="#install">Install</a>
-            <a class="button" href="https://github.com/fanckush/apple-passwords-plus">Source code</a>
-          </div>
-          <p class="fine">Free and open source. Not affiliated with Apple.</p>
+  /* the nav's pinned icon opens a preview of the real popup */
+  .pin { position: relative; display: inline-flex; }
+  .nav-pop { right: -4px; top: calc(100% + 6px); width: 300px; max-width: calc(100vw - 24px); font: 13px/1.45 var(--font); letter-spacing: 0; color: #1d1d1f; text-align: left; }
+  .nav-pop .dm-pop-empty { margin: 0 4px 10px; color: #6e6e73; }
+  .nav-pop .preview { margin: 10px -12px -12px; padding: 12px; border-radius: 0 0 12px 12px; background: #f5f5f7; text-align: center; }
+  .nav-pop .preview p { margin: 0 0 8px; font-size: 12px; color: #6e6e73; }
+  .nav-pop .preview-add { display: inline-block; padding: 6px 16px; border-radius: 980px; background: #0071e3; color: #fff; font: 500 13px var(--font); }
+  .nav-pop .preview-add:hover { background: #0077ed; text-decoration: none; }
+  .nav-pop .unlock-btn { margin: 4px 0 2px; padding: 7px 14px; border: 0; border-radius: 8px; background: var(--blue); color: #fff; font: 500 13px var(--font); cursor: pointer; }
+
+  /* hero */
+  .hero { padding-top: 56px; padding-bottom: 96px; text-align: center; }
+  .hero-name { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 18px; font: 600 17px var(--display); letter-spacing: -0.01em; }
+  .hero-title { margin: 0; font: 700 clamp(44px, 6.4vw, 84px)/1.02 var(--display); letter-spacing: -0.05em; }
+  .hero-title { margin-bottom: 40px; }
+  .hero-grid { display: grid; grid-template-columns: 1fr minmax(0, 420px) 1fr; gap: 48px; align-items: center; text-align: left; }
+  .hero-try { position: relative; }
+  .hero-try .dm-card { margin: 0 auto; box-shadow: 0 0 0 1px rgb(0 0 0 / 6%), 0 30px 80px rgb(0 0 0 / 10%); }
+  .hero-try .dm-hint { display: none; }
+  .hero-feats { justify-self: end; display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; font: 500 16px/1.3 var(--font); }
+  .hero-feats li { white-space: nowrap; display: flex; align-items: center; gap: 12px; opacity: 0; transform: translateX(-12px); animation: feat-in .7s var(--ease) forwards; }
+  .hero-feats li:nth-child(2) { animation-delay: .12s; } .hero-feats li:nth-child(3) { animation-delay: .24s; } .hero-feats li:nth-child(4) { animation-delay: .36s; } .hero-feats li:nth-child(5) { animation-delay: .48s; } .hero-feats li:nth-child(6) { animation-delay: .6s; }
+  @keyframes feat-in { to { opacity: 1; transform: none; } }
+  .hf-ico { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(160deg, #3a8dff, #6a4cf0); color: #fff; }
+  .hf-ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .try-hints { justify-self: start; display: grid; gap: 20px; max-width: 260px; margin: 0; padding: 0; list-style: none; counter-reset: t; }
+  .try-hints li { counter-increment: t; display: grid; grid-template-columns: 26px 1fr; gap: 2px 10px; font-size: 15px; }
+  .try-hints li::before { content: counter(t); grid-row: span 2; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--alt); font: 600 13px var(--font); color: var(--muted); }
+  .try-hints b { font-weight: 600; }
+  .try-hints span { color: var(--muted); }
+  /* the card's own way into the extension, tied to the toolbar icon */
+  .card-ext { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 18px; padding: 10px 12px; border: 0; border-radius: 11px; background: rgb(0 113 227 / 8%); color: #0071e3; font: 500 14px var(--font); text-align: left; cursor: pointer; }
+  .card-ext:hover { background: rgb(0 113 227 / 13%); }
+  .card-ext img { width: 24px; height: 24px; }
+  .card-ext { white-space: nowrap; }
+  .nav-chrome .nc-ico.ours.glow { box-shadow: 0 0 0 3px rgb(0 113 227 / 35%); animation: glow 1.2s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 6px rgb(0 113 227 / 18%); } }
+  .hero-ctas { margin-top: 48px; }
+  .hero-ctas { justify-content: center; }
+  .hero .pretend { margin-top: 4px; }
+
+  /* the browser tour */
+  .tour-cap { margin: 0 0 22px; text-align: center; font: 600 19px var(--display); color: var(--muted); }
+  .tour-cap b { color: var(--ink); }
+  .hero-try .dm-hint { display: none; }
+  .orb { position: absolute; z-index: 15; width: 26px; height: 26px; margin: -13px 0 0 -13px; padding: 0; border: 0; border-radius: 50%; background: radial-gradient(circle, #fff 0 24%, #0a84ff 26% 62%, transparent 64%); cursor: pointer; }
+  .orb::before, .orb::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 50%; background: rgb(10 132 255 / 45%); animation: orb-pulse 1.8s ease-out infinite; }
+  .orb::after { animation-delay: .9s; }
+  @keyframes orb-pulse { from { transform: scale(1); opacity: .85; } to { transform: scale(3.2); opacity: 0; } }
+  .orb[hidden] { display: none; }
+  .tour-note { margin: 22px 0 0; text-align: center; font-size: 14px; color: var(--muted); min-height: 20px; }
+
+  /* open source */
+  .oss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+  .trust { list-style: none; margin: 36px 0 0; padding: 0; }
+  .trust li { display: grid; grid-template-columns: 28px 1fr; gap: 14px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .trust svg { width: 24px; height: 24px; color: var(--blue); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-top: 2px; }
+  .trust b { display: block; font-weight: 600; }
+  .trust span { color: var(--muted); font-size: 17px; }
+  .repo { padding: 28px; border-radius: 24px; background: #fff; box-shadow: 0 0 0 1px var(--line), 0 30px 70px rgb(0 0 0 / 8%); font: 15px/1.5 var(--font); letter-spacing: 0; }
+  .repo-h { display: flex; align-items: center; gap: 10px; font-size: 19px; }
+  .repo-h svg { width: 26px; height: 26px; }
+  .repo-h a { color: #0969da; } .repo-h b { font-weight: 600; }
+  .badge { margin-left: 4px; padding: 1px 9px; border: 1px solid #d0d7de; border-radius: 980px; font-size: 12px; color: #57606a; }
+  .repo p { margin: 14px 0 16px; color: #57606a; }
+  .topics { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .topics span { padding: 2px 10px; border-radius: 980px; background: #ddf4ff; color: #0969da; font-size: 12px; font-weight: 500; }
+  .repo-meta { display: flex; flex-wrap: wrap; gap: 18px; padding-top: 16px; border-top: 1px solid #d0d7de; color: #57606a; font-size: 13px; }
+  .repo-meta i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: -1px; }
+  .repo-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .gh-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; border: 1px solid #d0d7de; background: #f6f8fa; color: #24292f; font-weight: 600; font-size: 14px; }
+  .gh-btn:hover { text-decoration: none; background: #eef1f4; }
+  .gh-btn.dark { background: #24292f; border-color: #24292f; color: #fff; }
+  .gh-btn svg { width: 16px; height: 16px; }
+
+  .closing .h2 { margin: 0 auto; }
+
+  @media (max-width: 900px) {
+    .hero { padding-top: 32px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+    .hero-try { order: -1; }
+    .hero-feats, .try-hints { justify-self: stretch; max-width: none; }
+    .oss-grid { grid-template-columns: 1fr; gap: 24px; }
+  }
+</style>
+</head>
+<body>
+<nav class="nav-chrome" aria-label="Main">
+  <div class="nc-strip">
+    <div class="nc-lights" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="tabs">
+      <a class="tab" href="#tour"><img src="icon.svg" alt="" width="16" height="16" /><span>Apple Passwords Plus</span></a>
+      <a class="tab" href="#compare"><span>Compare</span></a>
+      <a class="tab" href="#privacy"><span>Privacy</span></a>
+      <a class="tab" href="#faq"><span>Questions</span></a>
+    </div>
+    <a class="nc-gh" href="https://github.com/fanckush/apple-passwords-plus" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56l-.02-1.96c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.7 5.41-5.27 5.69.41.36.78 1.06.78 2.14l-.01 3.18c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg><span>GitHub</span></a>
+  </div>
+  <div class="nc-bar">
+    <span class="nc-nav" aria-hidden="true"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4"/></svg></span>
+    <div class="nc-omni"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-.5V4.5A3.5 3.5 0 0 0 8 1Zm2 5H6V4.5a2 2 0 1 1 4 0Z"/></svg><span id="nc-url">Apple Passwords Plus</span></div>
+    <span class="nc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3a2 2 0 0 1 2 2v1h3a1 1 0 0 1 1 1v3h1a2 2 0 1 1 0 4h-1v3a1 1 0 0 1-1 1h-3v-1a2 2 0 1 0-4 0v1H5a1 1 0 0 1-1-1v-3h1a2 2 0 1 0 0-4H4V7a1 1 0 0 1 1-1h3V5a2 2 0 0 1 2-2Z"/></svg></span>
+    <span class="pin">
+      <button class="nc-ico ours" type="button" id="nav-ext" aria-expanded="false" aria-controls="nav-pop" title="Apple Passwords Plus"><img src="icon.svg" alt="Apple Passwords Plus" /></button>
+      <div class="dm-popup nav-pop" id="nav-pop" hidden></div>
+    </span>
+    <a class="nc-add" data-add href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Add to Chrome</span></a>
+  </div>
+</nav>
+
+<main>
+  <header class="hero wrap" id="tour">
+    <p class="hero-name"><img src="icon.svg" alt="" width="28" height="28" />Apple Passwords Plus</p>
+    <p class="note center">A browser companion for Apple Passwords.</p>
+    <h1 class="hero-title">Just try it.</h1>
+    <div class="hero-grid">
+      <ul class="hero-feats" aria-label="What's in it">
+        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M15 12v2"/></svg></span>Your Apple Passwords, in login fields</li>
+        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg></span>Hide My Email in sign-ups</li>
+        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="8" rx="2.5"/><path d="M7 12h.01M10.5 12h.01M14 12h.01M17.5 12h.01"/></svg></span>Strong passwords, saved</li>
+        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 0 0-8 8M12 4a8 8 0 0 1 8 8v1M7.5 19.5A10 10 0 0 0 8 12a4 4 0 0 1 8 0v1.5M12 12v2.5a10 10 0 0 1-2 5.5M16 17a14 14 0 0 1-.8 3"/></svg></span>Touch ID instead of six digits</li>
+        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg></span>Your emails, from Contacts</li>
+        <li><span class="hf-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 5l-3 14"/></svg></span>Free and open source</li>
+      </ul>
+      <div class="hero-try">
+        <div id="demo"></div>
+      </div>
+      <ol class="try-hints" aria-label="Things to try">
+        <li><b>Sign in</b><span>Click the email field and pick a saved login.</span></li>
+        <li><b>Create account</b><span>Get a private address from Hide My Email, and a strong password.</span></li>
+        <li><b>The extension</b><span>Open it from the card, or from its icon in the toolbar.</span></li>
+      </ol>
+    </div>
+    <div class="ctas hero-ctas">
+      <a class="add big" data-add href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Add to Chrome</span></a>
+      <a class="other" data-other href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Also for Firefox</span></a>
+    </div>
+    <p class="note center" data-note>Free and open source. For Mac only (macOS 14 or later). Works in Chrome, Firefox, Edge, Brave and Arc.</p>
+    <p class="note center pretend">A pretend site: nothing you type here is real or sent anywhere.</p>
+  </header>
+
+  <section class="alt" id="compare" data-common="compare"></section>
+
+  <section id="privacy">
+    <div class="wrap oss-grid">
+      <div>
+        <h2 class="h2 reveal">Private by design.</h2>
+        <ul class="trust reveal d2">
+          <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6Z"/></svg><div><b>Your passwords stay with Apple</b><span>Each login comes from the password helper built into macOS, over Apple's own encrypted pairing, straight into the page.</span></div></li>
+          <li><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M6 18 18 6"/></svg><div><b>No backend or tracking</b><span>We run no backend. Hide My Email connects to Apple only when you turn it on.</span></div></li>
+          <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg><div><b>Open source</b><span>The extension and the companion app are public on <a href="https://github.com/fanckush/apple-passwords-plus" target="_blank" rel="noopener">GitHub</a> under the MIT license, so anyone can check what they do.</span></div></li>
+          <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5Z"/><path d="M14 4v5h5M8.5 13h7M8.5 16.5h5"/></svg><div><b>The risks, written down</b><span>A <a href="https://github.com/fanckush/apple-passwords-plus/blob/main/docs/threat-model.md" target="_blank" rel="noopener">threat model</a> lists what it defends against and what it doesn't.</span></div></li>
+        </ul>
+      </div>
+      <div class="repo reveal d1">
+        <div class="repo-h">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56l-.02-1.96c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.7 5.41-5.27 5.69.41.36.78 1.06.78 2.14l-.01 3.18c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
+          <span><a href="https://github.com/fanckush" target="_blank" rel="noopener">fanckush</a> / <a href="https://github.com/fanckush/apple-passwords-plus" target="_blank" rel="noopener"><b>apple-passwords-plus</b></a></span>
+          <span class="badge">Public</span>
         </div>
-
-        <!-- an illustration of the inline menu, drawn in CSS -->
-        <div class="mock" aria-hidden="true">
-          <div class="mock-window">
-            <div class="mock-bar"><span></span><span></span><span></span></div>
-            <div class="mock-page">
-              <div class="mock-title">Sign in</div>
-              <div class="mock-label">Email</div>
-              <div class="mock-field focused">|</div>
-              <div class="mock-menu">
-                <div class="mock-row active">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.75a5.25 5.25 0 0 1 1.5 10.28v1.72h1.9a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.9v.75h1.4a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.4v.6a.8.8 0 0 1-.23.56l-.7.7a.8.8 0 0 1-1.14 0l-.7-.7a.8.8 0 0 1-.23-.56v-8.15A5.25 5.25 0 0 1 12 1.75Zm0 2.25a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5Z" /></svg>
-                  <div><b>jane@example.com</b><small>example.com</small></div>
-                </div>
-                <div class="mock-row">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.75a5.25 5.25 0 0 1 1.5 10.28v1.72h1.9a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.9v.75h1.4a.6.6 0 0 1 .6.6v1.3a.6.6 0 0 1-.6.6h-1.4v.6a.8.8 0 0 1-.23.56l-.7.7a.8.8 0 0 1-1.14 0l-.7-.7a.8.8 0 0 1-.23-.56v-8.15A5.25 5.25 0 0 1 12 1.75Zm0 2.25a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5Z" /></svg>
-                  <div><b>jane.work</b><small>example.com</small></div>
-                </div>
-                <hr />
-                <div class="mock-row plain">Open Passwords…</div>
-              </div>
-              <div class="mock-label">Password</div>
-              <div class="mock-field"></div>
-            </div>
-          </div>
+        <p>Apple Passwords. Without the friction. A Chrome and Firefox extension for Apple Passwords and Hide My Email on macOS.</p>
+        <div class="topics"><span>chrome-extension</span><span>firefox-addon</span><span>apple-passwords</span><span>hide-my-email</span><span>macos</span></div>
+        <div class="repo-meta"><span><i style="background:#3178c6"></i>TypeScript</span><span><i style="background:#f05138"></i>Swift</span><span>MIT license</span></div>
+        <div class="repo-actions">
+          <a class="gh-btn dark" href="https://github.com/fanckush/apple-passwords-plus" target="_blank" rel="noopener">View on GitHub</a>
+          <a class="gh-btn" href="https://github.com/fanckush/apple-passwords-plus" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .67.42l1.88 3.8 4.2.61a.75.75 0 0 1 .41 1.28l-3.04 2.96.72 4.19a.75.75 0 0 1-1.09.79L8 12.33 4.25 14.3a.75.75 0 0 1-1.09-.79l.72-4.19L.84 6.36a.75.75 0 0 1 .41-1.28l4.2-.61L7.33.67A.75.75 0 0 1 8 .25Z"/></svg>Star</a>
         </div>
-      </section>
+      </div>
+    </div>
+  </section>
 
-      <section class="features">
-        <article>
-          <h2>Pair once</h2>
-          <p>
-            Apple's extension drops its connection whenever the browser idles, and every reconnect asks for a new
-            code. This one keeps the connection open until you quit the browser.
-          </p>
-        </article>
-        <article>
-          <h2>Or use Touch ID</h2>
-          <p>
-            With the optional Mac companion app, you confirm with your fingerprint and the code is entered for you.
-            Your browser never gets Accessibility access.
-          </p>
-        </article>
-        <article>
-          <h2>Suggestions in the page</h2>
-          <p>
-            Click a login field and pick an account, like in Safari. Use the arrow keys if you prefer the keyboard.
-          </p>
-        </article>
-        <article>
-          <h2>Apple keeps your passwords</h2>
-          <p>
-            Every request goes to the password helper built into macOS, over Apple's own encrypted pairing. Nothing
-            is stored or sent anywhere else.
-          </p>
-        </article>
-      </section>
+  <section id="install" data-common="install"></section>
 
-      <section id="how" class="how">
-        <h2>How it works</h2>
-        <ol class="flow">
-          <li><b>Extension</b><span>Asks for logins for the site you're on</span></li>
-          <li><b>Apple's helper</b><span>Ships with macOS 14 and later. Checks the pairing, talks to iCloud Keychain</span></li>
-          <li><b>Apple Passwords</b><span>Your passwords, where they already are</span></li>
-        </ol>
-        <p>
-          The extension speaks the same protocol as Apple's iCloud Passwords extension: SRP pairing with the code your
-          Mac shows, then AES-GCM encryption. The difference is that it keeps the session. Read the
-          <a href="https://github.com/fanckush/apple-passwords-plus/blob/main/docs/architecture.md">architecture</a>
-          and the
-          <a href="https://github.com/fanckush/apple-passwords-plus/blob/main/docs/threat-model.md">threat model</a>.
-        </p>
-      </section>
+  <section class="alt" id="faq" data-common="faq"></section>
 
-      <section id="install" class="install">
-        <h2>Install</h2>
-        <p class="note">You need a Mac with macOS 14 (Sonoma) or later, signed in to iCloud with Passwords turned on.</p>
-        <div class="cards">
-          <article class="card">
-            <h3>From the browser stores</h3>
-            <p class="soon">Coming soon</p>
-            <ol>
-              <li>Install from the Chrome Web Store or Firefox Add-ons.</li>
-              <li>
-                Run the one-time setup in Terminal. It writes one small file per browser that lets the extension reach
-                Apple's helper. No admin rights needed.
-                <code>curl -fsSL https://github.com/fanckush/apple-passwords-plus/raw/main/scripts/setup-mac.sh | sh</code>
-              </li>
-              <li>Click the toolbar icon and enter the code your Mac shows.</li>
-            </ol>
-          </article>
-          <article class="card">
-            <h3>From GitHub</h3>
-            <p class="soon">Chromium browsers, no setup</p>
-            <ol>
-              <li>Turn off Apple's iCloud Passwords extension. This build uses its connection.</li>
-              <li>
-                Download <code class="inline">…-github-chrome.zip</code> from the
-                <a href="https://github.com/fanckush/apple-passwords-plus/releases">latest release</a> and unzip it.
-              </li>
-              <li>On the extensions page, turn on Developer mode, click Load unpacked, and pick the folder.</li>
-            </ol>
-          </article>
-          <article class="card">
-            <h3>Touch ID companion</h3>
-            <p class="soon">Optional, Mac app</p>
-            <ol>
-              <li>Download Apple Passwords Plus.app from the releases and move it to Applications.</li>
-              <li>Open it and follow the three steps: connect browsers, run in the background, allow reading the code.</li>
-              <li>The extension now unlocks with Touch ID. It also does the one-time setup for you.</li>
-            </ol>
-          </article>
-        </div>
-      </section>
+  <section class="closing">
+    <div class="wrap center">
+      <img class="reveal" src="icon.svg" alt="" width="96" height="96" style="margin-bottom:28px" />
+      <h2 class="h2 reveal d1">Apple Passwords. Hide My Email.<br /><span class="grad">One extension for <span data-browser>Chrome</span>.</span></h2>
+      <div class="ctas reveal d2" style="margin-top:36px">
+        <a class="add big" data-add href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Add to Chrome</span></a>
+        <a class="other" data-other href="#tour"><svg data-logo aria-hidden="true"></svg><span data-label>Also for Firefox</span></a>
+      </div>
+      <p class="note reveal d2" data-note>Free. For Mac only (macOS 14 or later). Works in Chrome, Firefox, Edge, Brave and Arc.</p>
+    </div>
+  </section>
+</main>
+<footer class="foot" data-common="footer"></footer>
 
-      <section class="faq">
-        <h2>Questions</h2>
-        <details>
-          <summary>Is this made by Apple?</summary>
-          <p>
-            No. It's an independent open-source project that talks to software Apple ships with macOS. "Apple" and
-            "iCloud" are trademarks of Apple Inc.
-          </p>
-        </details>
-        <details>
-          <summary>Can it see my passwords?</summary>
-          <p>
-            Only the one you choose to fill, for the site you're on, at the moment you click. It never stores them.
-            The pairing key lives in memory and is gone when you quit the browser or press Lock.
-          </p>
-        </details>
-        <details>
-          <summary>Why does the store version need a setup step?</summary>
-          <p>
-            Browsers only let an extension start a program that a small permission file names. macOS ships that file
-            for Apple's own extension only. The setup writes the same kind of file for this one, pointing at Apple's
-            unmodified helper.
-          </p>
-        </details>
-        <details>
-          <summary>Why does Touch ID need Accessibility?</summary>
-          <p>
-            Touch ID can't replace the code in Apple's pairing, because the code is the pairing password. The
-            companion reads the code off Apple's window after you confirm with Touch ID. It checks that the window
-            really is Apple's, and it gives the extension nothing but the six digits.
-          </p>
-        </details>
-        <details>
-          <summary>Windows?</summary>
-          <p>Not yet. Apple's helper on Windows works differently; it's on the list.</p>
-        </details>
-      </section>
-    </main>
+<script src="assets/common.js"></script>
+<script src="assets/browser.js"></script>
+<script src="assets/kit.js"></script>
+<script>
+  (() => {
+    Kit.reveal();
 
-    <footer>
-      <p>
-        <a href="https://github.com/fanckush/apple-passwords-plus">GitHub</a> ·
-        <a href="https://github.com/fanckush/apple-passwords-plus/blob/main/SECURITY.md">Security</a> ·
-        <a href="https://github.com/fanckush/apple-passwords-plus/blob/main/PRIVACY.md">Privacy</a> ·
-        <a href="https://github.com/fanckush/apple-passwords-plus/blob/main/LICENSE">MIT License</a>
-      </p>
-      <p>Not affiliated with or endorsed by Apple Inc. Apple, iCloud and Touch ID are trademarks of Apple Inc.</p>
-    </footer>
-  </body>
+
+    // The demo lives in the hero; the nav's pinned icon is its extension button.
+    if (location.host) document.getElementById("nc-url").textContent = location.host + location.pathname.replace(/\/index\.html$|\/$/, "");
+    const demoEl = document.getElementById("demo");
+    const navExt = document.getElementById("nav-ext");
+    const navPop = document.getElementById("nav-pop");
+    const browserName = document.querySelector("[data-browser]")?.textContent ?? "Chrome";
+    const storeHref = () => document.querySelector(".nav-chrome [data-add]").href;
+    const demo = Kit.demo(demoEl, {
+      switchable: true, frameless: true, toolbarButton: navExt, popupEl: navPop,
+      popupFooter: () => `<div class="preview"><p>This is a preview. Set up the extension in ${browserName} to use it for real.</p><a class="preview-add" href="${storeHref()}">Get the extension</a></div>`,
+    });
+    const cardExt = document.createElement("button");
+    cardExt.type = "button";
+    cardExt.className = "card-ext";
+    cardExt.innerHTML = '<img src="icon.svg" alt="" />Open the extension';
+    demoEl.querySelector(".dm-card").append(cardExt);
+    cardExt.addEventListener("click", (e) => { e.stopPropagation(); navExt.classList.remove("glow"); if (navPop.hidden) navExt.click(); });
+    cardExt.addEventListener("pointerenter", () => navExt.classList.add("glow"));
+    cardExt.addEventListener("pointerleave", () => navExt.classList.remove("glow"));
+    cardExt.addEventListener("focus", () => navExt.classList.add("glow"));
+    cardExt.addEventListener("blur", () => navExt.classList.remove("glow"));
+    const orb = document.createElement("button");
+    orb.type = "button";
+    orb.className = "orb";
+    orb.setAttribute("aria-label", "Try it: open the email field's suggestions");
+    demoEl.querySelector(".dm-card").append(orb);
+
+    const place = () => {
+      const el = demo.target("email");
+      if (!el || orb.hidden) return;
+      orb.style.left = `${el.offsetLeft + Math.min(190, el.offsetWidth * 0.55)}px`;
+      orb.style.top = `${el.offsetTop + el.offsetHeight / 2}px`;
+    };
+    const done = () => { orb.hidden = true; };
+    orb.addEventListener("click", () => { done(); demo.target("email").focus(); });
+    demoEl.addEventListener("pointerdown", (e) => { if (e.target !== orb) done(); }, true);
+    demoEl.addEventListener("focusin", (e) => { if (e.target !== orb) done(); });
+    // Anything that uses the demo, including the toolbar popup outside the card, retires the dot.
+    ["demo:fill", "demo:mode", "demo:submit", "demo:ask"].forEach((ev) => { demoEl.addEventListener(ev, done); });
+    place();
+    addEventListener("resize", place);
+
+    addEventListener("keydown", (e) => { if (e.key === "Escape" && !navPop.hidden) { navPop.hidden = true; navExt.setAttribute("aria-expanded", "false"); navExt.focus(); } });
+  })();
+</script>
+</body>
 </html>

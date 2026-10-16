@@ -43,6 +43,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["apps/site/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDescendingSpecificity": "off"
+          }
+        }
+      }
     }
   ]
 }
