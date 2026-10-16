@@ -110,7 +110,7 @@
     id === "safari"
       ? "You're in Safari, which already fills from Apple Passwords. This brings the same to Chrome and Firefox."
       : !mac
-        ? "Apple Passwords Plus is for Mac (macOS 14 or later). Open this page on your Mac to install it."
+        ? "Better Passwords is for Mac (macOS 14 or later). Open this page on your Mac to install it."
         : null;
   document.querySelectorAll("[data-browser]").forEach((el) => {
     el.textContent = name;

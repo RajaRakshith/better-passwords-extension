@@ -1,6 +1,6 @@
-# Apple Passwords Plus
+# Better Passwords
 
-**Apple Passwords. Without the friction.**
+**A browser companion for Apple Passwords.**
 
 A browser extension that fills your logins from Apple Passwords (iCloud Keychain) on macOS, without asking for a 6-digit code every few hours.
 
@@ -53,6 +53,10 @@ It can't auto-update. Download new releases yourself.
 ## How it works
 
 See [docs/architecture.md](docs/architecture.md), [docs/protocol.md](docs/protocol.md) and [docs/threat-model.md](docs/threat-model.md). Nothing is collected or sent anywhere: see the [privacy policy](PRIVACY.md).
+
+## Upgrading from the previous name
+
+Existing Apple Passwords Plus installations need fresh setup and permissions. [Follow the transition steps](docs/companion.md#moving-from-apple-passwords-plus) before replacing the old app or extension.
 
 ## Contributing
 

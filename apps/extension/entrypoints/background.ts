@@ -524,7 +524,7 @@ export default defineBackground(() => {
       if (isMenu && (sender.tab?.id === undefined || !isMenuNonce(sender.tab.id, request.menuNonce))) {
         sendResponse({
           ok: false,
-          error: "This menu wasn't opened by Apple Passwords Plus.",
+          error: "This menu wasn't opened by Better Passwords.",
         } satisfies Envelope<never>);
         return false;
       }

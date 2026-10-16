@@ -62,12 +62,12 @@ public enum HostManifests {
             return [
                 HostManifest(
                     name: Identity.bridgeHost,
-                    description: "Apple Passwords Plus: Apple's password helper",
+                    description: "Better Passwords: Apple's password helper",
                     path: Identity.helperPath,
                     allowedOrigins: [origin(Identity.storeExtensionID)]),
                 HostManifest(
                     name: Identity.companionHost,
-                    description: "Apple Passwords Plus: Touch ID companion",
+                    description: "Better Passwords: Touch ID companion",
                     path: hostPath,
                     allowedOrigins: [origin(Identity.storeExtensionID), origin(Identity.appleExtensionID)]),
             ]
@@ -75,12 +75,12 @@ public enum HostManifests {
             return [
                 HostManifest(
                     name: Identity.bridgeHost,
-                    description: "Apple Passwords Plus: Apple's password helper",
+                    description: "Better Passwords: Apple's password helper",
                     path: Identity.helperPath,
                     allowedExtensions: [Identity.firefoxExtensionID]),
                 HostManifest(
                     name: Identity.companionHost,
-                    description: "Apple Passwords Plus: Touch ID companion",
+                    description: "Better Passwords: Touch ID companion",
                     path: hostPath,
                     allowedExtensions: [Identity.firefoxExtensionID]),
             ]

@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Apple Passwords Plus</string>
+	<string>Better Passwords</string>
 	<key>CFBundleExecutable</key>
-	<string>ApplePasswordsPlus</string>
+	<string>BetterPasswords</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.applepasswordsplus.companion</string>
+	<string>io.github.fanckush.betterpasswords.companion</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Apple Passwords Plus</string>
+	<string>Better Passwords</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -30,7 +30,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSContactsUsageDescription</key>
-	<string>Apple Passwords Plus suggests the email addresses on your contact card when you sign up for websites.</string>
+	<string>Better Passwords suggests the email addresses on your contact card when you sign up for websites.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>MIT License. Not affiliated with Apple Inc.</string>
 </dict>

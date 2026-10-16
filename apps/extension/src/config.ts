@@ -1,6 +1,6 @@
 // Identity and build-variant settings. The display name lives here so branding is one edit.
 
-export const DISPLAY_NAME = "Apple Passwords Plus";
+export const DISPLAY_NAME = "Better Passwords";
 
 export const REPO_URL = "https://github.com/fanckush/apple-passwords-plus";
 export const SETUP_COMMAND = `curl -fsSL ${REPO_URL}/raw/main/scripts/setup-mac.sh | sh`;
@@ -11,10 +11,10 @@ export type Variant = "store" | "github";
 export const APPLE_HOST = "com.apple.passwordmanager";
 
 /** Our own registration of Apple's helper, written by scripts/setup-mac.sh or the companion app. */
-export const STORE_HOST = "org.applepasswordsplus.bridge";
+export const STORE_HOST = "io.github.fanckush.betterpasswords.bridge";
 
 /** The optional Touch ID companion app's own native host (see apps/companion). */
-export const COMPANION_HOST = "org.applepasswordsplus.companion";
+export const COMPANION_HOST = "io.github.fanckush.betterpasswords.companion";
 
 export const HELPER_PATH =
   "/System/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper";
@@ -36,7 +36,7 @@ export const STORE_PUBLIC_KEY =
 
 export const STORE_EXTENSION_ID = "kmkmelgjmhnfhhbgagdaejamhodddfmh";
 export const APPLE_EXTENSION_ID = "pejdijmoenmkgeppbflobdenhhabjlaj";
-export const FIREFOX_EXTENSION_ID = "apple-passwords-plus@applepasswordsplus.org";
+export const FIREFOX_EXTENSION_ID = "better-passwords@fanckush.github.io";
 
 /** Pages where the inline menu runs and passwords may be filled (see src/url-policy.ts). */
 export const FILL_MATCHES = ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"];

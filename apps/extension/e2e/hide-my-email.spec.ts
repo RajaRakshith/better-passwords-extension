@@ -98,7 +98,7 @@ test("turned on from the hint, creates an address for the site and fills it in",
   expect(reserve?.body).toEqual({
     hme: "fresh2@icloud.com",
     label: "localhost",
-    note: "Created by Apple Passwords Plus",
+    note: "Created by Better Passwords",
   });
 });
 

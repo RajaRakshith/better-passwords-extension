@@ -8,7 +8,7 @@
 
 const SETUP_URL = "https://setup.icloud.com/setup/ws/1";
 const ICLOUD_WEB = "https://www.icloud.com";
-const NOTE = "Created by Apple Passwords Plus";
+const NOTE = "Created by Better Passwords";
 
 export class ICloudError extends Error {
   constructor(

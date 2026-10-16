@@ -26,7 +26,7 @@ import Testing
         let chrome = support.appendingPathComponent("Google/Chrome/NativeMessagingHosts")
         let bridge =
             try JSONSerialization.jsonObject(
-                with: Data(contentsOf: chrome.appendingPathComponent("org.applepasswordsplus.bridge.json")))
+                with: Data(contentsOf: chrome.appendingPathComponent("io.github.fanckush.betterpasswords.bridge.json")))
             as? [String: Any]
         #expect(bridge?["path"] as? String == Identity.helperPath)
         #expect(bridge?["allowed_origins"] as? [String] == ["chrome-extension://kmkmelgjmhnfhhbgagdaejamhodddfmh/"])

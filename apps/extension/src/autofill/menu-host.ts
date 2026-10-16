@@ -34,7 +34,7 @@ const HOST_STYLE: Record<string, string> = {
 
 function createFrame(src: string): HTMLIFrameElement {
   const frame = document.createElement("iframe");
-  frame.setAttribute("title", "Apple Passwords Plus");
+  frame.setAttribute("title", "Better Passwords");
   frame.setAttribute("allow", "");
   for (const [key, value] of Object.entries({
     border: "0",

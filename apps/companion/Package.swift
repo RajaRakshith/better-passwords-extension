@@ -8,14 +8,14 @@ let package = Package(
     name: "Companion",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "ApplePasswordsPlus", targets: ["ApplePasswordsPlus"]),
-        .executable(name: "apple-passwords-plus-host", targets: ["NativeHost"]),
+        .executable(name: "BetterPasswords", targets: ["BetterPasswords"]),
+        .executable(name: "better-passwords-host", targets: ["NativeHost"]),
     ],
     targets: [
         // Everything that can be tested without Accessibility, Touch ID or a browser.
         .target(name: "CompanionCore"),
         // The menu-bar app; started with --agent by launchd, it is the background agent instead.
-        .executableTarget(name: "ApplePasswordsPlus", dependencies: ["CompanionCore"]),
+        .executableTarget(name: "BetterPasswords", dependencies: ["CompanionCore"]),
         // The native-messaging host the browser launches. It only relays to the agent.
         .executableTarget(name: "NativeHost", dependencies: ["CompanionCore"]),
         .testTarget(name: "CompanionCoreTests", dependencies: ["CompanionCore"]),

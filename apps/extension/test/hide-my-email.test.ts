@@ -58,7 +58,7 @@ describe("HideMyEmail", () => {
     expect(JSON.parse(String(reserve?.init?.body))).toEqual({
       hme: "fresh@icloud.com",
       label: "example.com",
-      note: "Created by Apple Passwords Plus",
+      note: "Created by Better Passwords",
     });
   });
 

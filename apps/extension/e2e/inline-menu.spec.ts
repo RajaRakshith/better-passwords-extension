@@ -190,7 +190,7 @@ test("refuses everything a copy of the menu without our nonce asks", async ({ co
   // (Firefox has no per-session address): it lists nothing
   const forged = await context.newPage();
   await forged.goto(`chrome-extension://${STORE_EXTENSION_ID}/menu.html#nonce=forged&mode=logins`);
-  await expect(forged.getByText("wasn't opened by Apple Passwords Plus")).toBeVisible();
+  await expect(forged.getByText("wasn't opened by Better Passwords")).toBeVisible();
   await expect(forged.getByText("e2e-user")).toHaveCount(0);
 
   // Nor does anything it asks get through, as an accepted click would ask it: no password is
@@ -206,7 +206,7 @@ test("refuses everything a copy of the menu without our nonce asks", async ({ co
     ];
   });
   for (const reply of replies) {
-    expect(reply).toEqual({ ok: false, error: "This menu wasn't opened by Apple Passwords Plus." });
+    expect(reply).toEqual({ ok: false, error: "This menu wasn't opened by Better Passwords." });
   }
   await expect(page.locator("#pass")).toHaveValue("");
 

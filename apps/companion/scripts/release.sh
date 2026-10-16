@@ -19,8 +19,8 @@ version="${1:?usage: release.sh VERSION}"
 
 scripts/bundle.sh --version "$version" --sign "$MACOS_SIGN_IDENTITY"
 
-app="dist/Apple Passwords Plus.app"
-zip="dist/Apple-Passwords-Plus-$version.zip"
+app="dist/Better Passwords.app"
+zip="dist/Better-Passwords-$version.zip"
 
 # notarize a zip of the app, then staple the ticket to the app and zip it again for download
 ditto -c -k --keepParent "$app" "$zip"

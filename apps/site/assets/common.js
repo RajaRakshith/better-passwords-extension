@@ -29,11 +29,11 @@
       <div class="wrap">
         <h2 class="h2 center reveal">Your passwords.<br />More ways to use them.</h2>
         <p class="lede center reveal d1" style="max-width:32em;margin:0 auto 56px">Both fill your Apple Passwords. Here's what's different.</p>
-        <div class="vs reveal d2" role="table" aria-label="Apple's iCloud Passwords extension compared with Apple Passwords Plus">
+        <div class="vs reveal d2" role="table" aria-label="Apple's iCloud Passwords extension compared with Better Passwords">
           <div class="vs-r vs-head" role="row">
             <span role="columnheader"></span>
             <div class="vs-prod" role="columnheader">${appIcon("vs-them", "#c7c7cc", "#8e8e93", "#aaaab0", false)}<div><b>iCloud Passwords</b><small>Apple's extension</small></div></div>
-            <div class="vs-prod" role="columnheader">${appIcon("vs-us", "#3a8dff", "#0060df", "#1774f0", true)}<div><b>Apple Passwords Plus</b><small>This extension</small></div></div>
+            <div class="vs-prod" role="columnheader">${appIcon("vs-us", "#3a8dff", "#0060df", "#1774f0", true)}<div><b>Better Passwords</b><small>This extension</small></div></div>
           </div>
           ${[
             ["Made by", "Apple", "An independent developer"],
@@ -105,7 +105,7 @@
     footer: `
       <div class="wrap">
         <p><a href="https://github.com/fanckush/apple-passwords-plus">Source code</a><a href="https://github.com/fanckush/apple-passwords-plus/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/fanckush/apple-passwords-plus/blob/main/SECURITY.md">Security</a></p>
-        <p>Apple Passwords Plus is not affiliated with or endorsed by Apple Inc. Apple, iCloud, iCloud+, Safari and Touch ID are trademarks of Apple Inc.</p>
+        <p>Better Passwords is not affiliated with or endorsed by Apple Inc. Apple, iCloud, iCloud+, Safari and Touch ID are trademarks of Apple Inc.</p>
       </div>`,
   };
 

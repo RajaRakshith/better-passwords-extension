@@ -1,6 +1,6 @@
 # Architecture
 
-Apple Passwords Plus is a browser extension that reads logins from Apple Passwords (iCloud Keychain) on macOS. It doesn't store passwords and doesn't run a server: every request goes to Apple's own helper program, which ships with macOS 14 and later.
+Better Passwords is a browser extension that reads logins from Apple Passwords (iCloud Keychain) on macOS. It doesn't store passwords and doesn't run a server: every request goes to Apple's own helper program, which ships with macOS 14 and later.
 
 ```
 popup · inline menu (our extension pages)      autofill content script (on login pages)
@@ -32,7 +32,7 @@ A browser only lets an extension start a native program if a small JSON *host ma
 | | Store build (`VARIANT=store`) | GitHub build (`VARIANT=github`) |
 |---|---|---|
 | Extension ID | our own | Apple's (the manifest carries Apple's public key) |
-| Host | `org.applepasswordsplus.bridge` | `com.apple.passwordmanager` |
+| Host | `io.github.fanckush.betterpasswords.bridge` | `com.apple.passwordmanager` |
 | Setup | `scripts/setup-mac.sh` (or the companion app) writes our host manifest, which points at Apple's unmodified helper | none, uses Apple's own manifest |
 | Distribution | Chrome Web Store, Firefox Add-ons | zip on GitHub releases, loaded unpacked |
 | Browsers | Chromium browsers, Firefox | Chromium browsers only |

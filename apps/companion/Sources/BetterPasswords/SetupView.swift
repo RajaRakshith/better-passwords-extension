@@ -29,7 +29,7 @@ struct SetupView: View {
                 .font(.system(size: 52))
                 .foregroundStyle(.green)
             Text("You're all set").font(.title2.bold())
-            Text("Apple Passwords Plus works in the background.\nYou can close this window.")
+            Text("Better Passwords works in the background.\nYou can close this window.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
             HStack(spacing: 18) {
@@ -55,7 +55,7 @@ struct SetupView: View {
     private var steps: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Apple Passwords Plus").font(.title2.bold())
+                Text("Better Passwords").font(.title2.bold())
                 Text("Unlock the browser extension with Touch ID instead of typing the code from your Mac.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -78,7 +78,7 @@ struct SetupView: View {
             Step(
                 number: 3,
                 title: "Allow reading the pairing code",
-                detail: "macOS calls this Accessibility. Apple Passwords Plus uses it only to read the code in "
+                detail: "macOS calls this Accessibility. Better Passwords uses it only to read the code in "
                     + "Apple's own pairing window, and only after you confirm with Touch ID.",
                 done: model.accessibilityTrusted,
                 actionTitle: "Allow…"
@@ -117,7 +117,7 @@ struct SetupView: View {
 
     private var agentDetail: String {
         switch model.agentStatus {
-        case .requiresApproval: "Allow Apple Passwords Plus in System Settings → General → Login Items."
+        case .requiresApproval: "Allow Better Passwords in System Settings → General → Login Items."
         default: "Starts by itself when the extension needs it, so this window doesn't need to stay open."
         }
     }
@@ -157,7 +157,7 @@ struct CompanionApp: App {
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
 
     var body: some Scene {
-        Window("Apple Passwords Plus", id: "setup") {
+        Window("Better Passwords", id: "setup") {
             SetupView()
         }
         .windowResizability(.contentSize)

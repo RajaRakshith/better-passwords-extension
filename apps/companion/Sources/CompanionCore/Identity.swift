@@ -3,26 +3,26 @@
 
 public enum Identity {
     /// Bundle identifier and code-signing identifier of the app (and of its agent mode).
-    public static let appBundleID = "org.applepasswordsplus.companion"
+    public static let appBundleID = "io.github.fanckush.betterpasswords.companion"
     /// Code-signing identifier of the native-messaging host inside the app bundle.
-    public static let hostSigningID = "org.applepasswordsplus.companion.host"
+    public static let hostSigningID = "io.github.fanckush.betterpasswords.companion.host"
     /// launchd label of the agent, and the XPC service it vends.
-    public static let agentService = "org.applepasswordsplus.agent"
+    public static let agentService = "io.github.fanckush.betterpasswords.agent"
     /// File name of the agent's launchd plist inside Contents/Library/LaunchAgents.
-    public static let agentPlistName = "org.applepasswordsplus.agent.plist"
+    public static let agentPlistName = "io.github.fanckush.betterpasswords.agent.plist"
     /// Executable name of the native host, inside Contents/MacOS.
-    public static let hostExecutableName = "apple-passwords-plus-host"
+    public static let hostExecutableName = "better-passwords-host"
 
     /// Native host that reaches the companion (for Touch ID).
-    public static let companionHost = "org.applepasswordsplus.companion"
+    public static let companionHost = "io.github.fanckush.betterpasswords.companion"
     /// Native host that reaches Apple's helper for the store build (what setup-mac.sh writes).
-    public static let bridgeHost = "org.applepasswordsplus.bridge"
+    public static let bridgeHost = "io.github.fanckush.betterpasswords.bridge"
 
     /// Our store build's ID. The bridge allows only this one: Apple's ID has Apple's own host.
     public static let storeExtensionID = "kmkmelgjmhnfhhbgagdaejamhodddfmh"
     /// The GitHub build borrows Apple's ID, so the companion host allows it too.
     public static let appleExtensionID = "pejdijmoenmkgeppbflobdenhhabjlaj"
-    public static let firefoxExtensionID = "apple-passwords-plus@applepasswordsplus.org"
+    public static let firefoxExtensionID = "better-passwords@fanckush.github.io"
 
     public static let helperPath =
         "/System/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper"
@@ -32,5 +32,5 @@ public enum Identity {
 
     /// Info.plist key holding the native host's cdhash in ad-hoc (development) builds, written by
     /// scripts/bundle.sh. Signed release builds check the team ID instead.
-    public static let hostCDHashKey = "APPHostCDHash"
+    public static let hostCDHashKey = "BPHostCDHash"
 }

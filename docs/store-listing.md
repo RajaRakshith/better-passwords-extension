@@ -2,17 +2,13 @@
 
 Text and answers for the Chrome Web Store and Firefox Add-ons forms. Nothing here is submitted yet.
 
-## Name: open decision
+## Name and compatibility
 
-The project is called "Apple Passwords Plus". Store reviewers often reject titles that start with someone else's trademark, because they read as impersonation. Options, from safest:
+The product name is **Better Passwords**. Use the separate compatibility line:
 
-| Store title | Risk |
-|---|---|
-| Passwords Plus for Mac: fills from Apple Passwords | Low. "Apple Passwords" describes compatibility rather than authorship. |
-| APP – Passwords Plus | Low, but "APP" is hard to find in search. |
-| Apple Passwords Plus | High. Likely to be flagged, and Apple can file a trademark complaint. |
+> A browser companion for Apple Passwords.
 
-Whichever title wins goes into `DISPLAY_NAME` in `apps/extension/src/config.ts`. Every listing should carry the line "Not affiliated with or endorsed by Apple Inc."
+`DISPLAY_NAME` in `apps/extension/src/config.ts` controls the extension name. Use the same name for the Mac companion. Describe Apple Passwords, iCloud and Touch ID as compatibility or features, without implying Apple authorship or endorsement. Every listing should carry "Not affiliated with or endorsed by Apple Inc." This branding does not establish trademark clearance or guarantee store approval.
 
 ## Short description (Chrome: 132 characters max)
 
@@ -22,7 +18,7 @@ Whichever title wins goes into `DISPLAY_NAME` in `apps/extension/src/config.ts`.
 
 > Use the passwords you keep in Apple Passwords (iCloud Keychain) in Chrome, Edge, Brave, Arc and other browsers on your Mac.
 >
-> Apple's own extension asks for a 6-digit code from your Mac every time the browser idles it. Apple Passwords Plus keeps the connection open, so you pair once per browser session. With the optional, free companion app, you can unlock with Touch ID instead of typing a code.
+> Apple's own extension asks for a 6-digit code from your Mac every time the browser idles it. Better Passwords keeps the connection open, so you pair once per browser session. With the optional, free companion app, you can unlock with Touch ID instead of typing a code.
 >
 > • Suggestions in login fields: click a field, pick your account
 > • Fill from the toolbar button

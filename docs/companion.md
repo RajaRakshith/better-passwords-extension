@@ -7,10 +7,10 @@ Touch ID can't replace the code in Apple's protocol: the code is the pairing pas
 ## Pieces
 
 ```
-extension ── sendNativeMessage ──► apple-passwords-plus-host      (launched by the browser)
+extension ── sendNativeMessage ──► better-passwords-host      (launched by the browser)
                                         │ XPC, both sides check code signatures
                                         ▼
-                                   ApplePasswordsPlus --agent      (launched by launchd on demand)
+                                   BetterPasswords --agent      (launched by launchd on demand)
                                         │ Touch ID, then Accessibility
                                         ▼
                                    Apple's helper window (the browser's own copy)
@@ -18,12 +18,12 @@ extension ── sendNativeMessage ──► apple-passwords-plus-host      (lau
 
 | Part | What it does |
 |---|---|
-| `ApplePasswordsPlus` (setup) | The app you open. Connects your browsers (writes host manifests), turns on the agent, and asks for Accessibility. |
-| `ApplePasswordsPlus --agent` | Same executable, started by launchd when the host connects. Holds the Accessibility permission. Quits after a quiet minute. |
-| `apple-passwords-plus-host` | The native-messaging host the browser launches. No permissions; it only relays to the agent. |
+| `BetterPasswords` (setup) | The app you open. Connects your browsers (writes host manifests), turns on the agent, and asks for Accessibility. |
+| `BetterPasswords --agent` | Same executable, started by launchd when the host connects. Holds the Accessibility permission. Quits after a quiet minute. |
+| `better-passwords-host` | The native-messaging host the browser launches. No permissions; it only relays to the agent. |
 | `CompanionCore` | Everything testable: framing, code parsing, process checks, manifests. |
 
-The setup window and the agent are one executable with one signature. That's why the Accessibility permission you grant in setup also covers the agent, and why System Settings lists it as "Apple Passwords Plus".
+The setup window and the agent are one executable with one signature. That's why the Accessibility permission you grant in setup also covers the agent, and why System Settings lists it as "Better Passwords".
 
 ## Why the agent can't be pointed at the wrong window
 
@@ -53,8 +53,8 @@ Sign local builds with an Apple Development certificate and install them in /App
 cd apps/companion
 swift test
 scripts/bundle.sh --sign "Apple Development: Your Name (XXXXXXXXXX)"
-ditto "dist/Apple Passwords Plus.app" "/Applications/Apple Passwords Plus.app" && rm -rf dist/*.app
-open "/Applications/Apple Passwords Plus.app"
+ditto "dist/Better Passwords.app" "/Applications/Better Passwords.app" && rm -rf dist/*.app
+open "/Applications/Better Passwords.app"
 ```
 
 Why both:
@@ -64,12 +64,12 @@ Why both:
 In the window:
 1. Click **Connect**. This writes the bridge manifest (the same one as `scripts/setup-mac.sh`) and the companion's manifest for every installed browser.
 2. Click **Turn On** for the background agent. macOS may ask you to allow it in Login Items.
-3. Click **Allow…**, then turn on Apple Passwords Plus under Accessibility.
+3. Click **Allow…**, then turn on Better Passwords under Accessibility.
 4. Optionally, click **Allow…** for Contacts. The extension then suggests the emails on your contact card ("Me") in sign-up forms. They are read when the extension asks, kept in the extension's memory for ten minutes, and never stored.
 
 Reload the extension. Its popup now unlocks with Touch ID, and so does the inline menu ("Unlock with Touch ID").
 
-If the agent won't start, `launchctl print gui/$(id -u)/org.applepasswordsplus.agent` shows why. "Launch Constraint Violation" in a crash report means a stale registration: click **Remove Setup**, then **Turn On** again. A rebuilt app also re-registers by itself when its window opens.
+If the agent won't start, `launchctl print gui/$(id -u)/io.github.fanckush.betterpasswords.agent` shows why. "Launch Constraint Violation" in a crash report means a stale registration: click **Remove Setup**, then **Turn On** again. A rebuilt app also re-registers by itself when its window opens.
 
 Signed releases: `scripts/bundle.sh --version 1.2.3 --sign "Developer ID Application: …"`, then notarize. See [release.md](release.md).
 
@@ -78,3 +78,14 @@ Signed releases: `scripts/bundle.sh --version 1.2.3 --sign "Developer ID Applica
 - macOS reports Apple's helper at its real location (`/System/Volumes/Preboot/Cryptexes/…`), behind the `/System/Cryptexes` link. Both are accepted; the code-signature check is what matters.
 - The agent finds the browser through its parent process. A browser that launches native hosts through an intermediate process would not work. Chromium browsers and Firefox launch hosts directly.
 - Accessibility can be removed only in System Settings. **Remove Setup** in the app removes the browser connections and the agent.
+
+## Moving from Apple Passwords Plus
+
+Better Passwords uses new app, background-agent and native-host identities. Existing permissions and browser registrations do not transfer automatically.
+
+1. Open the old **Apple Passwords Plus** app and choose **Remove Setup** before deleting it. If you used only the old setup script, run that version with `--uninstall` before replacing it.
+2. Remove the old extension, then install Better Passwords and move **Better Passwords.app** to Applications.
+3. Connect your browsers again, turn on the new background agent, and grant Accessibility and optional Contacts access to Better Passwords.
+4. The former GitHub build shared Apple's extension ID. After removing that build, you can re-enable or reinstall Apple's iCloud Passwords extension.
+
+The new setup does not remove old registrations, migrate extension settings or modify your saved passwords. Old permission entries can be removed manually in System Settings.

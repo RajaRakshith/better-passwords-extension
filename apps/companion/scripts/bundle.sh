@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds "Apple Passwords Plus.app" into apps/companion/dist.
+# Builds "Better Passwords.app" into apps/companion/dist.
 #
 # Usage: scripts/bundle.sh [--version X.Y.Z] [--sign "Developer ID Application: Name (TEAMID)"]
 #
@@ -24,14 +24,14 @@ done
 swift build -c release --arch arm64 --arch x86_64
 bin="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
 
-app="dist/Apple Passwords Plus.app"
-host="$app/Contents/MacOS/apple-passwords-plus-host"
+app="dist/Better Passwords.app"
+host="$app/Contents/MacOS/better-passwords-host"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Library/LaunchAgents"
-cp "$bin/ApplePasswordsPlus" "$app/Contents/MacOS/"
-cp "$bin/apple-passwords-plus-host" "$host"
+cp "$bin/BetterPasswords" "$app/Contents/MacOS/"
+cp "$bin/better-passwords-host" "$host"
 cp Resources/Info.plist "$app/Contents/Info.plist"
-cp Resources/org.applepasswordsplus.agent.plist "$app/Contents/Library/LaunchAgents/"
+cp Resources/io.github.fanckush.betterpasswords.agent.plist "$app/Contents/Library/LaunchAgents/"
 plutil -replace CFBundleShortVersionString -string "$version" "$app/Contents/Info.plist"
 plutil -replace CFBundleVersion -string "$version" "$app/Contents/Info.plist"
 
@@ -48,12 +48,12 @@ fi
 
 # The host first: an ad-hoc app pins the host's exact build, so its hash goes into Info.plist
 # before the app itself is signed.
-codesign "$@" --identifier org.applepasswordsplus.companion.host "$host"
+codesign "$@" --identifier io.github.fanckush.betterpasswords.companion.host "$host"
 if [ "$identity" = "-" ]; then
     cdhash="$(codesign -dvvv "$host" 2>&1 | sed -n 's/^CDHash=//p')"
-    plutil -insert APPHostCDHash -string "$cdhash" "$app/Contents/Info.plist"
+    plutil -insert BPHostCDHash -string "$cdhash" "$app/Contents/Info.plist"
 fi
-codesign "$@" --entitlements Resources/ApplePasswordsPlus.entitlements "$app"
+codesign "$@" --entitlements Resources/BetterPasswords.entitlements "$app"
 codesign --verify --strict --deep "$app"
 
 echo "built $app ($version, signed: $identity)"

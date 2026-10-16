@@ -274,7 +274,7 @@ globalThis.Kit = (() => {
           <div class="dm-lights" aria-hidden="true"><i></i><i></i><i></i></div>
           <div class="dm-omni"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H4a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-.5V4.5A3.5 3.5 0 0 0 8 1Zm2 5H6V4.5a2 2 0 1 1 4 0Z"/></svg><span class="dm-url">example.com/login</span></div>
           <span class="dm-tb" aria-hidden="true">${PUZZLE}</span>
-          <button class="dm-tb dm-ext" type="button" aria-expanded="false" aria-controls="${id}-pop" title="Apple Passwords Plus"><img src="${ICON}" alt="Apple Passwords Plus" /></button>
+          <button class="dm-tb dm-ext" type="button" aria-expanded="false" aria-controls="${id}-pop" title="Better Passwords"><img src="${ICON}" alt="Better Passwords" /></button>
           <div class="dm-popup" id="${id}-pop" hidden></div>
         </div>
         <div class="dm-page">
@@ -421,7 +421,7 @@ globalThis.Kit = (() => {
       rows = [];
       menu.innerHTML = `
         <div class="dm-unlock">
-          <b>Unlock Apple Passwords Plus</b>
+          <b>Unlock Better Passwords</b>
           <p>Type the six digits your Mac is showing. Once, until you quit.</p>
           <input class="dm-code" inputmode="numeric" maxlength="6" autocomplete="off" aria-label="Six digits from your Mac" placeholder="······" />
           <div class="dm-unlock-foot">
@@ -639,7 +639,7 @@ globalThis.Kit = (() => {
     // Mirrors the real popup: the site's logins, recent passwords, Open Passwords App, then settings.
     function renderPopup() {
       popup.innerHTML = isLocked
-        ? `<div class="dm-pop-h">Apple Passwords Plus</div><p class="dm-pop-p">Locked. Click a field on the page to unlock it.</p>`
+        ? `<div class="dm-pop-h">Better Passwords</div><p class="dm-pop-p">Locked. Click a field on the page to unlock it.</p>`
         : `<div class="dm-pop-h">example.com</div>
            <ul class="dm-pop-logins">${logins.map((u) => `<li><button type="button" class="dm-pop-row" data-user="${u}" title="Fill ${u}"><i>${u[0].toUpperCase()}</i>${u}</button></li>`).join("")}</ul>
            ${recent.length ? `<div class="dm-pop-sec"><h5>Recent passwords</h5><ul class="dm-pop-logins">${recent.map((r, i) => `<li class="dm-pop-recent"><span>${r.user}</span><button type="button" data-copy="${i}">Copy</button></li>`).join("")}</ul><p class="dm-pop-hint">New passwords from this session, in case one wasn't saved.</p></div>` : ""}

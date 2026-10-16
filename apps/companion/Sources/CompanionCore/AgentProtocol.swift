@@ -35,14 +35,14 @@ public enum CompanionError: String, Error, Codable, Sendable, CaseIterable {
 
     public var message: String {
         switch self {
-        case .needsAccessibility: "Open Apple Passwords Plus and allow Accessibility."
+        case .needsAccessibility: "Open Better Passwords and allow Accessibility."
         case .cancelled: "Touch ID was cancelled."
         case .noHelper: "Apple's password helper isn't running for this browser."
         case .noCode: "No pairing code is on screen."
         case .untrustedCaller: "The request didn't come from a trusted browser connection."
-        case .agentUnavailable: "The Apple Passwords Plus app isn't running. Open it to finish setup."
+        case .agentUnavailable: "The Better Passwords app isn't running. Open it to finish setup."
         case .busy: "Already reading a code."
-        case .needsContacts: "Allow Contacts in Apple Passwords Plus to suggest your email addresses."
+        case .needsContacts: "Allow Contacts in Better Passwords to suggest your email addresses."
         }
     }
 }

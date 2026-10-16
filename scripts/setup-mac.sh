@@ -1,5 +1,5 @@
 #!/bin/sh
-# One-time setup for the store build of Apple Passwords Plus on macOS.
+# One-time setup for the store build of Better Passwords on macOS.
 #
 # Browsers only let an extension start a native program that a small JSON "host manifest" names.
 # macOS ships one for Apple's own extension; this script writes the same kind of file for ours.
@@ -12,10 +12,10 @@
 
 set -eu
 
-HOST="org.applepasswordsplus.bridge"
+HOST="io.github.fanckush.betterpasswords.bridge"
 HELPER="/System/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper"
 CHROMIUM_IDS="kmkmelgjmhnfhhbgagdaejamhodddfmh"
-FIREFOX_ID="apple-passwords-plus@applepasswordsplus.org"
+FIREFOX_ID="better-passwords@fanckush.github.io"
 SUPPORT="$HOME/Library/Application Support"
 
 # Chromium-based browsers, as paths of their user data directory under Application Support
@@ -85,7 +85,7 @@ write_manifest() {
     cat >"$file" <<EOF
 {
   "name": "$HOST",
-  "description": "Apple Passwords Plus: connects the extension to Apple's password helper",
+  "description": "Better Passwords: connects the extension to Apple's password helper",
   "path": "$HELPER",
   "type": "stdio",
   "$2": [$3]
@@ -117,7 +117,7 @@ if [ -d "$SUPPORT/Firefox" ]; then
 fi
 
 if [ "$uninstall" -eq 1 ]; then
-    echo "Done. Apple Passwords Plus can no longer reach Apple's helper."
+    echo "Done. Better Passwords can no longer reach Apple's helper."
 else
-    echo "Done. Click the Apple Passwords Plus icon in your browser to pair."
+    echo "Done. Click the Better Passwords icon in your browser to pair."
 fi

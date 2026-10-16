@@ -36,7 +36,7 @@ const QUICK_MS = 3_500;
 function within<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(
-      () => reject(new CompanionError("The Apple Passwords Plus app didn't answer.", "timeout")),
+      () => reject(new CompanionError("The Better Passwords app didn't answer.", "timeout")),
       ms,
     );
     promise.then(
@@ -116,7 +116,7 @@ export class Companion {
       this.#emails = { value, at: this.now() };
       return value;
     }
-    if ((reply?.version ?? 1) < 2) throw new CompanionError("Update the Apple Passwords Plus app.", "outdated");
+    if ((reply?.version ?? 1) < 2) throw new CompanionError("Update the Better Passwords app.", "outdated");
     throw new CompanionError(reply?.message ?? "Couldn't read your contact card.", reply?.error ?? "failed");
   }
 
@@ -125,6 +125,6 @@ export class Companion {
     const reply = (await within(this.sendNative(COMPANION_HOST, { type: "open-app" }), QUICK_MS)) as
       | HostResponse
       | undefined;
-    if (!reply?.ok) throw new CompanionError("Open Apple Passwords Plus from your Applications folder.", "failed");
+    if (!reply?.ok) throw new CompanionError("Open Better Passwords from your Applications folder.", "failed");
   }
 }
