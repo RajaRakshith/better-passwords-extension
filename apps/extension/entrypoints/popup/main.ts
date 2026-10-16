@@ -84,19 +84,12 @@ async function unlockWithTouchId(status: Status) {
 }
 
 function showSetup(status: Status) {
-  const steps =
-    status.variant === "github"
-      ? h(
-          "p",
-          {},
-          "This build uses Apple's own connection. Make sure macOS 14 or later is signed in to iCloud with Passwords turned on, and that Apple's iCloud Passwords extension is disabled.",
-        )
-      : h(
-          "div",
-          { class: "card padded" },
-          h("p", {}, "Run this once in Terminal, then reopen this popup:"),
-          h("code", { textContent: SETUP_COMMAND }),
-        );
+  const steps = h(
+    "div",
+    { class: "card padded" },
+    h("p", {}, "Connect this browser using the companion Mac app, or run this once in Terminal:"),
+    h("code", { textContent: SETUP_COMMAND }),
+  );
   show(
     h("h1", { textContent: "One-time setup" }),
     h("p", {}, "This browser can't reach Apple Passwords yet."),

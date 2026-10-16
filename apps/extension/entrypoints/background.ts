@@ -1,6 +1,6 @@
 import type { FieldKind } from "@/src/autofill/fields.ts";
 import { Companion } from "@/src/companion.ts";
-import { nativeHostFor } from "@/src/config.ts";
+import { BRIDGE_HOST } from "@/src/config.ts";
 import { fillCredentials } from "@/src/fill.ts";
 import { HEADER_RULE_ID, HideMyEmail, headerRule, ICloudError } from "@/src/icloud/hide-my-email.ts";
 import {
@@ -49,7 +49,7 @@ interface GeneratedLogin {
 
 export default defineBackground(() => {
   const session = new Session({
-    openTransport: () => new PortTransport(nativeHostFor(__VARIANT__)),
+    openTransport: () => new PortTransport(BRIDGE_HOST),
     browserName: import.meta.env.FIREFOX ? "Firefox" : "Chrome",
   });
 
@@ -67,7 +67,7 @@ export default defineBackground(() => {
   });
 
   const companion = new Companion();
-  const status = (): Status => ({ ...session.status, variant: __VARIANT__ });
+  const status = (): Status => ({ ...session.status });
 
   /** Status plus whether the companion app can unlock with Touch ID. */
   async function fullStatus(): Promise<Status> {

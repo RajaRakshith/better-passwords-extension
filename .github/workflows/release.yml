@@ -46,9 +46,9 @@ jobs:
         working-directory: apps/extension
         run: >
           bunx wxt submit
-          --chrome-zip .output/*-store-chrome.zip
-          --firefox-zip .output/*-store-firefox.zip
-          --firefox-sources-zip .output/*-sources.zip
+          --chrome-zip .output/better-passwords-*-chrome.zip
+          --firefox-zip .output/better-passwords-*-firefox.zip
+          --firefox-sources-zip .output/better-passwords-*-sources.zip
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}

@@ -30,7 +30,6 @@ What we protect: the user's passwords in Apple Passwords, and the session that c
 | Plain-http pages leak a filled password | Only `https:` pages (and `http://localhost` for development) are filled. |
 | A longer-lived session widens the window of exposure | Sessions end on browser quit or "Lock". The optional "lock when my Mac locks" setting covers a walked-away Mac. Sensitive items still trigger macOS's own Touch ID prompt when read. |
 | The setup script is tampered with | It is plain, short shell. It writes only one JSON file per browser, pointing at Apple's signed helper, and needs no admin rights. Read it before running. |
-| The GitHub build borrows Apple's public key | That only decides the extension ID; it grants no access Apple's own design doesn't already give that ID. It is clearly labelled and can't be published to stores. |
 | A future macOS change in Apple's helper | Fail closed: unknown replies and protocol versions are rejected. |
 | A page reads a generated password | It's generated in the background and shown only in our menu frame. The page gets it only when the user picks it, into that page's own new-password fields. |
 | A generated password is filled but never saved | macOS asks before saving, and the user may decline. Until Apple Passwords lists the login, the password stays in memory, shown in the popup for the session. |

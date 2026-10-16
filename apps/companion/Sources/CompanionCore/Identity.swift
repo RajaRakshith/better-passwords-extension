@@ -15,13 +15,11 @@ public enum Identity {
 
     /// Native host that reaches the companion (for Touch ID).
     public static let companionHost = "io.github.fanckush.betterpasswords.companion"
-    /// Native host that reaches Apple's helper for the store build (what setup-mac.sh writes).
+    /// Native host that reaches Apple's helper (what setup-mac.sh writes).
     public static let bridgeHost = "io.github.fanckush.betterpasswords.bridge"
 
-    /// Our store build's ID. The bridge allows only this one: Apple's ID has Apple's own host.
-    public static let storeExtensionID = "kmkmelgjmhnfhhbgagdaejamhodddfmh"
-    /// The GitHub build borrows Apple's ID, so the companion host allows it too.
-    public static let appleExtensionID = "pejdijmoenmkgeppbflobdenhhabjlaj"
+    /// Our Chromium extension ID, shared by store and unpacked installations.
+    public static let extensionID = "kmkmelgjmhnfhhbgagdaejamhodddfmh"
     public static let firefoxExtensionID = "better-passwords@fanckush.github.io"
 
     public static let helperPath =

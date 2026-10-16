@@ -25,8 +25,8 @@ body:
     attributes:
       label: Build
       options:
-        - Store build (installed from a store, set up with setup-mac.sh or the companion app)
-        - GitHub build (loaded unpacked)
+        - Browser store installation
+        - GitHub download (loaded unpacked, with the same one-time setup)
         - Built from source
     validations:
       required: true

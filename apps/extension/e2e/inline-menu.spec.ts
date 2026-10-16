@@ -1,4 +1,4 @@
-import { STORE_EXTENSION_ID } from "../src/config.ts";
+import { EXTENSION_ID } from "../src/config.ts";
 import { choose, expect, menuFrame, PAIRING_CODE, test } from "./fixtures.ts";
 
 test("unlocks from the inline menu and fills the form", async ({ context, siteUrl }) => {
@@ -171,7 +171,7 @@ test("a page can't frame the menu at its well-known address", async ({ context, 
     frame.src = `${url}#nonce=forged&mode=logins`;
     frame.id = "forged";
     document.body.append(frame);
-  }, `chrome-extension://${STORE_EXTENSION_ID}/menu.html`);
+  }, `chrome-extension://${EXTENSION_ID}/menu.html`);
   await page.waitForTimeout(1_000);
   await expect(page.frameLocator("#forged").locator("#menu")).toHaveCount(0);
 });
@@ -189,7 +189,7 @@ test("refuses everything a copy of the menu without our nonce asks", async ({ co
   // a copy of menu.html with a made-up nonce, as a page that found its address could frame it
   // (Firefox has no per-session address): it lists nothing
   const forged = await context.newPage();
-  await forged.goto(`chrome-extension://${STORE_EXTENSION_ID}/menu.html#nonce=forged&mode=logins`);
+  await forged.goto(`chrome-extension://${EXTENSION_ID}/menu.html#nonce=forged&mode=logins`);
   await expect(forged.getByText("wasn't opened by Better Passwords")).toBeVisible();
   await expect(forged.getByText("e2e-user")).toHaveCount(0);
 

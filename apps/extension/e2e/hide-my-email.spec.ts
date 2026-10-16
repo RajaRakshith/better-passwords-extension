@@ -1,5 +1,5 @@
 import type { BrowserContext, Frame } from "@playwright/test";
-import { STORE_EXTENSION_ID } from "../src/config.ts";
+import { EXTENSION_ID } from "../src/config.ts";
 import { choose, expect, menuFrame, test } from "./fixtures.ts";
 
 /** A fake icloud.com for the extension's background, recording what it was asked. */
@@ -145,7 +145,7 @@ test("the iCloud header rule exists only while Hide My Email is on", async ({ co
     expect.objectContaining({
       condition: {
         requestDomains: ["icloud.com"],
-        initiatorDomains: [STORE_EXTENSION_ID],
+        initiatorDomains: [EXTENSION_ID],
         tabIds: [-1],
         resourceTypes: ["xmlhttprequest"],
       },

@@ -1,7 +1,7 @@
 import Foundation
 
 /// The small JSON files that let a browser start a native program for an extension. The companion
-/// writes two per browser: one for Apple's helper (the store build's bridge, the same file
+/// writes two per browser: one for Apple's helper (our bridge, the same file
 /// scripts/setup-mac.sh writes) and one for its own native host.
 public struct HostManifest: Codable, Equatable, Sendable {
     public var name: String
@@ -64,12 +64,12 @@ public enum HostManifests {
                     name: Identity.bridgeHost,
                     description: "Better Passwords: Apple's password helper",
                     path: Identity.helperPath,
-                    allowedOrigins: [origin(Identity.storeExtensionID)]),
+                    allowedOrigins: [origin(Identity.extensionID)]),
                 HostManifest(
                     name: Identity.companionHost,
                     description: "Better Passwords: Touch ID companion",
                     path: hostPath,
-                    allowedOrigins: [origin(Identity.storeExtensionID), origin(Identity.appleExtensionID)]),
+                    allowedOrigins: [origin(Identity.extensionID)]),
             ]
         case .firefox:
             return [

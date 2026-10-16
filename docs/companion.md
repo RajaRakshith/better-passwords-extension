@@ -1,6 +1,6 @@
 # Touch ID companion
 
-The companion is an optional Mac app (`apps/companion`, Swift). With it, the extension unlocks with Touch ID instead of asking you to type the 6-digit code. Without it, everything else works the same.
+The companion is an optional Mac app (`apps/companion`, Swift). With it, the extension unlocks with Touch ID instead of asking you to type the 6-digit code. Without it, password filling and generation still work through the setup script. Contact email suggestions also need the companion.
 
 Touch ID can't replace the code in Apple's protocol: the code is the pairing password. Instead, after you confirm with Touch ID, the companion reads the code off Apple's own window and hands it to the extension. That needs the Accessibility permission, which the companion holds so that the browser never needs it.
 

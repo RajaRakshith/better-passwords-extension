@@ -5,13 +5,13 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { type BrowserContext, test as base, chromium, expect, type Frame, type Page } from "@playwright/test";
-import { COMPANION_HOST, STORE_EXTENSION_ID, STORE_HOST } from "../src/config.ts";
+import { BRIDGE_HOST, COMPANION_HOST, EXTENSION_ID } from "../src/config.ts";
 
 // lets tests intercept the extension background's own requests (a fake iCloud for Hide My Email)
 process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS = "1";
 
 export const PAIRING_CODE = "246810";
-const extensionPath = resolve(import.meta.dirname, "../.output/store-chrome-mv3");
+const extensionPath = resolve(import.meta.dirname, "../.output/chrome-mv3");
 const fakeHelper = resolve(import.meta.dirname, "../../../packages/fake-helper/src/main.ts");
 const fakeCompanion = resolve(import.meta.dirname, "../../../packages/fake-helper/src/companion-main.ts");
 
@@ -29,7 +29,7 @@ function writeHost(dir: string, name: string, script: string) {
       description: "test double for e2e tests",
       path,
       type: "stdio",
-      allowed_origins: [`chrome-extension://${STORE_EXTENSION_ID}/`],
+      allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
     }),
   );
 }
@@ -46,7 +46,7 @@ function profileWithFakeHelper(companion: CompanionMode, declineSaves: boolean, 
   const log = join(dir, "helper.log");
   writeHost(
     dir,
-    STORE_HOST,
+    BRIDGE_HOST,
     `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}" FAKE_HELPER_LOG="${log}"${declineSaves ? " FAKE_HELPER_SAVE=decline" : ""}\nexec "${bun}" "${fakeHelper}"\n`,
   );
   if (companion !== "none") {
@@ -174,7 +174,7 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
   },
   popupUrl: async ({ context }, use) => {
     if (context.serviceWorkers().length === 0) await context.waitForEvent("serviceworker");
-    await use(`chrome-extension://${STORE_EXTENSION_ID}/popup.html`);
+    await use(`chrome-extension://${EXTENSION_ID}/popup.html`);
   },
 });
 

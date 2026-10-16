@@ -1,25 +1,44 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "wxt";
-import {
-  APPLE_PUBLIC_KEY,
-  DISPLAY_NAME,
-  FILL_MATCHES,
-  FIREFOX_EXTENSION_ID,
-  STORE_PUBLIC_KEY,
-  type Variant,
-} from "./src/config.ts";
-
-const variant: Variant = process.env.VARIANT === "github" ? "github" : "store";
+import { DISPLAY_NAME, EXTENSION_PUBLIC_KEY, FILL_MATCHES, FIREFOX_EXTENSION_ID } from "./src/config.ts";
 
 export default defineConfig({
-  outDirTemplate: `${variant}-{{browser}}-mv{{manifestVersion}}{{modeSuffix}}`,
-  zip: { artifactTemplate: `{{name}}-{{packageVersion}}-${variant}-{{browser}}.zip` },
-  vite: () => ({ define: { __VARIANT__: JSON.stringify(variant) } }),
+  outDirTemplate: "{{browser}}-mv{{manifestVersion}}{{modeSuffix}}",
+  zip: {
+    artifactTemplate: "better-passwords-{{packageVersion}}-{{browser}}.zip",
+    sourcesTemplate: "better-passwords-{{packageVersion}}-sources.zip",
+    // Reviewers need the workspace protocol package and root lockfile to reproduce the build.
+    sourcesRoot: fileURLToPath(new URL("../../", import.meta.url)),
+    includeSources: [
+      "package.json",
+      "bun.lock",
+      "tsconfig.base.json",
+      "README.md",
+      "CONTRIBUTING.md",
+      "LICENSE",
+      "NOTICE",
+      "PRIVACY.md",
+      "SECURITY.md",
+      "biome.json",
+      "lefthook.yml",
+      "commitlint.config.js",
+      "vitest.config.ts",
+      "apps/extension/**",
+      "packages/**",
+      "scripts/**",
+      "docs/**",
+    ],
+    excludeSources: [
+      "**/.output/**",
+      "**/.wxt/**",
+      "**/node_modules/**",
+      "**/test-results/**",
+      "**/playwright-report/**",
+    ],
+  },
   manifest: ({ browser }) => {
-    if (variant === "github" && browser === "firefox") {
-      throw new Error("The github build borrows Apple's Chrome extension ID and is Chromium-only.");
-    }
     return {
-      name: variant === "github" ? `${DISPLAY_NAME} (GitHub build)` : DISPLAY_NAME,
+      name: DISPLAY_NAME,
       description: "Fill passwords from Apple Passwords, pairing far less often.",
       permissions: [
         "nativeMessaging",
@@ -53,7 +72,7 @@ export default defineConfig({
               },
             },
           }
-        : { key: variant === "github" ? APPLE_PUBLIC_KEY : STORE_PUBLIC_KEY }),
+        : { key: EXTENSION_PUBLIC_KEY }),
     };
   },
 });

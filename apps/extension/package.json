@@ -5,17 +5,15 @@
   "type": "module",
   "description": "Autofill from Apple Passwords in Chromium browsers and Firefox",
   "scripts": {
-    "dev": "VARIANT=store wxt",
-    "dev:github": "VARIANT=github wxt",
-    "build:store": "VARIANT=store wxt build",
-    "build:github": "VARIANT=github wxt build",
-    "build:firefox": "VARIANT=store wxt build -b firefox",
-    "build:all": "bun run build:store && bun run build:github && bun run build:firefox",
-    "zip:all": "VARIANT=store wxt zip && VARIANT=github wxt zip && VARIANT=store wxt zip -b firefox",
+    "dev": "wxt",
+    "build:chrome": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "build:all": "bun run build:chrome && bun run build:firefox",
+    "zip:all": "wxt zip && wxt zip -b firefox",
     "typecheck": "wxt prepare && tsc --noEmit",
-    "test:e2e": "bun run build:store && playwright test",
+    "test:e2e": "bun run build:chrome && playwright test",
     "postinstall": "wxt prepare",
-    "lint:firefox": "web-ext lint --source-dir .output/store-firefox-mv2 --warnings-as-errors"
+    "lint:firefox": "web-ext lint --source-dir .output/firefox-mv2 --warnings-as-errors"
   },
   "dependencies": {
     "@app/protocol": "workspace:*"

@@ -49,16 +49,16 @@ The product name is **Better Passwords**. Use the separate compatibility line:
 
 **Remote code:** No. All code ships in the package.
 
-**Data usage:** Declare **Authentication information** (passwords and usernames are read to fill them). Certify that data is not sold, not used for unrelated purposes, and not used for creditworthiness. Nothing is transmitted off the device.
+**Data usage:** Declare **Authentication information** (passwords and usernames are read to fill them). Certify that data is not sold, not used for unrelated purposes, and not used for creditworthiness. Password lookup and filling are local; opt-in Hide My Email sends requests and site labels to the user's iCloud account.
 
 **Privacy policy URL:** `https://github.com/fanckush/apple-passwords-plus/blob/main/PRIVACY.md`
 
 ## Firefox Add-ons
 
 - **Data collection:** the manifest declares `data_collection_permissions: { required: ["none"] }`. Before submitting, check whether opt-in Hide My Email (it sends the site's hostname to the user's own iCloud as an address label) needs an optional category such as `websiteActivity`.
-- **Source code:** the build bundles code, so upload the sources zip (`bun run zip:all` makes `…-sources.zip`).
+- **Source code:** the build bundles code, so upload the sources zip (`bun run zip:all` makes `better-passwords-<version>-sources.zip`). It includes the workspace packages and root lockfile; run the reviewer commands from its root.
 - **Notes for reviewers:**
-  > Built with Bun 1.3 and WXT. To reproduce: `bun install --frozen-lockfile && bun run --filter @app/extension build:firefox`. The output is `apps/extension/.output/store-firefox-mv2`. The extension uses native messaging to reach Apple's PasswordManagerBrowserExtensionHelper, which ships with macOS. Testing needs a Mac signed in to iCloud and the setup in scripts/setup-mac.sh.
+  > Built with Bun 1.3 and WXT. To reproduce: `bun install --frozen-lockfile --ignore-scripts && bun run --filter @app/extension build:firefox`. The output is `apps/extension/.output/firefox-mv2`. The extension uses native messaging to reach Apple's PasswordManagerBrowserExtensionHelper, which ships with macOS. Testing needs a Mac signed in to iCloud and the setup in scripts/setup-mac.sh.
 
 ## Screenshots to take (1280×800)
 

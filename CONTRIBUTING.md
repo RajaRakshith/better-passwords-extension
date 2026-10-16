@@ -9,7 +9,7 @@ You need [Bun](https://bun.sh) 1.3 or later. A Mac is only needed for live testi
 ```sh
 bun install          # also installs the git hooks (lefthook)
 bun run check        # lint + typecheck + unit tests
-bun run build        # store + GitHub + Firefox builds into apps/extension/.output
+bun run build        # Chromium + Firefox packages into apps/extension/.output
 bun run test:e2e     # Playwright: real Chromium + the fake helper (run `bunx playwright install chromium` once)
 ```
 
@@ -21,7 +21,7 @@ bun run test:e2e     # Playwright: real Chromium + the fake helper (run `bunx pl
 | `packages/protocol` | The helper protocol: SRP pairing, encrypted channel, queries |
 | `apps/companion` | The optional Touch ID companion app (Swift; `swift test`, `scripts/bundle.sh`) |
 | `packages/fake-helper` | Test doubles of Apple's helper and of the companion's host |
-| `scripts/setup-mac.sh` | One-time setup for the store build |
+| `scripts/setup-mac.sh` | One-time browser setup |
 | `docs/` | Architecture, protocol, threat model, releasing |
 
 The UI uses no framework: plain TypeScript and DOM via the small `h()` helper in `apps/extension/src/ui/h.ts`. Please keep it that way.
@@ -33,9 +33,9 @@ Use a throwaway browser profile, so your everyday profile and Apple's extension 
 ```sh
 bun run build
 PROFILE=$(mktemp -d)
-scripts/setup-mac.sh --user-data-dir "$PROFILE"     # store build only
+scripts/setup-mac.sh --user-data-dir "$PROFILE"
 open -na "Google Chrome" --args --user-data-dir="$PROFILE" \
-  --load-extension="$PWD/apps/extension/.output/store-chrome-mv3"
+  --load-extension="$PWD/apps/extension/.output/chrome-mv3"
 ```
 
 Use a **new profile directory after every rebuild**, or reload the extension on its extensions page. Relaunching an existing profile can keep running the previous build's background worker, which talks past the new content scripts and fails silently.

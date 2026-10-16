@@ -21,24 +21,17 @@ Apple Passwords / iCloud Keychain
 |---|---|
 | `packages/protocol` | Client for the helper's protocol: SRP-6a pairing, the AES-GCM channel, login and password queries. Pure TypeScript with no browser APIs, so it is unit-tested directly. |
 | `packages/fake-helper` | A test double of Apple's helper. Used in-process by unit tests and as a real native-messaging host by the e2e tests. |
-| `apps/extension` | The WXT extension: background worker, popup, the page-fill function, and the build variants. |
+| `apps/extension` | The WXT extension: background worker, popup, the page-fill function, and the browser packages. |
 | `apps/companion` | The optional Touch ID companion app (Swift). See [companion.md](companion.md). |
-| `scripts/setup-mac.sh` | One-time setup for the store build (see below). |
+| `scripts/setup-mac.sh` | One-time browser setup (see below). |
 
-## Two builds, one codebase
+## One identity, separate browser packages
 
-A browser only lets an extension start a native program if a small JSON *host manifest* names that extension's ID. macOS installs one, `com.apple.passwordmanager`, which allows only Apple's own extension IDs.
+Better Passwords uses its own extension identity whether installed from a browser store or loaded unpacked from GitHub. Both use `io.github.fanckush.betterpasswords.bridge`, registered once by `scripts/setup-mac.sh` or the optional companion app. The manifest points at Apple's unmodified helper; the browser still launches that helper directly.
 
-| | Store build (`VARIANT=store`) | GitHub build (`VARIANT=github`) |
-|---|---|---|
-| Extension ID | our own | Apple's (the manifest carries Apple's public key) |
-| Host | `io.github.fanckush.betterpasswords.bridge` | `com.apple.passwordmanager` |
-| Setup | `scripts/setup-mac.sh` (or the companion app) writes our host manifest, which points at Apple's unmodified helper | none, uses Apple's own manifest |
-| Distribution | Chrome Web Store, Firefox Add-ons | zip on GitHub releases, loaded unpacked |
-| Browsers | Chromium browsers, Firefox | Chromium browsers only |
-| Next to Apple's extension | yes | no: it has the same ID, so disable Apple's first |
+macOS's preinstalled `com.apple.passwordmanager` manifest allows only Apple's extension IDs. Better Passwords does not reuse those IDs or alter Apple's registration, and can be installed alongside Apple's extension.
 
-The only differences between the two builds are the manifest `key`, the host name and the display name. They are selected in `apps/extension/wxt.config.ts` and `src/config.ts`.
+Chromium uses the project's stable public key and extension ID. Firefox has its own add-on identity and manifest format. Build output lives in `chrome-mv3` and `firefox-mv2`; GitHub and store distribution do not select different runtime behavior. The companion host allows only Better Passwords' own browser identities.
 
 ## Why the browser has to launch Apple's helper
 

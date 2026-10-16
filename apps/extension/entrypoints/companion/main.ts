@@ -1,5 +1,5 @@
 import "./style.css";
-import { companionDownloadUrlFor, REPO_URL } from "@/src/config.ts";
+import { COMPANION_DOWNLOAD_URL, REPO_URL } from "@/src/config.ts";
 import { send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { h } from "@/src/ui/h.ts";
@@ -22,7 +22,7 @@ async function render() {
 
   const primary = h("a", {
     class: "button primary",
-    href: installed ? "#" : companionDownloadUrlFor(__VARIANT__),
+    href: installed ? "#" : COMPANION_DOWNLOAD_URL,
     textContent: installed ? "Open Companion App" : "Download for Mac",
   });
   if (installed) {

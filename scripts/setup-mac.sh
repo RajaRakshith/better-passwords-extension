@@ -1,5 +1,5 @@
 #!/bin/sh
-# One-time setup for the store build of Better Passwords on macOS.
+# One-time setup for Better Passwords on macOS.
 #
 # Browsers only let an extension start a native program that a small JSON "host manifest" names.
 # macOS ships one for Apple's own extension; this script writes the same kind of file for ours.

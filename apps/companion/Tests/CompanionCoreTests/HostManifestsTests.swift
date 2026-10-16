@@ -41,14 +41,14 @@ import Testing
         }
     }
 
-    @Test func companionHostAllowsBothChromiumBuilds() {
+    @Test func bothChromiumHostsAllowOnlyOurExtension() {
         let chrome = HostManifests.browsers[0]
-        let companion = HostManifests.manifests(for: chrome, hostPath: "/h").first { $0.name == Identity.companionHost }
-        #expect(
-            companion?.allowedOrigins == [
-                "chrome-extension://kmkmelgjmhnfhhbgagdaejamhodddfmh/",
-                "chrome-extension://pejdijmoenmkgeppbflobdenhhabjlaj/",
-            ])
+        let manifests = HostManifests.manifests(for: chrome, hostPath: "/h")
+        #expect(manifests.count == 2)
+        for manifest in manifests {
+            #expect(manifest.allowedOrigins == ["chrome-extension://kmkmelgjmhnfhhbgagdaejamhodddfmh/"])
+            #expect(manifest.allowedExtensions == nil)
+        }
     }
 
     @Test func uninstallRemovesOnlyOurFiles() throws {

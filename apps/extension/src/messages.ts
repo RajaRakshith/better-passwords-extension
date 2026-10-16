@@ -96,7 +96,6 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export interface Status extends SessionStatus {
-  variant: "store" | "github";
   /** The companion app, checked only while locked (unlocked sessions don't need it). */
   companion?: CompanionState;
   /** True when the user wants Touch ID and the companion is ready for it. */

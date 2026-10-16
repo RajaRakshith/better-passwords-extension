@@ -1,7 +1,7 @@
 // Browser logos and setup buttons for the visitor's browser.
 // Markup hooks:
-//   <a data-add>      primary button. Gets the store link, `Add to <Browser>`, and the logo.
-//   <a data-other>    secondary link to the other store ("Also for Firefox").
+//   <a data-add>      primary button. Gets the setup link, `Get for <Browser>`, and the logo.
+//   <a data-other>    secondary setup link for the other browser.
 //   [data-browser]    replaced with the browser's name, for headlines.
 //   [data-note]       replaced with a line for Safari or non-Mac visitors; left alone otherwise.
 // Preview another browser with ?browser=firefox|chrome|edge|brave|arc|safari|windows.
