@@ -1,6 +1,7 @@
 // Shared product identity. Browser packages and download routes use the same configuration.
 
 export const DISPLAY_NAME = "Better Passwords";
+export const STORE_TITLE = "Better Passwords - for Apple Passwords";
 
 export const REPO_URL = "https://github.com/fanckush/better-passwords-extension";
 export const SETUP_COMMAND = `curl -fsSL ${REPO_URL}/raw/main/scripts/setup-mac.sh | sh`;
@@ -15,13 +16,13 @@ export const HELPER_PATH =
   "/System/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper";
 
 /**
- * Project-owned development key, giving Chromium builds the stable ID kmkmelgjmhnfhhbgagdaejamhodddfmh.
- * Replace with the Chrome Web Store's public key once the listing exists.
+ * Chrome Web Store public key, keeping unpacked builds on the published extension ID.
+ * Store ZIPs omit the key field; the store supplies the identity when signing.
  */
 export const EXTENSION_PUBLIC_KEY =
-  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9CWVpaas10FNP4dB6E7x/Ln9MYeR5HXFBC7WvXfEgJ397qj6wSDBFOMJAWqqhN6/xSO7OPUbbdW3Jm+RfaKofcREe6/9oq9U4e15IisZoi0aeYjB7kay2tRnTj1WNqAHaxFwetz4L1oWRxa3D7pBck5RfqcPdAf0JTD5uwoxaQJkfj+iJMXeR6fhIDYXNy3yCEZ7/5T0o4lKC2y4FbrcH5vzJVuETkhlxigDeRC/09F+gLWuUmu7/qs4SzzCLhC5kzleGClLpgqPZbXll9IE0M55JHVlXllk0TLn9Y/JYfBpkHLXHDrQfo5HFizKST5uuWfMwTtQ49hjdsvf0Dt9JQIDAQAB";
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp2/Wf1H7oA9Gtl9Ek7ELlADUenHSFBzcfTaH0whjkdyrb1SlmHATUiZrEjSwAc0LuGveH+dcB+adUZYshW8sfNH+/ymV8UI5QbYfeECSg7hcLOe6AKFD+zPr1C0ezHkAfcvPvIxZyZFvUu+wJ2kKVkunObN0ccth2+W0xubpQF3xZ7OcGS8nsjekjFM6rIIQw1X74lKS5tqLwh74THpNmnNsR3RajFUPajT9U8jXPOO3Azf5wvNwrr0qIUGRuzvHawzDWvuB/+RBahE8rFYL45u8nxgTCLdt/EuEdMeUmoGgDmzD87fnFQo0OQxZ3bzz3sc35bnAjdmt+aS2RObMQwIDAQAB";
 
-export const EXTENSION_ID = "kmkmelgjmhnfhhbgagdaejamhodddfmh";
+export const EXTENSION_ID = "ocongmkplhijgajnipnhhggfcjfdilgj";
 export const FIREFOX_EXTENSION_ID = "better-passwords@fanckush.github.io";
 
 /** Pages where the inline menu runs and passwords may be filled (see src/url-policy.ts). */

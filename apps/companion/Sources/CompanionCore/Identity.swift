@@ -19,7 +19,7 @@ public enum Identity {
     public static let bridgeHost = "io.github.fanckush.betterpasswords.bridge"
 
     /// Our Chromium extension ID, shared by store and unpacked installations.
-    public static let extensionID = "kmkmelgjmhnfhhbgagdaejamhodddfmh"
+    public static let extensionID = "ocongmkplhijgajnipnhhggfcjfdilgj"
     public static let firefoxExtensionID = "better-passwords@fanckush.github.io"
 
     public static let helperPath =

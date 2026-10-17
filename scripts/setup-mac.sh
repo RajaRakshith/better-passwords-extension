@@ -14,7 +14,7 @@ set -eu
 
 HOST="io.github.fanckush.betterpasswords.bridge"
 HELPER="/System/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper"
-CHROMIUM_IDS="kmkmelgjmhnfhhbgagdaejamhodddfmh"
+CHROMIUM_IDS="ocongmkplhijgajnipnhhggfcjfdilgj"
 FIREFOX_ID="better-passwords@fanckush.github.io"
 SUPPORT="$HOME/Library/Application Support"
 

@@ -29,7 +29,7 @@ import Testing
                 with: Data(contentsOf: chrome.appendingPathComponent("io.github.fanckush.betterpasswords.bridge.json")))
             as? [String: Any]
         #expect(bridge?["path"] as? String == Identity.helperPath)
-        #expect(bridge?["allowed_origins"] as? [String] == ["chrome-extension://kmkmelgjmhnfhhbgagdaejamhodddfmh/"])
+        #expect(bridge?["allowed_origins"] as? [String] == ["chrome-extension://ocongmkplhijgajnipnhhggfcjfdilgj/"])
         #expect(!FileManager.default.fileExists(atPath: support.appendingPathComponent("Chromium").path))
     }
 
@@ -46,7 +46,7 @@ import Testing
         let manifests = HostManifests.manifests(for: chrome, hostPath: "/h")
         #expect(manifests.count == 2)
         for manifest in manifests {
-            #expect(manifest.allowedOrigins == ["chrome-extension://kmkmelgjmhnfhhbgagdaejamhodddfmh/"])
+            #expect(manifest.allowedOrigins == ["chrome-extension://ocongmkplhijgajnipnhhggfcjfdilgj/"])
             #expect(manifest.allowedExtensions == nil)
         }
     }

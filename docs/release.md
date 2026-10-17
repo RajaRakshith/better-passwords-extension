@@ -23,7 +23,9 @@ When an extension release is due, CI:
 4. attests build provenance for the zips (`gh attestation verify <zip> -R fanckush/better-passwords-extension`),
 5. submits to the Chrome Web Store and Firefox Add-ons, only once the repository variable `STORE_SUBMIT` is `true` and these secrets exist: `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`, `FIREFOX_EXTENSION_ID`, `FIREFOX_JWT_ISSUER`, `FIREFOX_JWT_SECRET`. `bunx wxt submit init` walks through creating them.
 
-Every distribution uses the same Chromium identity. Before the first store submission, replace `EXTENSION_PUBLIC_KEY` and `EXTENSION_ID` in `apps/extension/src/config.ts` (and `CHROMIUM_IDS` in `scripts/setup-mac.sh`) with the values the Chrome Web Store assigns.
+The Chrome draft has ID `ocongmkplhijgajnipnhhggfcjfdilgj`. Its public key is in `apps/extension/src/config.ts`; the setup script and companion allow this same ID. Store ZIPs omit the manifest `key` field, which Chrome rejects on upload; unpacked builds retain it. If the store identity ever changes, update the extension config, setup script, companion identity and tests, README and website links together.
+
+The initial 1.0.0 packages are draft candidates. Do not enable `STORE_SUBMIT` until the listing content has been reviewed and the first submissions are complete. Firefox’s final **Submit Version** can publish the add-on; an unfinished form is not a published release.
 
 ## Companion app
 

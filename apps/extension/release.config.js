@@ -9,7 +9,8 @@ export default {
     [
       "@semantic-release/exec",
       {
-        prepareCmd: "npm pkg set version=${nextRelease.version} && bun run zip:all",
+        prepareCmd:
+          "npm pkg set version=${nextRelease.version} && bun install --lockfile-only --ignore-scripts && bun run zip:all",
         successCmd: 'echo "version=${nextRelease.version}" >> "$GITHUB_OUTPUT"',
       },
     ],

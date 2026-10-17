@@ -1,9 +1,28 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "wxt";
-import { DISPLAY_NAME, EXTENSION_PUBLIC_KEY, FILL_MATCHES, FIREFOX_EXTENSION_ID } from "./src/config.ts";
+import { DISPLAY_NAME, EXTENSION_PUBLIC_KEY, FILL_MATCHES, FIREFOX_EXTENSION_ID, STORE_TITLE } from "./src/config.ts";
 
 export default defineConfig({
   outDirTemplate: "{{browser}}-mv{{manifestVersion}}{{modeSuffix}}",
+  hooks: {
+    // Chrome rejects the development identity field in store uploads. Keep it in unpacked
+    // builds so native messaging still uses the same ID during local development.
+    "zip:extension:start": async (wxt) => {
+      if (wxt.config.browser !== "chrome") return;
+      const path = join(wxt.config.outDir, "manifest.json");
+      const manifest = JSON.parse(await readFile(path, "utf8"));
+      delete manifest.key;
+      await writeFile(path, JSON.stringify(manifest));
+    },
+    "zip:extension:done": async (wxt) => {
+      if (wxt.config.browser !== "chrome") return;
+      const path = join(wxt.config.outDir, "manifest.json");
+      const manifest = JSON.parse(await readFile(path, "utf8"));
+      await writeFile(path, JSON.stringify({ ...manifest, key: EXTENSION_PUBLIC_KEY }));
+    },
+  },
   zip: {
     artifactTemplate: "better-passwords-{{packageVersion}}-{{browser}}.zip",
     sourcesTemplate: "better-passwords-{{packageVersion}}-sources.zip",
@@ -38,7 +57,8 @@ export default defineConfig({
   },
   manifest: ({ browser }) => {
     return {
-      name: DISPLAY_NAME,
+      name: STORE_TITLE,
+      short_name: DISPLAY_NAME,
       description: "Fill passwords from Apple Passwords, pairing far less often.",
       permissions: [
         "nativeMessaging",

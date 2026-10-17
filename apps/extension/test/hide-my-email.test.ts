@@ -120,10 +120,10 @@ describe("HideMyEmail", () => {
 
 describe("headerRule", () => {
   it("only touches our background's requests to iCloud", () => {
-    expect(headerRule("kmkmelgjmhnfhhbgagdaejamhodddfmh").condition).toEqual({
+    expect(headerRule("ocongmkplhijgajnipnhhggfcjfdilgj").condition).toEqual({
       requestDomains: ["icloud.com"],
       // a website's service worker has no tab either: only requests we start qualify
-      initiatorDomains: ["kmkmelgjmhnfhhbgagdaejamhodddfmh"],
+      initiatorDomains: ["ocongmkplhijgajnipnhhggfcjfdilgj"],
       tabIds: [-1],
       resourceTypes: ["xmlhttprequest"],
     });

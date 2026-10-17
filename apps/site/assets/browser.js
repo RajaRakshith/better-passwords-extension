@@ -10,7 +10,7 @@
   // Store listings. Placeholders until the extension is published: swap in the real listing URLs.
   // Every Chromium browser (Edge, Brave, Arc…) installs from the Chrome Web Store.
   const STORE = {
-    chrome: "https://chromewebstore.google.com/detail/better-passwords/EXTENSION_ID",
+    chrome: "https://chromewebstore.google.com/detail/better-passwords/ocongmkplhijgajnipnhhggfcjfdilgj",
     firefox: "https://addons.mozilla.org/firefox/addon/better-passwords/",
   };
 
