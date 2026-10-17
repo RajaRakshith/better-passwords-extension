@@ -1,5 +1,6 @@
 import "./style.css";
 import { DISPLAY_NAME } from "@/src/config.ts";
+import { requestHideMyEmailConsent } from "@/src/icloud/consent.ts";
 import type { EmailSuggestions } from "@/src/messages.ts";
 import { bindToMenu, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
@@ -312,7 +313,7 @@ function hintRow(): HTMLButtonElement {
   const hint = row(
     ENVELOPE,
     "Use Hide My Email",
-    "A unique, random address that forwards to your inbox (iCloud+)",
+    "Sends site labels and aliases to Apple using your iCloud sign-in (iCloud+)",
     () => void enableHideMyEmail(),
   );
   return dismissible(hint, "Don't suggest Hide My Email again", () => send({ type: "dismiss-hide-my-email-hint" }));
@@ -321,6 +322,10 @@ function hintRow(): HTMLButtonElement {
 async function enableHideMyEmail() {
   render(message("Turning on Hide My Email…"));
   try {
+    if (!(await requestHideMyEmailConsent())) {
+      renderEmail(lastSuggestions);
+      return;
+    }
     renderEmail(await send({ type: "enable-hide-my-email", nonce }));
   } catch (e) {
     render(message(messageOf(e), true));

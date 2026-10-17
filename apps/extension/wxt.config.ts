@@ -67,8 +67,11 @@ export default defineConfig({
               gecko: {
                 id: FIREFOX_EXTENSION_ID,
                 strict_min_version: "142.0",
-                // nothing leaves the Mac: passwords go from Apple's helper to the page, nowhere else
-                data_collection_permissions: { required: ["none"] },
+                // Mozilla's transmission rules include the local native password helper.
+                data_collection_permissions: {
+                  required: ["authenticationInfo", "browsingActivity"],
+                  optional: ["personallyIdentifyingInfo", "websiteContent"],
+                },
               },
             },
           }

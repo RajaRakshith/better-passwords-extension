@@ -2,6 +2,7 @@ import type { FieldKind } from "@/src/autofill/fields.ts";
 import { Companion } from "@/src/companion.ts";
 import { BRIDGE_HOST } from "@/src/config.ts";
 import { fillCredentials } from "@/src/fill.ts";
+import { hasHideMyEmailConsent } from "@/src/icloud/consent.ts";
 import { HEADER_RULE_ID, HideMyEmail, headerRule, ICloudError } from "@/src/icloud/hide-my-email.ts";
 import {
   type AutofillStatus,
@@ -251,18 +252,34 @@ export default defineBackground(() => {
 
   // Hide My Email: the header rule exists only while the user has it turned on (session rules
   // don't outlive the browser, so it's set again on every start)
-  const hideMyEmail = new HideMyEmail();
+  const hideMyEmail = new HideMyEmail(async (input, init) => {
+    if (!(await getSettings()).hideMyEmail || !(await hasHideMyEmailConsent())) {
+      throw new Error("Turn on Hide My Email and allow its data permissions first.");
+    }
+    return fetch(input, init);
+  });
   async function syncHideMyEmail(on: boolean) {
+    on = on && (await hasHideMyEmailConsent());
     await browser.declarativeNetRequest.updateSessionRules({
       removeRuleIds: [HEADER_RULE_ID],
       ...(on ? { addRules: [headerRule(new URL(browser.runtime.getURL("/")).host)] } : {}),
     });
-    if (!on) hideMyEmail.reset();
+    if (!on) {
+      hideMyEmail.reset();
+      addressCache.clear();
+    }
   }
   void getSettings().then((settings) => syncHideMyEmail(settings.hideMyEmail));
 
   // each site's Hide My Email address, remembered for a minute so reopening the menu is instant
   const addressCache = new Map<string, { address: string | undefined; at: number }>();
+  if (import.meta.env.FIREFOX) {
+    browser.permissions.onRemoved.addListener(() => {
+      void hasHideMyEmailConsent().then((allowed) => {
+        if (!allowed) return saveSettings({ hideMyEmail: false });
+      });
+    });
+  }
 
   /** What sign-up email fields offer: Hide My Email above, the user's own emails below. */
   async function emailSuggestions(tabId: number): Promise<EmailSuggestions> {
@@ -272,7 +289,9 @@ export default defineBackground(() => {
   }
 
   async function hideMyEmailState(tabId: number, settings: Settings): Promise<HideMyEmailState> {
-    if (!settings.hideMyEmail) return { state: settings.hideMyEmailHint ? "hint" : "off" };
+    if (!settings.hideMyEmail || !(await hasHideMyEmailConsent())) {
+      return { state: settings.hideMyEmailHint ? "hint" : "off" };
+    }
     const url = await tabUrl(tabId);
     if (!url) return { state: "off" };
     try {
@@ -327,6 +346,9 @@ export default defineBackground(() => {
   }
 
   async function saveSettings(changes: Partial<Settings>): Promise<Settings> {
+    if (changes.hideMyEmail && !(await hasHideMyEmailConsent())) {
+      throw new Error("Allow Hide My Email's data permissions before turning it on.");
+    }
     const before = await getSettings();
     const settings = { ...before, ...changes };
     await browser.storage.local.set({ settings });

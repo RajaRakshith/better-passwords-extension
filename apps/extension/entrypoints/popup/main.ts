@@ -1,5 +1,6 @@
 import "./style.css";
 import { DISPLAY_NAME, REPO_URL, SETUP_COMMAND } from "@/src/config.ts";
+import { requestHideMyEmailConsent } from "@/src/icloud/consent.ts";
 import { type LoginsResult, type Settings, type Status, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { bindCodeInput } from "@/src/ui/code-input.ts";
@@ -259,8 +260,17 @@ async function footer(status: Status) {
   const settings: Settings = await send({ type: "get-settings" });
   const option: Option = (key, label, detail, disabled = false) => {
     const toggle = h("input", { type: "checkbox", checked: !disabled && settings[key], disabled });
-    toggle.addEventListener("change", () => {
-      void send({ type: "set-settings", settings: { [key]: toggle.checked } });
+    toggle.addEventListener("change", async () => {
+      try {
+        if (key === "hideMyEmail" && toggle.checked && !(await requestHideMyEmailConsent())) {
+          toggle.checked = false;
+          return;
+        }
+        await send({ type: "set-settings", settings: { [key]: toggle.checked } });
+      } catch (error) {
+        toggle.checked = settings[key];
+        await refresh(messageOf(error));
+      }
     });
     return h(
       "label",
@@ -280,7 +290,7 @@ async function footer(status: Status) {
     h("h2", { textContent: "Suggestions" }),
     option("inlineMenu", "When signing in", "saved passwords"),
     option("generatePasswords", "When signing up", "strong passwords and emails"),
-    option("hideMyEmail", "Hide My Email", "uses icloud.com"),
+    option("hideMyEmail", "Hide My Email", "sends site labels and aliases to Apple using your iCloud sign-in"),
     h("hr"),
     macAppSection(status, option),
     h("hr"),

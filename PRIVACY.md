@@ -1,22 +1,22 @@
 # Privacy policy
 
-Better Passwords (the browser extension and the optional Mac companion app) collects nothing. It sends nothing anywhere, except to Apple's iCloud if you turn on Hide My Email.
+Better Passwords (the browser extension and the optional Mac companion app) handles the information described below to fill and save logins and suggest email addresses. The developer receives none of this information. Password operations use Apple’s local macOS helper; optional Hide My Email connects to Apple’s iCloud.
 
 ## What it handles, and where
 
-- **Passwords and usernames.** The extension asks the password helper built into macOS for the usernames saved for the site you're on. When you choose a login, it asks for that password and fills it into the page. It doesn't store usernames or passwords, and nothing leaves your Mac except what you fill into a website yourself.
+- **Passwords and usernames.** The extension asks the password helper built into macOS for the usernames saved for the site you're on. When you choose a login, it asks for that password and fills it into the page. Usernames, passwords and generated-password suggestions are held temporarily in browser memory, not saved to the extension’s disk storage. When you submit a form using a generated password, the extension asks Apple’s local helper to save the login in Apple Passwords. Apple manages any iCloud Keychain syncing. Filling a login makes it available to the website you choose.
 - **The site's address.** The extension sends the current site's hostname to Apple's helper, on your Mac, to look up matching logins.
 - **The pairing key.** Pairing with your Mac creates a key that stays in the browser's memory until you quit the browser or press Lock. It is never written to disk.
 - **Settings.** Your settings (for example, whether to show suggestions in login fields) are saved in the browser's extension storage on your device.
-- **Hide My Email (only if you turn it on).** The extension asks iCloud, using your icloud.com sign-in in that browser, for your Hide My Email addresses and creates new ones when you ask. It sends iCloud the site's hostname as the new address's label, as Safari does. Nothing is stored by the extension.
-- **Your email addresses (companion app only, if you allow Contacts).** The companion app reads the emails on your own contact card and passes them to the extension on your Mac, which shows them in sign-up forms. They're kept in memory for ten minutes and never stored or sent anywhere.
+- **Hide My Email (only if you turn it on).** The extension asks iCloud, using your icloud.com sign-in in that browser, for your Hide My Email addresses and creates new ones when you ask. It sends iCloud the site's hostname as the new address's label, as Safari does. The extension keeps temporary service information and site-specific alias suggestions in memory. It does not save them to disk. Your iCloud session cookies authenticate these requests to Apple. In Firefox, enabling this feature requests optional data permissions; revoking them prevents further iCloud requests.
+- **Your email addresses (companion app only, if you allow Contacts).** The companion app reads the emails on your own contact card and passes them to the extension on your Mac, which shows them in sign-up forms. They're kept in memory for ten minutes and are not saved to disk by the companion. Choosing an address fills it into the website’s form.
 - **The pairing code (companion app only).** After you confirm with Touch ID, the companion app reads the 6-digit code from Apple's pairing window and passes it to the extension on your Mac. It isn't stored.
 
 ## What it doesn't do
 
 - No analytics, telemetry, crash reporting or ads.
 - No servers. The project runs no backend. The only network requests are to Apple's iCloud, for Hide My Email, and only if you turn it on.
-- No selling or sharing of data, because none is collected.
+- No sale of data or use for advertising. Information is shared only with Apple’s services, the local helper/companion, and the websites you choose, as described above.
 
 ## Contact
 
