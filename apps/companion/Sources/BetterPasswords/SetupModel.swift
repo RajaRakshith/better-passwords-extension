@@ -39,8 +39,9 @@ final class SetupModel {
         }
         Task {
             // the asynchronous unregister returns once macOS has dropped the old registration;
-            // registering right after the synchronous one keeps the old build's pin
-            try? await agent.unregister()
+            // registering right after the synchronous one keeps the old build's pin. A fresh handle,
+            // as older compilers won't send the main actor's one to the nonisolated method
+            try? await SMAppService.agent(plistName: Identity.agentPlistName).unregister()
             perform { try agent.register() }
             UserDefaults.standard.set(build, forKey: key)
         }
