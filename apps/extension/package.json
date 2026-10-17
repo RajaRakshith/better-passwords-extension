@@ -12,6 +12,7 @@
     "zip:all": "wxt zip && wxt zip -b firefox",
     "typecheck": "wxt prepare && tsc --noEmit",
     "test:e2e": "bun run build:chrome && playwright test",
+    "capture:store": "bun run build:chrome && playwright test --config media.config.ts",
     "postinstall": "wxt prepare",
     "lint:firefox": "web-ext lint --source-dir .output/firefox-mv2 --warnings-as-errors"
   },

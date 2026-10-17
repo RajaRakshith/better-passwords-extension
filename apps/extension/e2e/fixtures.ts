@@ -5,6 +5,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { type BrowserContext, test as base, chromium, expect, type Frame, type Page } from "@playwright/test";
+import type { VaultEntry } from "../../../packages/fake-helper/src/fake-helper.ts";
 import { BRIDGE_HOST, COMPANION_HOST, EXTENSION_ID } from "../src/config.ts";
 
 // lets tests intercept the extension background's own requests (a fake iCloud for Hide My Email)
@@ -35,10 +36,15 @@ function writeHost(dir: string, name: string, script: string) {
 }
 
 /** Registers the fake helper (and optionally the fake companion) inside a fresh profile. */
-function profileWithFakeHelper(companion: CompanionMode, declineSaves: boolean, companionEmails: string): string {
+export function profileWithFakeHelper(
+  companion: CompanionMode,
+  declineSaves: boolean,
+  companionEmails: string,
+  vaultEntries: VaultEntry[] = [{ hostname: "localhost", username: "e2e-user", password: "e2e-pass" }],
+): string {
   const dir = mkdtempSync(join(tmpdir(), "app-e2e-"));
   const vault = join(dir, "vault.json");
-  writeFileSync(vault, JSON.stringify([{ hostname: "localhost", username: "e2e-user", password: "e2e-pass" }]));
+  writeFileSync(vault, JSON.stringify(vaultEntries));
 
   // browsers start native hosts with a minimal PATH, so call bun by absolute path
   const bun = execSync("command -v bun", { encoding: "utf8" }).trim();

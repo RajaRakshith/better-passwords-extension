@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Northwind — Better Passwords demo</title>
+<style>
+:root { color-scheme: light; --ink:#142324; --muted:#61716e; --page:#f4f7f3; --surface:#fff; --line:#dce4dd; --aside:#eaf2ed; --accent:#126955; --field:#fff; }
+* { box-sizing:border-box; }
+body { margin:0; width:1280px; height:800px; overflow:hidden; background:var(--page); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+body.dark { color-scheme:dark; --ink:#eef6f0; --muted:#9eafa5; --page:#101b19; --surface:#192622; --line:#31453a; --aside:#20382e; --accent:#91dcbb; --field:#20302a; }
+header { height:66px; padding:28px 64px 0; display:flex; align-items:center; justify-content:space-between; }
+.brand { display:flex; gap:11px; align-items:center; font-size:17px; font-weight:650; letter-spacing:-.3px; }
+.brand img { height:28px; width:28px; border-radius:6px; }
+.platform { color:var(--muted); font-size:13px; }
+.hero { margin:28px 64px 24px; }
+h1 { font-size:44px; line-height:1.08; letter-spacing:-1.9px; margin:0 0 12px; font-weight:660; }
+.hero p { font-size:18px; line-height:1.45; color:var(--muted); margin:0; }
+.browser { margin:0 64px; height:530px; border:1px solid var(--line); border-radius:17px; background:var(--surface); box-shadow:0 14px 40px #142d2110; overflow:hidden; }
+.toolbar { height:45px; display:flex; align-items:center; gap:7px; padding:0 20px; border-bottom:1px solid var(--line); background:color-mix(in srgb,var(--surface) 94%,var(--ink)); }
+.dot { width:9px; height:9px; border-radius:50%; background:var(--line); }
+.address { margin:auto; width:420px; border:1px solid var(--line); background:var(--surface); color:var(--muted); border-radius:7px; height:27px; text-align:center; font-size:12px; line-height:26px; }
+.toolbar img { width:22px; height:22px; border-radius:5px; }
+.site { height:484px; display:grid; grid-template-columns:660px 1fr; }
+.main { padding:28px 0; }
+.site-brand { width:380px; margin:0 auto 21px; display:flex; align-items:center; gap:9px; font-weight:650; font-size:15px; }
+.northwind { background:var(--accent); width:21px; height:21px; border-radius:6px; color:var(--surface); text-align:center; line-height:21px; font-size:12px; }
+form { width:380px; margin:0 auto; }
+h2 { font-size:26px; letter-spacing:-.8px; margin:0 0 7px; font-weight:650; }
+.intro { font-size:13px; color:var(--muted); margin:0 0 23px; }
+label { display:block; font-size:12px; font-weight:550; margin:0 0 14px; }
+input { display:block; margin-top:7px; width:100%; height:43px; border:1px solid var(--line); border-radius:8px; background:var(--field); color:var(--ink); padding:0 12px; font:14px -apple-system,BlinkMacSystemFont,sans-serif; outline:none; }
+input:focus { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent); }
+button.submit { margin-top:4px; width:100%; height:42px; background:var(--accent); color:var(--surface); border:0; border-radius:8px; font:600 13px -apple-system,BlinkMacSystemFont,sans-serif; }
+aside { border-left:1px solid var(--line); background:var(--aside); padding:52px 39px; }
+.eyebrow { color:var(--accent); font-size:11px; font-weight:700; letter-spacing:1.6px; margin:0 0 22px; }
+aside h3 { font-size:31px; letter-spacing:-1px; line-height:1.16; margin:0 0 18px; font-weight:620; }
+#aside-copy { font-size:15px; color:var(--muted); line-height:1.55; margin:0 0 24px; }
+.pill { display:inline-flex; font-size:11px; color:var(--accent); padding:7px 10px; border:1px solid var(--line); border-radius:7px; }
+footer { margin:19px 65px 0; display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:11px; }
+#confirmation { display:none; color:var(--accent); font-size:12px; margin:8px 0 0; }
+</style>
+</head>
+<body>
+<header><div class="brand"><img src="/demo-icon.png" alt="">Better Passwords</div><div class="platform">A browser companion for Apple Passwords · macOS</div></header>
+<section class="hero"><h1 id="headline">Your Apple passwords. Right where you sign in.</h1><p id="subtitle">Choose a saved login without leaving the page.</p></section>
+<section class="browser">
+<div class="toolbar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><div class="address">northwind.example / sign-in</div><img src="/demo-icon.png" alt="Better Passwords"></div>
+<div class="site">
+<div class="main"><div class="site-brand"><span class="northwind">N</span>Northwind</div>
+<form id="demo-form"><h2 id="form-title">Welcome back.</h2><p class="intro" id="form-intro">Sign in to your Northwind workspace.</p>
+<label>Email address<input id="email" name="email" type="email" autocomplete="username"></label>
+<label>Password<input id="password" name="password" type="password" autocomplete="current-password"></label>
+<button class="submit" type="submit" id="submit">Sign in</button><p id="confirmation" role="status">You're signed in. This is a demo account.</p></form>
+</div>
+<aside><p class="eyebrow" id="eyebrow">01 / SIGN IN</p><h3 id="aside-title">The logins you already use.</h3><p id="aside-copy">Pick an account from the inline menu. Better Passwords fills the username and password you choose.</p><span class="pill" id="pill">Works with Apple Passwords</span></aside>
+</div>
+</section>
+<footer><span>Demo website and sample credentials. Actual extension interface.</span><span>Free & open source · Not affiliated with Apple Inc.</span></footer>
+<script>
+var params = new URLSearchParams(location.search);
+var scene = params.get("scene") || "signin";
+if (params.get("theme") === "dark") document.body.classList.add("dark");
+var content = {
+ signin: ["Your Apple passwords. Right where you sign in.", "Choose a saved login without leaving the page.", "01 / SIGN IN", "The logins you already use.", "Pick an account from the inline menu. Better Passwords fills the username and password you choose.", "Works with Apple Passwords"],
+ dark: ["Feels at home. Even after dark.", "The same inline suggestions, with a native dark appearance.", "02 / DARK MODE", "A familiar Mac feel.", "A compact menu that follows your system appearance and keeps the focus on the form.", "Light & dark appearance"],
+ generate: ["A strong password, right from the start.", "Create a new login without inventing another password.", "03 / SIGN UP", "Make a stronger start.", "Choose a strong password or one without special characters. Save the new login in Apple Passwords when you submit.", "Generated in your browser"],
+ email: ["The right email for every new account.", "Use an iCloud alias or choose an address from your own contact card.", "04 / EMAIL SUGGESTIONS", "Keep your inbox in your hands.", "Hide My Email is optional and requires iCloud+. Contact-card suggestions use the optional Mac companion with your permission.", "Optional · iCloud+ / Mac companion"],
+ saved: ["New login. Same place for your passwords.", "Save generated logins back to Apple Passwords.", "05 / SAVE YOUR LOGIN", "Ready for your next sign-in.", "Generate it here, then keep it with the rest of your logins in Apple Passwords.", "Works with your existing password library"],
+ video: ["Your Apple passwords. Right where you sign in.", "Choose a saved login without leaving the page.", "BETTER PASSWORDS", "One account. One click.", "Watch a sample login fill from the real extension's inline menu. All information shown is demo data.", "Free & open source"]
+};
+var c = content[scene] || content.signin;
+["headline", "subtitle", "eyebrow", "aside-title", "aside-copy", "pill"].forEach((id,i)=> {document.getElementById(id).textContent=c[i];});
+if (["generate","email","saved"].includes(scene)) {
+ document.querySelector(".address").textContent="northwind.example / sign-up";
+ document.getElementById("form-title").textContent="Create your account.";
+ document.getElementById("form-intro").textContent="A fresh start for your next project.";
+ document.getElementById("email").setAttribute("autocomplete","email");
+ document.getElementById("password").setAttribute("autocomplete","new-password");
+ document.getElementById("submit").textContent="Create account";
+}
+document.getElementById("demo-form").addEventListener("submit", (e)=> {
+ e.preventDefault();
+ if (scene === "saved") history.pushState({}, "", "/account-created");
+ document.getElementById("confirmation").style.display="block";
+ document.getElementById("confirmation").textContent=scene==="video"?"You're signed in. This is a demo account.":"Your demo account is ready.";
+});
+</script>
+</body>
+</html>
