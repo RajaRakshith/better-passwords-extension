@@ -1,10 +1,10 @@
-# Store listings (draft)
+# Store listings
 
-Text and answers for the Chrome Web Store and Firefox Add-ons forms. Neither store has been submitted for publication. The Chrome draft has ID `ocongmkplhijgajnipnhhggfcjfdilgj`. Firefox has an incomplete submission at `better-passwords`; its details form must be reviewed before clicking Submit Version.
+The text and answers behind the [Chrome Web Store](https://chromewebstore.google.com/detail/better-passwords/ocongmkplhijgajnipnhhggfcjfdilgj) listing (ID `ocongmkplhijgajnipnhhggfcjfdilgj`) and the [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/better-passwords/) listing (`better-passwords`). Update this file when either listing changes.
 
-Reviewer build and testing instructions: [reviewer-build.md](reviewer-build.md). The first submission uses version 1.0.0. Public policy changes and setup-ID changes must be pushed before final submission.
+Reviewer build and testing instructions: [reviewer-build.md](reviewer-build.md). Screenshots and promotional art: [store-media.md](store-media.md).
 
-For Firefox, replace the screen-lock bullet below with “Lock any time from the toolbar popup.” Firefox summary: “Fill and save logins from Apple Passwords on your Mac, with inline suggestions and optional Touch ID and Hide My Email.”
+On Firefox, the screen-lock bullet reads “Lock any time from the toolbar popup.” Firefox summary: “Fill and save logins from Apple Passwords on your Mac, with inline suggestions and optional Touch ID and Hide My Email.”
 
 ## Name and compatibility
 
@@ -12,7 +12,7 @@ The product name is **Better Passwords**. Use the separate compatibility line:
 
 > A browser companion for Apple Passwords.
 
-`DISPLAY_NAME` in `apps/extension/src/config.ts` controls the extension name. Use the same name for the Mac companion. Describe Apple Passwords, iCloud and Touch ID as compatibility or features, without implying Apple authorship or endorsement. Every listing should carry "Not affiliated with or endorsed by Apple Inc." This branding does not establish trademark clearance or guarantee store approval.
+`DISPLAY_NAME` in `apps/extension/src/config.ts` controls the extension name. Use the same name for the Mac companion. Describe Apple Passwords, iCloud and Touch ID as compatibility or features, without implying Apple authorship or endorsement. Every listing carries "Not affiliated with or endorsed by Apple Inc."
 
 ## Short description (Chrome: 132 characters max)
 
@@ -57,7 +57,7 @@ The product name is **Better Passwords**. Use the separate compatibility line:
 
 **Remote code:** No. All code ships in the package.
 
-**Data usage:** Declare **Authentication information** (passwords/usernames), **Personally identifiable information** (email addresses), and **Web history** (site addresses used for lookup and alias labels). Certify that data is not sold, not used for unrelated purposes, and not used for creditworthiness. Password lookup and filling are local; opt-in Hide My Email sends requests and site labels to the user's iCloud account.
+**Data usage:** Declares **Authentication information** (passwords/usernames), **Personally identifiable information** (email addresses), and **Web history** (site addresses used for lookup and alias labels). Certifies that data is not sold, not used for unrelated purposes, and not used for creditworthiness. Password lookup and filling are local; opt-in Hide My Email sends requests and site labels to the user's iCloud account.
 
 **Privacy policy URL:** `https://github.com/fanckush/better-passwords-extension/blob/main/PRIVACY.md`
 
@@ -65,17 +65,7 @@ The product name is **Better Passwords**. Use the separate compatibility line:
 
 - **Data collection:** required `authenticationInfo` and `browsingActivity` describe the core local native-helper exchange. Optional `personallyIdentifyingInfo` and `websiteContent` cover Hide My Email aliases and iCloud session cookies. Firefox prompts when Hide My Email is enabled, and network requests check the permission grant. No data is sent to the developer.
 - **Platforms:** macOS only.
-- **Payment requirement:** disclose that the optional Hide My Email feature needs an Apple iCloud+ subscription; the extension itself is free.
-- **Source code:** the build bundles code, so upload the sources zip (`bun run zip:all` makes `better-passwords-<version>-sources.zip`). It includes the workspace packages and root lockfile; run the reviewer commands from its root.
+- **Payment requirement:** discloses that the optional Hide My Email feature needs an Apple iCloud+ subscription; the extension itself is free.
+- **Source code:** the build bundles code, so each version uploads the sources zip (`bun run zip:all` makes `better-passwords-<version>-sources.zip`). It includes the workspace packages and root lockfile; run the reviewer commands from its root.
 - **Notes for reviewers:**
   > Built with Bun 1.3.14 and WXT 0.21.4. To reproduce: `bun install --frozen-lockfile --ignore-scripts && bun run --filter @app/extension build:firefox`. The output is `apps/extension/.output/firefox-mv2`. The extension uses native messaging to reach Apple's PasswordManagerBrowserExtensionHelper, which ships with macOS. Testing needs a Mac signed in to iCloud and the setup in scripts/setup-mac.sh.
-
-## Screenshots to take (1280×800)
-
-1. The inline menu open under a login field (light mode).
-2. The same in dark mode.
-3. The popup listing logins for a site.
-4. The popup asking for the code, next to Apple's code window.
-5. The companion app's setup window.
-
-Use a test account. Never show real passwords, real usernames or real pairing codes.

@@ -31,7 +31,7 @@ Better Passwords uses its own extension identity whether installed from a browse
 
 macOS's preinstalled `com.apple.passwordmanager` manifest allows only Apple's extension IDs. Better Passwords does not reuse those IDs or alter Apple's registration, and can be installed alongside Apple's extension.
 
-Chromium uses the project's stable public key and extension ID. Firefox has its own add-on identity and manifest format. Build output lives in `chrome-mv3` and `firefox-mv2`; GitHub and store distribution do not select different runtime behavior. The companion host allows only Better Passwords' own browser identities.
+Chromium builds carry the Chrome Web Store's public key, so unpacked builds get the same extension ID as the store version. Firefox has its own add-on identity and manifest format. Build output lives in `chrome-mv3` and `firefox-mv2`; GitHub and store distribution do not select different runtime behavior. The companion host allows only Better Passwords' own browser identities.
 
 ## Why the browser has to launch Apple's helper
 

@@ -100,6 +100,6 @@ Thank you to their authors. [NOTICE](NOTICE) lists every project this one builds
 
 [MIT](LICENSE). The protocol knowledge builds on earlier Apache-2.0 projects, credited in [NOTICE](NOTICE).
 
-<!-- Store listings: the same placeholders as apps/site/assets/browser.js; swap both once published. -->
+<!-- Store listings: apps/site/assets/browser.js links the same pages. -->
 [chrome-web-store]: https://chromewebstore.google.com/detail/better-passwords/ocongmkplhijgajnipnhhggfcjfdilgj
 [firefox-addons]: https://addons.mozilla.org/firefox/addon/better-passwords/

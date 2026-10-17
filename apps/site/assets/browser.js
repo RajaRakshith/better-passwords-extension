@@ -7,7 +7,7 @@
 // Preview another browser with ?browser=firefox|chrome|edge|brave|arc|safari|windows.
 
 (() => {
-  // Store listings. Placeholders until the extension is published: swap in the real listing URLs.
+  // Store listings (README.md links the same pages).
   // Every Chromium browser (Edge, Brave, Arc…) installs from the Chrome Web Store.
   const STORE = {
     chrome: "https://chromewebstore.google.com/detail/better-passwords/ocongmkplhijgajnipnhhggfcjfdilgj",

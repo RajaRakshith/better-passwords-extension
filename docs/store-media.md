@@ -13,7 +13,7 @@ Five 1280×800 RGB PNGs show the real extension UI on a fictional Northwind webs
 | [Marquee promo tile](images/store/07-marquee-promo-tile.png) | 1400×560 branded artwork with a crop of the real extension screenshot |
 | [Sign-in demo](videos/store/signin-demo.webm) | A 10.6-second silent recording of selecting a login, filling the form, and signing in to the fictional site |
 
-The screenshots contain no alpha channel and meet Chrome's 1280×800 requirement. The video is 1280×800 VP9 WebM at 25 fps. Chrome's promotional video field requires a YouTube URL; the recording is prepared locally for review and has not been uploaded to a public video service.
+The screenshots contain no alpha channel and meet Chrome's 1280×800 requirement. The video is 1280×800 VP9 WebM at 25 fps. Chrome's promotional video field takes a YouTube URL, so the recording has to be uploaded there to appear on the listing.
 
 ## Recreate the media
 
@@ -31,8 +31,8 @@ The capture verifies that login suggestions render, generated passwords can be s
 
 ## Promotional artwork
 
-The small and marquee tiles use the existing SVG key icon, the screenshot set’s colors, and the headline “Apple Passwords. In your browser.” Both are opaque 24-bit RGB PNGs and are saved in the Chrome draft. The marquee shows a crop of the actual demo screenshot, with sample credentials. Nothing has been published.
+The small and marquee tiles use the existing SVG key icon, the screenshot set’s colors, and the headline “Apple Passwords. In your browser.” Both are opaque 24-bit RGB PNGs, used on the Chrome Web Store listing. The marquee shows a crop of the actual demo screenshot, with sample credentials.
 
 Editable layout: `apps/extension/media/promo.html`; renderer: `apps/extension/media/promo.spec.ts`. To regenerate only the two tiles, run `bunx playwright test --config media.config.ts promo.spec.ts` from `apps/extension`. The full `capture:store` command also regenerates them.
 
-Submission update: all five screenshots and the existing 128px icon have now also been uploaded, captioned and saved to Firefox’s product page. The gallery was visually verified after submission.
+The Firefox Add-ons listing shows the same five screenshots, with captions, and the 128px icon.
