@@ -11,3 +11,4 @@ playwright-report/
 .env.*
 # private keys must never be committed
 *.pem
+.wrangler/

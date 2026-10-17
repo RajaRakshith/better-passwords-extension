@@ -241,10 +241,11 @@ globalThis.Kit = (() => {
 
   // The interactive browser: a pretend site with a sign-in page and, optionally, a create-account page.
   // Options: locked (start locked), mode ("signin" | "signup"), switchable (show both), hint.
-  // Emits demo:ask, demo:unlock, demo:lock, demo:mode, demo:fill (detail.kind: login | hme | me | strong)
-  // and demo:submit (detail.mode).
-  // Frameless: just the site's card, for a page that is itself the browser. The page then passes its
-  // own toolbar button and popup element, and optionally a footer for the popup.
+  // Emits demo:ask, demo:unlock, demo:lock, demo:mode and demo:fill (detail.kind: login | hme | me | strong).
+  // There's no submit button, so nothing on the page reads as a real form to send.
+  // Intro: the card's fields hop one after another on load.
+  // Frameless: just the site's card, with no browser around it. The page then passes its own
+  // extension button and popup element, and optionally a footer for the popup.
   function demo(
     root,
     {
@@ -253,6 +254,7 @@ globalThis.Kit = (() => {
       switchable = false,
       hint = "Click the field to try it",
       frameless = false,
+      intro = false,
       toolbarButton = null,
       popupEl = null,
       popupFooter = () => "",
@@ -266,6 +268,12 @@ globalThis.Kit = (() => {
     shadow.adoptedStyleSheets = [demoSheet()];
     const box = document.createElement("div");
     box.className = frameless ? "dm frameless" : "dm";
+    // Intro: the card's fields hop one after another on load. The class goes once they're done, so
+    // fields that are hidden and shown again later don't replay it.
+    if (intro && !reduce) {
+      box.classList.add("intro");
+      setTimeout(() => box.classList.remove("intro"), 2500);
+    }
     shadow.append(box);
     const CARD = `
             <div class="dm-form">
@@ -273,20 +281,15 @@ globalThis.Kit = (() => {
               <div class="dm-h"></div>
               <label class="dm-l" for="${id}-a">Email</label>
               <input class="dm-email" id="${id}-a" type="text" role="combobox" aria-expanded="false" aria-controls="${id}-menu" aria-autocomplete="list" placeholder="you@example.com" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" data-protonpass-ignore="true" />
-              <p class="dm-err" hidden>Enter your email.</p>
               <div class="dm-hint" part="hint">${hint}</div>
               <label class="dm-l" for="${id}-b">Password</label>
               <div class="dm-pass-wrap"><input class="dm-pass masked" id="${id}-b" type="text" role="combobox" aria-expanded="false" aria-controls="${id}-menu" aria-autocomplete="list" spellcheck="false" autocapitalize="off" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" data-protonpass-ignore="true" /><button type="button" class="dm-eye" aria-label="Show password" aria-pressed="false">${EYE}</button></div>
-              <p class="dm-err" hidden>Enter a password.</p>
               <div class="dm-repeat" hidden>
                 <label class="dm-l" for="${id}-c">Repeat password</label>
                 <input class="dm-pass2 masked" id="${id}-c" type="text" spellcheck="false" autocapitalize="off" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other" data-protonpass-ignore="true" />
-                <p class="dm-err" hidden>Enter the same password again.</p>
               </div>
-              <button class="dm-submit" type="button"><span class="dm-spin" aria-hidden="true"></span><span class="dm-submit-label"></span></button>
               <div class="dm-menu" id="${id}-menu" hidden></div>
             </div>
-            <div class="dm-success" role="status" hidden></div>
             <slot></slot>`;
     box.innerHTML =
       (frameless
@@ -311,12 +314,6 @@ globalThis.Kit = (() => {
         <div class="dm-mac-head"><span class="dm-mac-icon">${KEY}</span><b>Passwords</b><small>now</small></div>
         <p>Enter this code in your browser</p>
         <div class="dm-mac-digits"></div>
-      </div>
-      <div class="dm-mac dm-save" role="dialog" aria-label="Save password" hidden>
-        <div class="dm-mac-head"><span class="dm-mac-icon">${KEY}</span><b>Passwords</b><small>now</small></div>
-        <p class="dm-save-q">Save this password for example.com?</p>
-        <p class="dm-save-user"></p>
-        <div class="dm-save-actions"><button type="button" data-save="no">Not Now</button><button type="button" data-save="yes" class="primary">Save Password</button></div>
       </div>`;
 
     const $ = (s) => box.querySelector(s);
@@ -326,14 +323,9 @@ globalThis.Kit = (() => {
       repeat = $(".dm-repeat"),
       menu = $(".dm-menu"),
       hintEl = $(".dm-hint");
-    const form = $(".dm-form"),
-      success = $(".dm-success"),
-      submit = $(".dm-submit"),
-      errs = [...box.querySelectorAll(".dm-err")];
     const ext = toolbarButton ?? $(".dm-ext"),
       popup = popupEl ?? $(".dm-popup"),
-      ask = $(".dm-ask"),
-      save = $(".dm-save");
+      ask = $(".dm-ask");
     const digits = roller($(".dm-mac-digits"));
     const logins = [...LOGINS];
     const recent = []; // new passwords not yet confirmed as saved, listed in the popup like the real one
@@ -341,10 +333,8 @@ globalThis.Kit = (() => {
       sel = 0,
       rows = [],
       field = email,
-      busy = false,
       hme = hideMyEmail(),
-      strong = strongPassword(),
-      used = new Set();
+      strong = strongPassword();
     const emit = (name, detail) => root.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
 
     const closeMenu = () => {
@@ -485,7 +475,7 @@ globalThis.Kit = (() => {
     }
 
     function openMenu(f) {
-      if (f.value || busy) return;
+      if (f.value) return;
       const same = field === f && !menu.hidden;
       field = f;
       // Nothing to offer here (a setting is off): no menu, like the real extension.
@@ -545,22 +535,11 @@ globalThis.Kit = (() => {
         flash(pass, pass2);
         recent.unshift({ user: email.value || "example.com", pw: value });
       } else email.value = value;
-      used.add(kind);
-      clearErrors();
       emit("demo:fill", { kind });
       if (mode === "signup" && kind !== "strong" && !pass.value && shadow.activeElement === email)
         setTimeout(() => pass.focus(), 350);
     }
 
-    // The fields the site checks: sign-up also asks for the password twice.
-    const fields = () => (mode === "signup" ? [email, pass, pass2] : [email, pass]);
-    const clearErrors = () =>
-      [email, pass, pass2].forEach((f, i) => {
-        if (f.value) {
-          errs[i].hidden = true;
-          f.classList.remove("invalid");
-        }
-      });
     // Fields lit up the moment they're filled, like the browser's own autofill.
     const flash = (...fs) =>
       fs.forEach((f) => {
@@ -569,79 +548,12 @@ globalThis.Kit = (() => {
         f.classList.add("filled");
       });
 
-    // The site's own submit: check the fields, a moment of "Signing in…", then the signed-in page.
-    async function send(e) {
-      e?.preventDefault();
-      if (busy) return;
-      const bad = fields().filter((f) => !f.value.trim() || (f === pass2 && f.value !== pass.value));
-      fields().forEach((f, i) => {
-        errs[i].hidden = !bad.includes(f);
-        f.classList.toggle("invalid", bad.includes(f));
-      });
-      errs[2].textContent = pass2.value ? "The passwords don't match." : "Enter the same password again.";
-      if (bad.length) return;
-      busy = true;
-      closeMenu();
-      submit.classList.add("busy");
-      $(".dm-submit-label").textContent = mode === "signin" ? "Signing in…" : "Creating account…";
-      await wait(900);
-      let saved = false;
-      if (mode === "signup") saved = await askToSave();
-      submit.classList.remove("busy");
-      busy = false;
-      showSignedIn(saved);
-      emit("demo:submit", { mode });
-    }
-
-    // Apple's helper asks macOS to save a new password once the page moves on with it.
-    function askToSave() {
-      $(".dm-save-user").textContent = email.value;
-      showPanel(save);
-      return new Promise((resolve) => {
-        save.querySelectorAll("[data-save]").forEach((b) => {
-          b.onclick = () => {
-            const yes = b.dataset.save === "yes";
-            if (yes) {
-              if (!logins.includes(email.value)) logins.push(email.value);
-              const i = recent.findIndex((r) => r.user === email.value);
-              if (i >= 0) recent.splice(i, 1);
-            }
-            hidePanel(save);
-            resolve(yes);
-          };
-        });
-      });
-    }
-
-    function showSignedIn(saved) {
-      const who = email.value;
-      const notes =
-        mode === "signin"
-          ? ""
-          : (used.has("hme")
-              ? `<p class="dm-note">That's a Hide My Email address. Mail to it reaches your inbox, and the site never sees your real one.</p>`
-              : "") +
-            (saved ? `<p class="dm-note">Your password is saved in Apple Passwords, on all your devices.</p>` : "");
-      success.innerHTML = `
-        <span class="dm-avatar" aria-hidden="true">${who[0]?.toUpperCase() ?? "?"}</span>
-        <b>${mode === "signin" ? "Welcome back" : "Account created"}</b>
-        <p>Signed in as ${who}</p>${notes}
-        <button type="button" class="dm-link">Sign out</button>`;
-      success.querySelector(".dm-link").addEventListener("click", () => setMode("signin"));
-      form.hidden = true;
-      success.hidden = false;
-    }
-
     function reset() {
       email.value = "";
       pass.value = "";
       pass2.value = "";
-      used = new Set();
-      errs.forEach((e) => {
-        e.hidden = true;
-      });
       [email, pass, pass2].forEach((f) => {
-        f.classList.remove("invalid", "filled");
+        f.classList.remove("filled");
       });
       hme = hideMyEmail();
       strong = strongPassword();
@@ -663,10 +575,7 @@ globalThis.Kit = (() => {
       eye.hidden = m !== "signup";
       repeat.hidden = m !== "signup";
       closeMenu();
-      form.hidden = false;
-      success.hidden = true;
       $(".dm-h").textContent = m === "signin" ? "Sign in" : "Create your account";
-      $(".dm-submit-label").textContent = m === "signin" ? "Sign in" : "Create account";
       const url = $(".dm-url");
       if (url) url.textContent = m === "signin" ? "example.com/login" : "example.com/signup";
       box.querySelectorAll(".dm-switch button").forEach((b) => {
@@ -688,11 +597,9 @@ globalThis.Kit = (() => {
       bindSettings(popup);
       popup.querySelectorAll(".dm-pop-row").forEach((b) => {
         b.addEventListener("click", () => {
-          if (!form.hidden) {
-            email.value = "";
-            pass.value = "";
-            fill("login", b.dataset.user);
-          }
+          email.value = "";
+          pass.value = "";
+          fill("login", b.dataset.user);
         });
       });
       popup.querySelectorAll("[data-copy]").forEach((b) => {
@@ -711,23 +618,16 @@ globalThis.Kit = (() => {
       if (open) renderPopup();
     };
 
-    pass2.addEventListener("input", clearErrors);
-    pass2.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") send(e);
-    });
     for (const f of [email, pass]) {
       f.addEventListener("focus", () => openMenu(f));
       f.addEventListener("click", () => openMenu(f));
-      f.addEventListener("input", () => {
-        closeMenu();
-        clearErrors();
-      });
+      f.addEventListener("input", closeMenu);
       f.addEventListener("keydown", (e) => {
         if (menu.hidden) {
           if (e.key === "ArrowDown") {
             openMenu(f);
             e.preventDefault();
-          } else if (e.key === "Enter") send(e);
+          }
           return;
         }
         if (e.key === "Escape") return closeMenu();
@@ -744,7 +644,6 @@ globalThis.Kit = (() => {
         }
       });
     }
-    submit.addEventListener("click", send);
     box.querySelectorAll(".dm-switch button").forEach((b) => {
       b.addEventListener("click", () => setMode(b.dataset.m));
     });
@@ -773,7 +672,6 @@ globalThis.Kit = (() => {
         pass,
         signup: $('.dm-switch [data-m="signup"]'),
         signin: $('.dm-switch [data-m="signin"]'),
-        submit,
         row0: rows[0],
       })[what];
     root.demo = {
@@ -796,48 +694,6 @@ globalThis.Kit = (() => {
   }
 
   // Mark the navigation tab for the section currently on screen.
-  function nav() {
-    // The page may scroll inside a .viewport under a fixed toolbar, like a browser window.
-    const scroller = document.querySelector(".viewport");
-    const onScroll = (fn) => {
-      (scroller ?? window).addEventListener("scroll", fn, { passive: true });
-      fn();
-    };
-    const watchSections = (links, mark) => {
-      const map = new Map();
-      links.forEach((a) => {
-        const id = a.getAttribute("href").slice(1);
-        const el = id && document.getElementById(id);
-        if (el) map.set(el, a);
-      });
-      if (!map.size || !("IntersectionObserver" in window)) return;
-      const io = new IntersectionObserver(
-        (entries) => {
-          for (const e of entries) if (e.isIntersecting) mark(map.get(e.target));
-        },
-        { rootMargin: "-45% 0px -50% 0px" },
-      );
-      map.forEach((_, el) => {
-        io.observe(el);
-      });
-      onScroll(() => {
-        if ((scroller ? scroller.scrollTop : scrollY) < innerHeight * 0.4) mark(null);
-      });
-    };
-
-    const toolbar = document.querySelector(".nav-chrome");
-    if (toolbar) {
-      const tabs = [...toolbar.querySelectorAll(".tab")];
-      const mark = (a) =>
-        tabs.forEach((t) => {
-          t.classList.toggle("on", t === (a ?? tabs[0]));
-        });
-      mark(null);
-      watchSections(tabs.slice(1), mark);
-    }
-  }
-  nav();
-
   return {
     reduce,
     reveal,

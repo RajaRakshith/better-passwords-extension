@@ -42,3 +42,15 @@ The companion job stays off until the repository variable `COMPANION_RELEASE` is
 `apps/companion/scripts/release.sh` builds a universal app, signs it with the hardened runtime, notarizes it, staples the ticket, and attaches the zip to a `companion-vX.Y.Z` GitHub release with build provenance.
 
 Signed builds trust their native host by team ID, so the app and the host must be signed with the same Developer ID.
+
+## Landing page
+
+`apps/site` is served as static files by the Cloudflare Worker `better-passwords-site` at [betterpasswords.app](https://betterpasswords.app). There is no build step. `apps/site/wrangler.jsonc` holds the config, `_headers` the security headers (CSP, HSTS), and `.assetsignore` keeps those files from being served.
+
+Pushes to `main` that touch `apps/site/**` deploy through Workers Builds, Cloudflare's Git integration, so GitHub holds no Cloudflare token. To deploy by hand:
+
+```sh
+cd apps/site && bunx wrangler deploy
+```
+
+The CSP allows only same-origin scripts, so keep JavaScript in `assets/` rather than inline `<script>` blocks.

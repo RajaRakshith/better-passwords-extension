@@ -1,0 +1,11 @@
+// Serves this folder as static files on Cloudflare Workers at betterpasswords.app.
+// Deploy with `bunx wrangler deploy` from apps/site (see docs/release.md).
+{
+  "name": "better-passwords-site",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "."
+  },
+  "routes": [{ "pattern": "betterpasswords.app", "custom_domain": true }],
+  "workers_dev": false
+}

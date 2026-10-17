@@ -16,17 +16,7 @@
   --orange: #bf4800;
   --red: #d70015;
   /* the browser around the page (Chrome) */
-  --cr-strip: #dee1e6;
-  --cr-toolbar: #ffffff;
-  --cr-omni: #f1f3f4;
-  --cr-text: #3c4043;
-  --cr-text-strong: #202124;
   --cr-icon: #5f6368;
-  --cr-icon-off: #c4c7c5;
-  --cr-sep: #a8abb0;
-  --cr-border: #dadce0;
-  --cr-hover: rgb(0 0 0 / 7%);
-  --cr-tab-hover: rgb(255 255 255 / 45%);
   /* macOS panels, menus and the pretend site in the demo */
   --ui-ink: #1d1d1f;
   --ui-muted: #6e6e73;
@@ -51,9 +41,6 @@
   --ui-avatar: #d1d1d6;
   --fill-bg: #e8f0fe;
   --fill-line: #8ab4f8;
-  --submit-bg: #fff0ea;
-  --submit-hover: #ffe6dc;
-  --submit-ink: #e2481f;
   --tip-bg: #1d1d1f;
   --tip-ink: #ffffff;
   --tile-1: #fbfbfd;
@@ -78,17 +65,7 @@
     --link: #2997ff;
     --orange: #ff9f0a;
     --red: #ff453a;
-    --cr-strip: #202124;
-    --cr-toolbar: #35363a;
-    --cr-omni: #202124;
-    --cr-text: #bdc1c6;
-    --cr-text-strong: #e8eaed;
     --cr-icon: #9aa0a6;
-    --cr-icon-off: #5f6368;
-    --cr-sep: #5f6368;
-    --cr-border: #202124;
-    --cr-hover: rgb(255 255 255 / 10%);
-    --cr-tab-hover: rgb(255 255 255 / 8%);
     --ui-ink: #f5f5f7;
     --ui-muted: #98989d;
     --ui-faint: #8d8d93;
@@ -111,9 +88,6 @@
     --ui-page-2: #141415;
     --ui-avatar: #636366;
     --fill-bg: rgb(138 180 248 / 18%);
-    --submit-bg: rgb(255 105 60 / 16%);
-    --submit-hover: rgb(255 105 60 / 24%);
-    --submit-ink: #ff7a50;
     --tip-bg: #f5f5f7;
     --tip-ink: #1d1d1f;
     --tile-1: #3a3a3c;
@@ -154,242 +128,6 @@ a:hover {
 }
 .muted {
   color: var(--muted);
-}
-
-/* Browser-style navigation. */
-.nav-chrome {
-  position: sticky;
-  top: 0;
-  z-index: 60;
-  font: 12.5px / 1 var(--font);
-  color: var(--cr-text);
-}
-.nc-strip {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  height: 40px;
-  padding: 0 12px;
-  background: var(--cr-strip);
-}
-.nc-lights {
-  display: flex;
-  gap: 8px;
-  align-self: center;
-  padding: 0 6px 0 2px;
-}
-.nc-lights i {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #ff5f57;
-  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 12%);
-}
-.nc-lights i:nth-child(2) {
-  background: #febc2e;
-}
-.nc-lights i:nth-child(3) {
-  background: #28c840;
-}
-.nav-chrome .tabs {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.nav-chrome .tab {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  min-width: 0;
-  padding: 0 14px;
-  border-radius: 9px 9px 0 0;
-  color: var(--cr-text);
-  white-space: nowrap;
-}
-.nav-chrome .tab img {
-  width: 16px;
-  height: 16px;
-  flex: none;
-}
-.nav-chrome .tab span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.nav-chrome .tab:first-child {
-  flex: 0 1 auto;
-}
-.nav-chrome .tab:hover {
-  background: var(--cr-tab-hover);
-  text-decoration: none;
-}
-.nav-chrome .tab.on {
-  background: var(--cr-toolbar);
-  color: var(--cr-text-strong);
-}
-.nav-chrome .tab:not(:first-child)::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 9px;
-  bottom: 9px;
-  width: 1px;
-  background: var(--cr-sep);
-}
-.nav-chrome .tab.on::before,
-.nav-chrome .tab.on + .tab::before,
-.nav-chrome .tab:hover::before,
-.nav-chrome .tab:hover + .tab::before {
-  opacity: 0;
-}
-.nc-gh {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  align-self: center;
-  padding: 6px 8px;
-  border-radius: 7px;
-  color: var(--cr-text);
-}
-.nc-gh:hover {
-  background: var(--cr-hover);
-  text-decoration: none;
-}
-.nc-gh svg {
-  width: 15px;
-  height: 15px;
-  fill: currentColor;
-}
-.nc-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 40px;
-  padding: 0 10px;
-  background: var(--cr-toolbar);
-  border-bottom: 1px solid var(--cr-border);
-}
-.nc-nav {
-  display: flex;
-  gap: 2px;
-}
-.nc-nav svg {
-  width: 28px;
-  height: 28px;
-  padding: 6px;
-  fill: none;
-  stroke: var(--cr-icon);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.nc-nav svg:nth-child(2) {
-  stroke: var(--cr-icon-off);
-}
-.nc-omni {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 30px;
-  min-width: 0;
-  margin: 0 6px;
-  padding: 0 14px;
-  border-radius: 15px;
-  background: var(--cr-omni);
-  color: var(--cr-text-strong);
-  font-size: 13.5px;
-  white-space: nowrap;
-  overflow: hidden;
-}
-.nc-omni svg {
-  flex: none;
-  width: 12px;
-  height: 12px;
-  fill: var(--cr-icon);
-}
-.nc-ico {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--cr-icon);
-}
-.nc-ico svg {
-  width: 17px;
-  height: 17px;
-  fill: currentColor;
-}
-.nc-ico img {
-  width: 18px;
-  height: 18px;
-}
-button.nc-ico {
-  cursor: pointer;
-}
-button.nc-ico:hover,
-button.nc-ico[aria-expanded="true"] {
-  background: var(--cr-hover);
-}
-.nc-add {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  height: 30px;
-  margin-left: 4px;
-  padding: 0 12px 0 6px;
-  border-radius: 15px;
-  background: #0071e3;
-  color: #fff;
-  font: 500 13px var(--font);
-  white-space: nowrap;
-}
-.nc-add:hover {
-  background: #0077ed;
-  text-decoration: none;
-}
-.nc-add svg[data-logo] {
-  width: 20px;
-  color: #1d1d1f;
-  height: 20px;
-  padding: 2px;
-  border-radius: 50%;
-  background: #fff;
-}
-.nav-chrome ~ main section,
-.nav-chrome ~ main header {
-  scroll-margin-top: 84px;
-}
-@media (max-width: 760px) {
-  .nc-lights,
-  .nc-nav,
-  .nc-gh span,
-  .nc-ico:not(.ours) {
-    display: none;
-  }
-  .nav-chrome .tab {
-    padding: 0 10px;
-  }
-  .nav-chrome .tab:not(:first-child) {
-    display: none;
-  }
-  .nav-chrome .tab:first-child {
-    max-width: 60vw;
-  }
-  .nc-add span {
-    display: none;
-  }
-  .nc-add {
-    padding: 0 6px;
-  }
 }
 
 /* type */
@@ -613,12 +351,25 @@ svg.fp {
   letter-spacing: 0.02em;
 }
 
-/* frameless demo: the page is the browser, so macOS panels sit at the top right, just under its toolbar */
+/* frameless demo: just the site's card, so macOS panels sit at the top right of the screen */
 .dm.frameless .dm-card {
   padding-top: 20px;
 }
 .dm.frameless .dm-site {
   margin-bottom: 18px;
+}
+/* intro: once the card has landed, its fields hop one after another, to show they're there to play with */
+.dm.intro .dm-email,
+.dm.intro .dm-pass-wrap {
+  animation: dm-hop 0.5s var(--ease) var(--d, 1.3s);
+}
+.dm.intro .dm-pass-wrap {
+  --d: 1.4s;
+}
+@keyframes dm-hop {
+  40% {
+    transform: translateY(-6px);
+  }
 }
 .dm.frameless .dm-mac {
   position: fixed;
@@ -1026,132 +777,6 @@ svg.fp {
   border-color: var(--blue);
   box-shadow: 0 0 0 3.5px rgb(0 113 227 / 25%);
 }
-.dm-submit {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 20px;
-  width: 100%;
-  height: 40px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--submit-bg);
-  color: var(--submit-ink);
-  font: 600 15px var(--font);
-  cursor: pointer;
-}
-.dm-submit:hover {
-  background: var(--submit-hover);
-}
-.dm-submit.busy {
-  filter: saturate(0.8);
-  cursor: progress;
-}
-.dm-spin {
-  display: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid rgb(226 72 31 / 25%);
-  border-top-color: var(--submit-ink);
-  animation: dm-spin 0.8s linear infinite;
-}
-.dm-submit.busy .dm-spin {
-  display: block;
-}
-@keyframes dm-spin {
-  to {
-    transform: rotate(1turn);
-  }
-}
-.dm-err {
-  margin: 6px 0 0;
-  font-size: 12.5px;
-  color: var(--red);
-}
-.dm-err[hidden] {
-  display: none;
-}
-.dm-email.invalid,
-.dm-pass.invalid,
-.dm-pass2.invalid {
-  border-color: var(--red);
-}
-.dm-success {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  padding: 18px 4px 6px;
-  text-align: center;
-}
-.dm-success[hidden],
-.dm-form[hidden] {
-  display: none;
-}
-.dm-avatar {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  margin-bottom: 6px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ff7a3d, #ff3d6e);
-  color: #fff;
-  font: 700 21px var(--display);
-}
-.dm-success b {
-  font: 700 20px var(--display);
-  letter-spacing: -0.02em;
-}
-.dm-success p {
-  margin: 0;
-  color: var(--ui-muted);
-}
-.dm-success .dm-note {
-  max-width: 26em;
-  margin-top: 6px;
-  font-size: 13px;
-}
-.dm-link {
-  margin-top: 10px;
-  border: 0;
-  background: none;
-  color: #ff3d6e;
-  font: 600 14px var(--font);
-  cursor: pointer;
-}
-.dm-save {
-  top: 40%;
-}
-.dm-save .dm-save-q {
-  margin-top: 10px;
-  color: var(--ui-ink);
-  font-size: 13.5px;
-  font-weight: 600;
-}
-.dm-save .dm-save-user {
-  margin-top: 2px;
-}
-.dm-save-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 14px;
-}
-.dm-save-actions button {
-  padding: 6px 12px;
-  border: 0;
-  border-radius: 7px;
-  background: var(--ui-tint);
-  color: var(--ui-ink);
-  font: 500 13px var(--font);
-  cursor: pointer;
-}
-.dm-save-actions .primary {
-  background: var(--blue);
-  color: #fff;
-}
 .dm-hint {
   position: absolute;
   right: 26px;
@@ -1535,6 +1160,12 @@ section.alt {
   .vs-v.none {
     font-size: 15px;
   }
+  /* no room beside the icons: the text goes under them */
+  .vs-v:has(.vs-tiles) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }
 .cmp-cell {
   display: flex;
@@ -1676,15 +1307,6 @@ ol.steps .add svg[data-logo] {
   margin: -6px 0 24px;
   color: var(--muted);
   font-size: 17px;
-}
-.faq pre {
-  margin: 0 0 24px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--alt);
-  font: 13px / 1.5 var(--mono);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 
 footer.foot {
