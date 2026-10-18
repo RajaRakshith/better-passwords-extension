@@ -1,6 +1,14 @@
 import { FakeHelper, MemoryTransport } from "@app/fake-helper";
 import { describe, expect, it, vi } from "vitest";
-import { ApplePasswordsClient, Command, ProtocolError } from "../src/index.ts";
+import {
+  ApplePasswordsClient,
+  BinaryCodec,
+  Command,
+  type HelperMessage,
+  ProtocolError,
+  pake,
+  randomBytes,
+} from "../src/index.ts";
 
 const vault = [
   { hostname: "example.com", username: "alice@example.com", password: "correct horse" },
@@ -19,6 +27,26 @@ async function setup(options: { base64?: boolean; now?: () => number } = {}) {
 async function pair(helper: FakeHelper, client: ApplePasswordsClient) {
   await client.requestChallenge();
   await client.verifyCode(helper.currentCode ?? "");
+}
+
+/** A helper that rewrites its own replies, to play a buggy or hostile one. Undefined drops a reply. */
+class TamperingHelper extends FakeHelper {
+  constructor(private readonly tamper: (request: HelperMessage, reply: HelperMessage) => HelperMessage | undefined) {
+    super({ vault });
+  }
+
+  override async handle(message: HelperMessage): Promise<HelperMessage[]> {
+    return (await super.handle(message)).flatMap((reply) => this.tamper(message, reply) ?? []);
+  }
+}
+
+/** Changes fields of one handshake step's PAKE reply ("m0": the challenge, "m2": the verification). */
+function tamperHandshake(step: "m0" | "m2", change: Record<string, unknown>) {
+  return (request: HelperMessage, reply: HelperMessage): HelperMessage => {
+    if (request.cmd !== Command.Handshake || (request.msg as { QID: string }).QID !== step) return reply;
+    const original = pake.decode<Record<string, unknown>>(String(reply.payload?.PAKE));
+    return { ...reply, payload: { PAKE: pake.encode({ ...original, ...change }) } };
+  };
 }
 
 describe("ApplePasswordsClient", () => {
@@ -168,5 +196,63 @@ describe("ApplePasswordsClient", () => {
     const wire = JSON.stringify(transport.sent);
     expect(wire).not.toContain(code);
     expect(wire).not.toContain("battery staple");
+  });
+
+  it("refuses a helper that requires an unsupported session version", async () => {
+    const helper = new FakeHelper({ vault, capabilities: { secretSessionVersion: 2 } });
+    const transport = new MemoryTransport(helper);
+    await expect(ApplePasswordsClient.connect(transport)).rejects.toMatchObject({ code: "unsupported" });
+    expect(transport.sent.at(-1)).toEqual({ cmd: Command.End });
+  });
+
+  it("refuses a helper that can't prove it knows the code", async () => {
+    const forged = new BinaryCodec(true).encode(randomBytes(32));
+    const helper = new TamperingHelper(tamperHandshake("m2", { HAMK: forged }));
+    const client = await ApplePasswordsClient.connect(new MemoryTransport(helper));
+    await client.requestChallenge();
+    await expect(client.verifyCode(helper.currentCode ?? "")).rejects.toMatchObject({
+      code: "server-proof-mismatch",
+    });
+    expect(client.state).toBe("locked");
+    await expect(client.getLogins("example.com", tab)).rejects.toMatchObject({ code: "closed" });
+  });
+
+  it.each([
+    ["m0", "is for another session", { TID: "someone-else" }, "invalid-reply"],
+    ["m0", "reports an error", { ErrCode: 2 }, "invalid-reply"],
+    ["m0", "is the wrong message", { MSG: 3 }, "invalid-reply"],
+    ["m0", "picks an unsupported protocol", { PROTO: 2 }, "unsupported"],
+    ["m2", "is for another session", { TID: "someone-else" }, "invalid-reply"],
+    ["m2", "is the wrong message", { MSG: 1 }, "invalid-reply"],
+    ["m2", "reports an unknown error", { ErrCode: 5 }, "invalid-reply"],
+  ] as const)("stays locked when the helper's %s reply %s", async (step, _, change, code) => {
+    const helper = new TamperingHelper(tamperHandshake(step, change));
+    const client = await ApplePasswordsClient.connect(new MemoryTransport(helper));
+    await expect(pair(helper, client)).rejects.toMatchObject({ code });
+    expect(client.state).toBe("locked");
+  });
+
+  it("refuses an encrypted reply for another session", async () => {
+    const helper = new TamperingHelper((request, reply) => {
+      if (request.cmd !== Command.GetLoginNamesForUrl) return reply;
+      const smsg = JSON.parse(String(reply.payload?.SMSG)) as Record<string, unknown>;
+      return { ...reply, payload: { SMSG: JSON.stringify({ ...smsg, TID: "someone-else" }) } };
+    });
+    const client = await ApplePasswordsClient.connect(new MemoryTransport(helper));
+    await pair(helper, client);
+    await expect(client.getLogins("example.com", tab)).rejects.toMatchObject({ code: "invalid-reply" });
+  });
+
+  it("gives up on a reply that never comes, and keeps working after", async () => {
+    let dropped = false;
+    const helper = new TamperingHelper((request, reply) => {
+      if (request.cmd !== Command.GetLoginNamesForUrl || dropped) return reply;
+      dropped = true;
+      return undefined;
+    });
+    const client = await ApplePasswordsClient.connect(new MemoryTransport(helper), { timeoutMs: 50 });
+    await pair(helper, client);
+    await expect(client.getLogins("example.com", tab)).rejects.toMatchObject({ code: "timeout" });
+    expect(await client.getLogins("example.com", tab)).toHaveLength(2);
   });
 });

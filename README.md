@@ -1,6 +1,7 @@
 # Better Passwords (extension for Apple Passwords)
 
 [![CI](https://github.com/fanckush/better-passwords-extension/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/fanckush/better-passwords-extension/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffanckush%2Fbetter-passwords-extension%2Fbadges%2Fcoverage.json)](https://github.com/fanckush/better-passwords-extension/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/fanckush/better-passwords-extension?filter=extension-v*&label=release)](https://github.com/fanckush/better-passwords-extension/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/fanckush/better-passwords-extension)](LICENSE)
 [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-informational)](#setup)

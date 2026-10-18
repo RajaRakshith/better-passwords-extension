@@ -76,4 +76,35 @@ describe("Session", () => {
     expect(session.status.state).toBe("disconnected");
     await expect(session.unlockedClient()).rejects.toThrow();
   });
+
+  it("tells a missing host apart from one that failed during the handshake", async () => {
+    const failing = (error: string) =>
+      new Session({
+        openTransport: () => {
+          const transport = new MemoryTransport(new FakeHelper());
+          transport.send = () => transport.kill(error);
+          return transport;
+        },
+      });
+
+    const missing = failing("Specified native messaging host not found.");
+    await expect(missing.connect()).rejects.toThrow();
+    expect(missing.status.state).toBe("no-helper");
+
+    const crashed = failing("Native host has exited.");
+    await expect(crashed.connect()).rejects.toThrow();
+    expect(crashed.status).toEqual({ state: "disconnected", error: "Native host has exited." });
+  });
+
+  it("reports a wrong code, and shows a new one when asked", async () => {
+    const { helper, session } = setup();
+    await session.requestCode();
+    const wrong = helper.currentCode === "000000" ? "111111" : "000000";
+    await expect(session.verifyCode(wrong)).rejects.toThrow();
+    expect(session.status).toEqual({ state: "locked", error: "incorrect code" });
+
+    await session.requestCode();
+    expect(session.status.state).toBe("awaiting-code");
+    expect(helper.currentCode).toBeDefined();
+  });
 });

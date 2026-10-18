@@ -89,4 +89,20 @@ describe("Companion", () => {
     await expect(companion.myEmails()).rejects.toMatchObject({ code: "timeout" });
     expect(Date.now() - started).toBeLessThan(9_000);
   }, 15_000);
+
+  it("checks again after Touch ID finds the app gone or Accessibility off", async () => {
+    let readCode: unknown = new Error("Specified native messaging host not found.");
+    const host = fakeHost((message) => (message.type === "hello" ? { ok: true, accessibility: true } : readCode));
+    const companion = new Companion(host.send, () => 0);
+
+    expect(await companion.state()).toBe("ready");
+    await expect(companion.readCode()).rejects.toMatchObject({ code: "not-installed" });
+    await companion.state();
+    expect(host.calls.filter((c) => c.message.type === "hello")).toHaveLength(2);
+
+    readCode = { ok: false, error: "needs-accessibility", message: "Allow Accessibility." };
+    await expect(companion.readCode()).rejects.toMatchObject({ code: "needs-accessibility" });
+    await companion.state();
+    expect(host.calls.filter((c) => c.message.type === "hello")).toHaveLength(3);
+  });
 });

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fillCredentials, fillNewPassword, usernameNear } from "../src/fill.ts";
+import { fillCredentials, fillEmail, fillNewPassword, usernameNear } from "../src/fill.ts";
 
 const origin = window.location.origin;
 
@@ -124,6 +124,22 @@ describe("fillNewPassword", () => {
           <input id="trap" type="password" autocomplete="new-password" data-hidden></form>`);
     fillNewPassword(origin, "x", input("#p1"));
     expect(value("#trap")).toBe("");
+  });
+});
+
+describe("fillEmail", () => {
+  const input = (selector: string) => document.querySelector(selector) as HTMLInputElement;
+
+  it("refuses another origin, and fields the user can't see or edit", () => {
+    page(`<input id="email" type="email"><input id="hidden" type="email" data-hidden>
+          <input id="readonly" type="email" readonly>`);
+    expect(fillEmail("https://elsewhere.example", "jane@example.com", input("#email"))).toBe("origin-mismatch");
+    expect(fillEmail(origin, "jane@example.com", input("#hidden"))).toBe("no-fields");
+    expect(fillEmail(origin, "jane@example.com", input("#readonly"))).toBe("no-fields");
+    const detached = input("#email");
+    detached.remove();
+    expect(fillEmail(origin, "jane@example.com", detached)).toBe("no-fields");
+    expect([detached, input("#hidden"), input("#readonly")].map((el) => el.value)).toEqual(["", "", ""]);
   });
 });
 

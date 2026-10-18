@@ -9,6 +9,7 @@ You need [Bun](https://bun.sh) 1.3 or later. A Mac is only needed for live testi
 ```sh
 bun install          # also installs the git hooks (lefthook)
 bun run check        # lint + typecheck + unit tests
+bun run test:coverage  # unit tests with a coverage report in coverage/index.html
 bun run build        # Chromium + Firefox packages into apps/extension/.output
 bun run test:e2e     # Playwright: real Chromium + the fake helper (run `bunx playwright install chromium` once)
 ```

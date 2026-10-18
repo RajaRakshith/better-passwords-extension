@@ -12,6 +12,7 @@
     "format": "biome check --write .",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "bun run --filter @app/extension test:e2e",
     "build": "bun run --filter @app/extension build:all",
     "prepare": "lefthook install"
@@ -25,6 +26,7 @@
     "@semantic-release/github": "^12.0.10",
     "@semantic-release/release-notes-generator": "^14.1.1",
     "@types/bun": "^1.4.3",
+    "@vitest/coverage-v8": "5.0.4",
     "conventional-changelog-conventionalcommits": "^9",
     "lefthook": "^2.2.1",
     "semantic-release": "^25.0.9",
