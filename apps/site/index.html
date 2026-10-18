@@ -104,6 +104,11 @@
   .ext-pop .preview-add { display: inline-block; padding: 6px 16px; border-radius: 980px; background: var(--blue); color: #fff; font: 500 13px var(--font); }
   .ext-pop .preview-add:hover { background: var(--blue-hover); text-decoration: none; }
 
+  /* The repo link sits in the opposite corner to the extension button, in the same style. */
+  .gh { position: absolute; z-index: 60; top: 40px; left: 32px; display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 16px 0 13px; border-radius: 13px; background: var(--card); box-shadow: 0 0 0 1px var(--hair), 0 8px 24px rgb(0 0 0 / 10%); color: var(--ink); font: 500 15px var(--font); transition: transform 0.2s var(--ease); }
+  .gh:hover { text-decoration: none; transform: translateY(-1px); }
+  .gh svg { width: 22px; height: 22px; fill: currentColor; }
+
   /* hero */
   .hero { padding-top: 44px; padding-bottom: 80px; text-align: center; }
   .hero-name { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 18px; font: 600 17px var(--display); letter-spacing: -0.01em; }
@@ -171,12 +176,15 @@
     .ext-note { display: none; }
     .ext-btn { width: 40px; height: 40px; border-radius: 11px; }
     .ext-btn img { width: 26px; height: 26px; }
+    .gh { top: 16px; left: 16px; width: 40px; height: 40px; padding: 0; justify-content: center; border-radius: 11px; }
+    .gh span { display: none; }
     .hero { padding-top: 32px; }
     .trust { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
+<a class="gh" href="https://github.com/fanckush/better-passwords-extension" target="_blank" rel="noopener" aria-label="Better Passwords on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg><span>Open source on GitHub</span></a>
 <div class="ext-dock">
   <p class="ext-note">Once added, it lives<br />up in your toolbar<svg viewBox="0 0 54 40" aria-hidden="true"><path pathLength="1" d="M6 36c18-2 34-12 40-31"/><path pathLength="1" d="M37 12l9-8 4 11"/></svg></p>
   <span class="pin">
@@ -246,7 +254,7 @@
           <tr class="vs-r">
             <th class="vs-label" scope="row">Price</th>
             <td class="vs-v"><p>Free</p></td>
-            <td class="vs-v win"><p>Free, open source</p></td>
+            <td class="vs-v win"><p>Free, <a href="https://github.com/fanckush/better-passwords-extension" target="_blank" rel="noopener">open source</a></p></td>
           </tr>
         </tbody>
       </table>
@@ -261,7 +269,7 @@
       <ul class="trust">
         <li class="reveal"><span class="trust-tile keys"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3.6000000000000005 9a5.2 5.2 0 1 1 10.4 0a5.2 5.2 0 1 1 -10.4 0ZM7.300000000000001 12h3v14.5a1.5 1.5 0 0 1 -3 0ZM9.8 19.5h2.8v2.2h-2.8ZM9.8 23.2h2v2.2h-2Z" fill="#b4b4b9"/><circle cx="8.2" cy="7.6" r="1.5" fill="#f4f4f7"/><path d="M10.8 9a5.2 5.2 0 1 1 10.4 0a5.2 5.2 0 1 1 -10.4 0ZM14.5 12h3v14.5a1.5 1.5 0 0 1 -3 0ZM17 18.6h2.2v2.2h-2.2ZM17 22h3v2.2h-3Z" fill="#8e8e93"/><circle cx="15.4" cy="7.6" r="1.5" fill="#f4f4f7"/><path d="M18.0 9a5.2 5.2 0 1 1 10.4 0a5.2 5.2 0 1 1 -10.4 0ZM21.7 12h3v14.5a1.5 1.5 0 0 1 -3 0ZM24.2 20.6h3v2.2h-3ZM24.2 24h2.2v2.2h-2.2Z" fill="#5c5c61"/><circle cx="22.6" cy="7.6" r="1.5" fill="#f4f4f7"/></svg></span><b>Kept by Apple</b><span>Your passwords stay in Apple Passwords on your Mac. We never get a copy.</span></li>
         <li class="reveal d1"><span class="trust-tile blue"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/><path d="M4 4l16 16"/></svg></span><b>Nobody watching</b><span>No account to make, and nothing tracking what you do.</span></li>
-        <li class="reveal d2"><span class="trust-tile green"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.7-7 10-7 10Z"/></svg></span><b>Free, and open to check</b><span>It costs nothing, and anyone can look at how it works.</span></li>
+        <li class="reveal d2"><span class="trust-tile green"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.7-7 10-7 10Z"/></svg></span><b>Free, and open to check</b><span>It costs nothing, and its code is <a href="https://github.com/fanckush/better-passwords-extension" target="_blank" rel="noopener">public on GitHub</a>.</span></li>
       </ul>
     </div>
   </section>
