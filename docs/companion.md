@@ -16,12 +16,12 @@ extension ── sendNativeMessage ──► better-passwords-host      (launche
                                    Apple's helper window (the browser's own copy)
 ```
 
-| Part | What it does |
-|---|---|
-| `BetterPasswords` (setup) | The app you open. Connects your browsers (writes host manifests), turns on the agent, and asks for Accessibility. |
+| Part                      | What it does                                                                                                                |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `BetterPasswords` (setup) | The app you open. Connects your browsers (writes host manifests), turns on the agent, and asks for Accessibility.           |
 | `BetterPasswords --agent` | Same executable, started by launchd when the host connects. Holds the Accessibility permission. Quits after a quiet minute. |
-| `better-passwords-host` | The native-messaging host the browser launches. No permissions; it only relays to the agent. |
-| `CompanionCore` | Everything testable: framing, code parsing, process checks, manifests. |
+| `better-passwords-host`   | The native-messaging host the browser launches. No permissions; it only relays to the agent.                                |
+| `CompanionCore`           | Everything testable: framing, code parsing, process checks, manifests.                                                      |
 
 The setup window and the agent are one executable with one signature. That's why the Accessibility permission you grant in setup also covers the agent, and why System Settings lists it as "Better Passwords".
 
@@ -58,10 +58,12 @@ open "/Applications/Better Passwords.app"
 ```
 
 Why both:
+
 - **The certificate:** macOS ties the background agent's registration and the Accessibility and Contacts permissions to the app's signature. A team-signed build keeps them across rebuilds. An ad-hoc build (`scripts/bundle.sh` without `--sign`) is a new app every time: the old registration then fails with "Launch Constraint Violation", and the permissions must be granted again.
 - **/Applications:** a single copy in a fixed place. Replacing an app in place, or having two copies with the same identity, can leave macOS checking the agent against an older build.
 
 In the window:
+
 1. Click **Connect**. This writes the bridge manifest (the same one as `scripts/setup-mac.sh`) and the companion's manifest for every installed browser.
 2. Click **Turn On** for the background agent. macOS may ask you to allow it in Login Items.
 3. Click **Allow…**, then turn on Better Passwords under Accessibility.
@@ -78,14 +80,3 @@ Signed releases: `scripts/bundle.sh --version 1.2.3 --sign "Developer ID Applica
 - macOS reports Apple's helper at its real location (`/System/Volumes/Preboot/Cryptexes/…`), behind the `/System/Cryptexes` link. Both are accepted; the code-signature check is what matters.
 - The agent finds the browser through its parent process. A browser that launches native hosts through an intermediate process would not work. Chromium browsers and Firefox launch hosts directly.
 - Accessibility can be removed only in System Settings. **Remove Setup** in the app removes the browser connections and the agent.
-
-## Moving from Apple Passwords Plus
-
-Better Passwords uses new app, background-agent and native-host identities. Existing permissions and browser registrations do not transfer automatically.
-
-1. Open the old **Apple Passwords Plus** app and choose **Remove Setup** before deleting it. If you used only the old setup script, run that version with `--uninstall` before replacing it.
-2. Remove the old extension, then install Better Passwords and move **Better Passwords.app** to Applications.
-3. Connect your browsers again, turn on the new background agent, and grant Accessibility and optional Contacts access to Better Passwords.
-4. The former GitHub build shared Apple's extension ID. After removing that build, you can re-enable or reinstall Apple's iCloud Passwords extension.
-
-The new setup does not remove old registrations, migrate extension settings or modify your saved passwords. Old permission entries can be removed manually in System Settings.
