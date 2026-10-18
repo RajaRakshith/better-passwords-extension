@@ -405,6 +405,16 @@ async function showLocked(error?: string) {
   );
 }
 
+/** Before this browser can reach Apple Passwords: one row that opens the setup page. */
+function showSetup() {
+  render(
+    row(KEY, "Set Up Better Passwords", "One quick step to reach Apple Passwords", async () => {
+      await send({ type: "open-setup-page" }).catch(() => {});
+      close();
+    }),
+  );
+}
+
 function unlockTitle() {
   return kind === "new-password" ? "Unlock to suggest a strong password" : "Unlock to fill passwords";
 }
@@ -498,6 +508,7 @@ function messageOf(error: unknown): string {
 
 const mode = params.get("mode");
 if (mode === "locked") void showLocked();
+else if (mode === "setup") showSetup();
 else if (mode === "generate") void showGenerate();
 else if (mode === "email") void showEmail();
 else if (mode === "generated" || mode === "generated-unsaved") showGeneratedDone(mode === "generated");

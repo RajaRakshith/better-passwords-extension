@@ -111,7 +111,8 @@ echo "$BROWSERS" | while IFS= read -r browser; do
     dir="$SUPPORT/$browser/NativeMessagingHosts"
     if [ "$uninstall" -eq 1 ]; then remove_manifest "$dir"; else write_manifest "$dir" allowed_origins "$origins"; fi
 done
-if [ -d "$SUPPORT/Firefox" ]; then
+# Firefox and its fork Zen both read manifests from Mozilla's shared folder
+if [ -d "$SUPPORT/Firefox" ] || [ -d "$SUPPORT/zen" ]; then
     dir="$SUPPORT/Mozilla/NativeMessagingHosts"
     if [ "$uninstall" -eq 1 ]; then remove_manifest "$dir"; else write_manifest "$dir" allowed_extensions "\"$FIREFOX_ID\""; fi
 fi

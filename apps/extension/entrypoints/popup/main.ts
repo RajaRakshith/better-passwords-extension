@@ -1,12 +1,13 @@
 import "./style.css";
-import { DISPLAY_NAME, REPO_URL, SETUP_COMMAND } from "@/src/config.ts";
+import { DISPLAY_NAME } from "@/src/config.ts";
 import { requestHideMyEmailConsent } from "@/src/icloud/consent.ts";
 import { type LoginsResult, type Settings, type Status, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { bindCodeInput } from "@/src/ui/code-input.ts";
 import { companionPitch } from "@/src/ui/companion-pitch.ts";
 import { h } from "@/src/ui/h.ts";
-import { icon, OPEN } from "@/src/ui/icons.ts";
+import { CHECK, icon, OPEN } from "@/src/ui/icons.ts";
+import { setupFlow } from "@/src/ui/setup.ts";
 
 applySystemAccent();
 
@@ -33,9 +34,10 @@ async function refresh(error?: string) {
     return showRetry(messageOf(e));
   }
 
+  // not set up yet, or set up moments ago (the popup closes while the user does it)
+  if (status.state === "no-helper" || status.justConnected) return showSetup(status);
+
   switch (status.state) {
-    case "no-helper":
-      return showSetup(status);
     case "unlocked":
       return showLogins(status, error);
     case "awaiting-code":
@@ -84,20 +86,12 @@ async function unlockWithTouchId(status: Status) {
   }
 }
 
-function showSetup(status: Status) {
-  const steps = h(
-    "div",
-    { class: "card padded" },
-    h("p", {}, "Connect this browser using the companion Mac app, or run this once in Terminal:"),
-    h("code", { textContent: SETUP_COMMAND }),
-  );
-  show(
-    h("h1", { textContent: "One-time setup" }),
-    h("p", {}, "This browser can't reach Apple Passwords yet."),
-    steps,
-    h("a", { href: `${REPO_URL}#setup`, target: "_blank", textContent: "Setup guide" }),
-    errorLine(status.error),
-  );
+/** Set once this popup has shown the setup flow, so the first unlock after it says "all set". */
+let settingUp = false;
+
+async function showSetup(status: Status) {
+  settingUp = true;
+  show(await setupFlow(status, { next: { label: "Continue", run: () => void refresh() } }));
 }
 
 function showRetry(error: string) {
@@ -206,8 +200,19 @@ async function showLogins(status: Status, error?: string) {
     window.close();
   });
 
+  const allSet = settingUp
+    ? h(
+        "p",
+        { class: "card padded all-set" },
+        icon(CHECK),
+        "You're all set. Click a login field on any website to fill a password.",
+      )
+    : null;
+  settingUp = false;
+
   show(
     h("h1", { textContent: result.hostname ?? DISPLAY_NAME }),
+    allSet,
     body,
     await unconfirmedPasswords(tabId),
     errorLine(error),

@@ -14,7 +14,7 @@ import Testing
     }
 
     @Test func installsOnlyForInstalledBrowsers() throws {
-        let support = try temporarySupport(with: ["Google/Chrome", "Mozilla"])
+        let support = try temporarySupport(with: ["Google/Chrome", "Firefox"])
         defer { try? FileManager.default.removeItem(at: support) }
 
         let done = try HostManifests.install(hostPath: "/Applications/X.app/host", support: support)
@@ -31,6 +31,20 @@ import Testing
         #expect(bridge?["path"] as? String == Identity.helperPath)
         #expect(bridge?["allowed_origins"] as? [String] == ["chrome-extension://ocongmkplhijgajnipnhhggfcjfdilgj/"])
         #expect(!FileManager.default.fileExists(atPath: support.appendingPathComponent("Chromium").path))
+    }
+
+    @Test func firefoxForksShareMozillasManifests() throws {
+        // Zen alone, no Firefox: it reads Mozilla's folder, which may not exist yet
+        let support = try temporarySupport(with: ["zen"])
+        defer { try? FileManager.default.removeItem(at: support) }
+
+        let done = try HostManifests.install(hostPath: "/h", support: support)
+        #expect(done.map(\.name) == ["Zen"])
+        let mozilla = support.appendingPathComponent("Mozilla/NativeMessagingHosts")
+        #expect(FileManager.default.fileExists(
+            atPath: mozilla.appendingPathComponent("io.github.fanckush.betterpasswords.bridge.json").path))
+        #expect(!FileManager.default.fileExists(atPath: support.appendingPathComponent("zen/NativeMessagingHosts").path))
+        #expect(HostManifests.connected(hostPath: "/h", support: support).map(\.name) == ["Zen"])
     }
 
     @Test func firefoxManifestsUseExtensionIDs() throws {

@@ -1,0 +1,164 @@
+/* The welcome and setup flow (src/ui/setup.ts), in the popup and on the setup page. */
+
+.setup {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.setup [hidden] {
+  display: none;
+}
+
+.setup .app-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.setup h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.setup p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.setup .lead {
+  margin-top: -6px;
+  text-wrap: balance;
+}
+
+.setup .note {
+  font-size: 12px;
+}
+
+.setup a {
+  color: var(--accent);
+}
+
+/* one route at a time: its button, a line under it, and the way to the other route */
+.setup .route {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.setup .links {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.setup .links a {
+  text-decoration: none;
+}
+
+.setup .button {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: var(--radius-small);
+  font: inherit;
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.setup .button.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.setup button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* the setup command, shown only when it couldn't be copied (one class, so .setup [hidden] wins) */
+.command {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  font:
+    11px / 1.4 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  text-align: left;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--separator);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: setup-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 3s;
+  }
+}
+
+@keyframes setup-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* "You're connected" / "You're all set" */
+.setup .badge {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.setup .badge svg {
+  width: 26px;
+  height: 26px;
+}
+
+.setup .details {
+  width: 100%;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.setup .details summary {
+  cursor: pointer;
+}

@@ -1,3 +1,4 @@
 wrangler.jsonc
+worker.js
 .wrangler
 .DS_Store

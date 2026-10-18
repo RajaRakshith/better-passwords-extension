@@ -24,6 +24,16 @@ public struct Browser: Equatable, Sendable {
     /// Directory under ~/Library/Application Support holding the browser's data.
     public let dataDirectory: String
     public let kind: Kind
+    /// Directory under ~/Library/Application Support whose NativeMessagingHosts the browser reads:
+    /// its own for Chromium browsers, Mozilla's shared one for Firefox and its forks.
+    public let manifestDirectory: String
+
+    public init(name: String, dataDirectory: String, kind: Kind) {
+        self.name = name
+        self.dataDirectory = dataDirectory
+        self.kind = kind
+        manifestDirectory = kind == .firefox ? "Mozilla" : dataDirectory
+    }
 }
 
 public enum HostManifests {
@@ -39,7 +49,8 @@ public enum HostManifests {
         Browser(name: "Vivaldi", dataDirectory: "Vivaldi", kind: .chromium),
         Browser(name: "Arc", dataDirectory: "Arc/User Data", kind: .chromium),
         Browser(name: "Helium", dataDirectory: "net.imput.helium", kind: .chromium),
-        Browser(name: "Firefox", dataDirectory: "Mozilla", kind: .firefox),
+        Browser(name: "Firefox", dataDirectory: "Firefox", kind: .firefox),
+        Browser(name: "Zen", dataDirectory: "zen", kind: .firefox),
     ]
 
     /// Browsers whose data directory exists under `support` (normally ~/Library/Application Support).
@@ -52,7 +63,7 @@ public enum HostManifests {
     }
 
     public static func directory(for browser: Browser, in support: URL) -> URL {
-        support.appendingPathComponent(browser.dataDirectory).appendingPathComponent("NativeMessagingHosts")
+        support.appendingPathComponent(browser.manifestDirectory).appendingPathComponent("NativeMessagingHosts")
     }
 
     /// The two manifests for one browser.

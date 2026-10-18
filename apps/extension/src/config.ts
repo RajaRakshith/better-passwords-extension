@@ -28,5 +28,10 @@ export const FIREFOX_EXTENSION_ID = "better-passwords@fanckush.github.io";
 /** Pages where the inline menu runs and passwords may be filled (see src/url-policy.ts). */
 export const FILL_MATCHES = ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"];
 
-/** The same optional companion app is used by every extension installation. */
-export const COMPANION_DOWNLOAD_URL = `${REPO_URL}/releases`;
+export const SITE_URL = "https://betterpasswords.app";
+
+/**
+ * The same optional companion app is used by every extension installation. The site redirects to
+ * the newest release (apps/site/worker.js), so where releases live can change without an update.
+ */
+export const COMPANION_DOWNLOAD_URL = `${SITE_URL}/download/mac`;

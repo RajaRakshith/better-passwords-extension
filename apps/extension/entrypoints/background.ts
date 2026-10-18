@@ -62,6 +62,32 @@ export default defineBackground(() => {
   });
   browser.alarms.onAlarm.addListener(() => {});
 
+  // Remembered while this browser can't reach Apple's helper, so the first connection after setup
+  // is announced once (by the popup or the setup page), even if the popup closed in between.
+  const SETUP_PENDING = "setupPending";
+  session.onChange(({ state }) => {
+    if (state === "no-helper") void browser.storage.local.set({ [SETUP_PENDING]: true });
+    else if (state === "unlocked") void browser.storage.local.remove(SETUP_PENDING);
+  });
+
+  /** Apple Passwords and its helper exist only on macOS; elsewhere there's nothing to set up. */
+  const onMac = browser.runtime
+    .getPlatformInfo()
+    .then(({ os }) => os === "mac")
+    .catch(() => true);
+
+  // A fresh install that can't reach the helper yet opens the setup page, so nobody has to find
+  // the toolbar button first. A Mac that is set up already (a reinstall) sees nothing.
+  browser.runtime.onInstalled.addListener(async ({ reason }) => {
+    if (reason !== "install" || !(await onMac)) return;
+    await session.connect().catch(() => {});
+    if (session.status.state === "no-helper") await openSetupPage();
+  });
+
+  function openSetupPage() {
+    return browser.tabs.create({ url: browser.runtime.getURL("/setup.html") });
+  }
+
   browser.idle.onStateChanged.addListener(async (state) => {
     if (state !== "locked") return;
     if ((await getSettings()).lockOnScreenLock) session.lock();
@@ -75,7 +101,14 @@ export default defineBackground(() => {
     const base = status();
     if (base.state === "no-helper") return base;
     const state = await companion.state();
-    return { ...base, companion: state, touchId: state === "ready" && (await getSettings()).touchId };
+    const connected = base.state === "locked" || base.state === "awaiting-code";
+    const justConnected = connected && (await browser.storage.local.get(SETUP_PENDING))[SETUP_PENDING];
+    return {
+      ...base,
+      companion: state,
+      touchId: state === "ready" && (await getSettings()).touchId,
+      ...(justConnected === true ? { justConnected } : {}),
+    };
   }
 
   /**
@@ -132,15 +165,18 @@ export default defineBackground(() => {
         (await companion.state()) !== "not-installed";
       return { show: offered ? "email" : "none" };
     }
-    if (session.status.state === "disconnected" || session.status.state === "closed") {
+    // "no-helper" too: the user may have just run the setup
+    if (["disconnected", "closed", "no-helper"].includes(session.status.state)) {
       await session.connect().catch(() => {});
     }
-    if (!session.isUnlocked) return { show: session.status.state === "no-helper" ? "none" : "locked" };
+    if (!session.isUnlocked) {
+      if (session.status.state !== "no-helper") return { show: "locked" };
+      return { show: (await onMac) ? "setup" : "none" };
+    }
     // saving needs the session, so new passwords are offered only once unlocked
     if (kind === "new-password") return { show: "generate" };
-    const client = await session.unlockedClient();
-    const logins = await client.getLogins(url.hostname, { tabId: caller.tabId });
-    return { show: logins.length > 0 ? "logins" : "none" };
+    // shown even without saved logins: the menu then says so, every time, not only after unlocking
+    return { show: "logins" };
   }
 
   // Passwords generated for open menus (by tab and menu nonce), and the one filled per tab.
@@ -372,7 +408,10 @@ export default defineBackground(() => {
     }
     switch (request.type) {
       case "get-status":
-        if (session.status.state === "disconnected") await session.connect().catch(() => {});
+        // retrying "no-helper" is how the popup and setup page notice that setup just finished
+        if (session.status.state === "disconnected" || session.status.state === "no-helper") {
+          await session.connect().catch(() => {});
+        }
         return fullStatus();
       case "unlock-with-touch-id": {
         await session.requestCode();
@@ -515,6 +554,12 @@ export default defineBackground(() => {
       case "open-companion-page":
         // our own page about the app, which links to its download
         await browser.tabs.create({ url: browser.runtime.getURL("/companion.html") });
+        return null;
+      case "open-setup-page":
+        await openSetupPage();
+        return null;
+      case "setup-seen":
+        await browser.storage.local.remove(SETUP_PENDING);
         return null;
       case "open-icloud-plus":
         await browser.tabs.create({ url: "https://www.apple.com/icloud/" });

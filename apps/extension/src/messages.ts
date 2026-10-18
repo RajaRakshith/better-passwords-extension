@@ -41,6 +41,10 @@ export type Request =
   | { type: "fill-email"; nonce: string; email: string }
   | { type: "dismiss-companion-emails-hint" }
   | { type: "open-companion-page" }
+  /** Opens the setup page in a tab (from the inline menu, before this browser is set up). */
+  | { type: "open-setup-page" }
+  /** The user has seen that setup worked; stop saying so. */
+  | { type: "setup-seen" }
   /** Opens the Mac app's window (its setup), through its native host. */
   | { type: "open-companion-app" }
   /** Generated passwords for the tab's site whose update Apple Passwords couldn't confirm. */
@@ -100,6 +104,8 @@ export interface Status extends SessionStatus {
   companion?: CompanionState;
   /** True when the user wants Touch ID and the companion is ready for it. */
   touchId?: boolean;
+  /** This browser was just set up and hasn't been unlocked yet: say it worked, once. */
+  justConnected?: boolean;
 }
 
 export interface LoginsResult {
@@ -111,9 +117,10 @@ export interface LoginsResult {
 export interface AutofillStatus {
   /**
    * "logins": saved logins exist for this site; "generate": suggest a new password;
-   * "locked": pairing needed; "none": stay out of the way.
+   * "locked": pairing needed; "setup": this browser can't reach Apple Passwords yet;
+   * "none": stay out of the way.
    */
-  show: "logins" | "generate" | "email" | "locked" | "none";
+  show: "logins" | "generate" | "email" | "locked" | "setup" | "none";
   /** For a menu to show: its nonce, which the background accepts from this tab's menu only. */
   nonce?: string;
 }
@@ -176,6 +183,8 @@ interface Responses {
   "dismiss-companion-emails-hint": null;
   "open-companion-page": null;
   "open-companion-app": null;
+  "open-setup-page": null;
+  "setup-seen": null;
   "menu-resize": null;
   "menu-close": null;
   "menu-focus-field": null;

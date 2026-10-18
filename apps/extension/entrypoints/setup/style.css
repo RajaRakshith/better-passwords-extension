@@ -1,0 +1,48 @@
+@import "../../src/ui/tokens.css";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px / 1.5 var(--font);
+}
+
+main {
+  width: min(420px, 100%);
+  padding: 32px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px var(--separator),
+    0 12px 40px rgb(0 0 0 / 8%);
+}
+
+/* the same flow as the popup's, with more room */
+main .setup {
+  gap: 16px;
+}
+
+main .setup .app-icon {
+  width: 72px;
+  height: 72px;
+}
+
+main .setup h1 {
+  font-size: 22px;
+}
+
+main .command {
+  background: var(--bg);
+}
+
+main .setup .button {
+  padding: 9px 16px;
+}

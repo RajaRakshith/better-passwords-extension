@@ -39,11 +39,13 @@ The companion job stays off until the repository variable `COMPANION_RELEASE` is
 
 `apps/companion/scripts/release.sh` builds a universal app, signs it with the hardened runtime, notarizes it, staples the ticket, and attaches the zip to a `companion-vX.Y.Z` GitHub release with build provenance.
 
+Everything links to the download as `https://betterpasswords.app/download/mac`: the extension, the landing page and the README. The site's Worker (`apps/site/worker.js`) redirects it to the zip of the newest `companion-v*` release, or to the release list while there is none.
+
 Signed builds trust their native host by team ID, so the app and the host must be signed with the same Developer ID.
 
 ## Landing page
 
-`apps/site` is served as static files by the Cloudflare Worker `better-passwords-site` at [betterpasswords.app](https://betterpasswords.app). There is no build step. `apps/site/wrangler.jsonc` holds the config, `_headers` the security headers (CSP, HSTS), and `.assetsignore` keeps those files from being served.
+`apps/site` is served as static files by the Cloudflare Worker `better-passwords-site` at [betterpasswords.app](https://betterpasswords.app). There is no build step. `worker.js` answers only the paths that aren't files, such as `/download/mac`. `apps/site/wrangler.jsonc` holds the config, `_headers` the security headers (CSP, HSTS), and `.assetsignore` keeps those files from being served.
 
 Pushes to `main` that touch `apps/site/**` deploy through Workers Builds, Cloudflare's Git integration, so GitHub holds no Cloudflare token. To deploy by hand:
 

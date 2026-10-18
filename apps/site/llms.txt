@@ -15,6 +15,7 @@ Privacy: passwords stay in Apple Passwords on the Mac. The extension asks the pa
 ## Links
 
 - [Website](https://betterpasswords.app/)
+- [Optional Mac app (Touch ID unlock)](https://betterpasswords.app/companion)
 - [Source code (MIT)](https://github.com/fanckush/better-passwords-extension)
 - [Privacy policy](https://github.com/fanckush/better-passwords-extension/blob/main/PRIVACY.md)
 - [Threat model](https://github.com/fanckush/better-passwords-extension/blob/main/docs/threat-model.md)

@@ -35,31 +35,40 @@ function writeHost(dir: string, name: string, script: string) {
   );
 }
 
-/** Registers the fake helper (and optionally the fake companion) inside a fresh profile. */
+// browsers start native hosts with a minimal PATH, so call bun by absolute path
+const bun = () => execSync("command -v bun", { encoding: "utf8" }).trim();
+
+/** What the setup script does, for the fake helper: registers it in the profile at `dir`. */
+export function registerFakeHelper(dir: string, declineSaves = false): void {
+  const vault = join(dir, "vault.json");
+  const log = join(dir, "helper.log");
+  writeHost(
+    dir,
+    BRIDGE_HOST,
+    `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}" FAKE_HELPER_LOG="${log}"${declineSaves ? " FAKE_HELPER_SAVE=decline" : ""}\nexec "${bun()}" "${fakeHelper}"\n`,
+  );
+}
+
+/**
+ * Registers the fake helper (and optionally the fake companion) inside a fresh profile. Without
+ * `setUp`, the profile is like a browser before the setup script ran.
+ */
 export function profileWithFakeHelper(
   companion: CompanionMode,
   declineSaves: boolean,
   companionEmails: string,
   vaultEntries: VaultEntry[] = [{ hostname: "localhost", username: "e2e-user", password: "e2e-pass" }],
+  setUp = true,
 ): string {
   const dir = mkdtempSync(join(tmpdir(), "app-e2e-"));
-  const vault = join(dir, "vault.json");
-  writeFileSync(vault, JSON.stringify(vaultEntries));
-
-  // browsers start native hosts with a minimal PATH, so call bun by absolute path
-  const bun = execSync("command -v bun", { encoding: "utf8" }).trim();
+  writeFileSync(join(dir, "vault.json"), JSON.stringify(vaultEntries));
   mkdirSync(join(dir, "profile", "NativeMessagingHosts"), { recursive: true });
-  const log = join(dir, "helper.log");
-  writeHost(
-    dir,
-    BRIDGE_HOST,
-    `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}" FAKE_HELPER_LOG="${log}"${declineSaves ? " FAKE_HELPER_SAVE=decline" : ""}\nexec "${bun}" "${fakeHelper}"\n`,
-  );
+  if (setUp) registerFakeHelper(dir, declineSaves);
   if (companion !== "none") {
     writeHost(
       dir,
       COMPANION_HOST,
-      `#!/bin/sh\nexport FAKE_COMPANION_CODE=${PAIRING_CODE} FAKE_COMPANION_RESULT=${companion} FAKE_COMPANION_EMAILS="${companionEmails}"\nexec "${bun}" "${fakeCompanion}"\n`,
+      `#!/bin/sh\nexport FAKE_COMPANION_CODE=${PAIRING_CODE} FAKE_COMPANION_RESULT=${companion} FAKE_COMPANION_EMAILS="${companionEmails}"\nexec "${bun()}" "${fakeCompanion}"\n`,
     );
   }
   return dir;
@@ -92,6 +101,10 @@ type Fixtures = {
   companionEmails: string;
   /** Extra command-line switches for the browser. */
   browserArgs: string[];
+  /** Whether the setup script has run for this browser; see `runSetup`. */
+  setUp: boolean;
+  /** Runs the setup (registers the fake helper) while the browser is open. */
+  runSetup: () => void;
   context: BrowserContext;
   popupUrl: string;
   /** Search URLs of the requests to open the Passwords app that reached the fake helper. */
@@ -155,8 +168,9 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
   declineSaves: [false, { option: true }],
   companionEmails: ["jane@example.com,jane.work@example.com", { option: true }],
   browserArgs: [[], { option: true }],
-  context: async ({ companion, declineSaves, companionEmails, browserArgs }, use) => {
-    const dir = profileWithFakeHelper(companion, declineSaves, companionEmails);
+  setUp: [true, { option: true }],
+  context: async ({ companion, declineSaves, companionEmails, browserArgs, setUp }, use) => {
+    const dir = profileWithFakeHelper(companion, declineSaves, companionEmails, undefined, setUp);
     const context = await chromium.launchPersistentContext(join(dir, "profile"), {
       channel: "chromium",
       args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`, ...browserArgs],
@@ -165,6 +179,9 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
     await use(context);
     await context.close();
     rmSync(dir, { recursive: true, force: true });
+  },
+  runSetup: async ({ context, declineSaves }, use) => {
+    await use(() => registerFakeHelper(profileDirs.get(context) ?? "", declineSaves));
   },
   passwordsAppLaunches: async ({ context }, use) => {
     await use(() => helperLog(context, "launch").map((entry) => entry.url as string));

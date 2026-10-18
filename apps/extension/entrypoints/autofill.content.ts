@@ -1,4 +1,4 @@
-import { type FieldKind, fieldKind, isPasswordField } from "@/src/autofill/fields.ts";
+import { type FieldKind, fieldKind } from "@/src/autofill/fields.ts";
 import { MenuHost } from "@/src/autofill/menu-host.ts";
 import { isGone, isUsernameInput, watchUntilGone } from "@/src/autofill/submission.ts";
 import { FILL_MATCHES } from "@/src/config.ts";
@@ -28,8 +28,6 @@ export default defineContentScript({
       }));
       // the user may have moved on while we asked
       if (ticket !== request || document.activeElement !== field) return;
-      // when locked, offer to unlock only where a password is clearly expected
-      const unlockHere = kind === "new-password" || isPasswordField(field) || field.autocomplete.includes("username");
       if (nonce === undefined) {
         menu.close();
       } else if (kind === "new-password" && field.value !== "") {
@@ -41,7 +39,9 @@ export default defineContentScript({
         }
       } else if (show === "email" && kind === "signup-email") {
         menu.open(field, "email", kind, nonce);
-      } else if (show === "logins" || show === "generate" || (show === "locked" && unlockHere)) {
+      } else if (show === "logins" || show === "generate" || show === "locked" || show === "setup") {
+        // "locked" and "setup" too: login fields include guessed usernames, but only next to a
+        // password field, and the email field is usually the first one people click
         menu.open(field, show, kind, nonce);
       } else {
         menu.close();

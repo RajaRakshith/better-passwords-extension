@@ -27,7 +27,7 @@ Fill logins from Apple Passwords (iCloud Keychain) in any browser on your Mac. P
 - Unlock with Touch ID, and suggest the emails on your contact card, with the optional [companion app](docs/companion.md)
 - Lock any time, or automatically when your Mac locks
 - Open the Passwords app for the current site
-- Works in Chrome, Arc, Brave, Edge, Vivaldi, Chromium, Helium and Firefox
+- Works in Chrome, Arc, Brave, Edge, Vivaldi, Chromium, Helium, Firefox and Zen
 
 ## Compared with Apple's iCloud Passwords extension
 
@@ -58,7 +58,7 @@ Requirements: macOS 14 (Sonoma) or later, signed in to iCloud with Passwords tur
 ### 1. Install the extension
 
 - **Chrome, Arc, Brave, Edge, Vivaldi and other Chromium browsers:** [Chrome Web Store][chrome-web-store]
-- **Firefox:** [Firefox Add-ons][firefox-addons]
+- **Firefox and Zen:** [Firefox Add-ons][firefox-addons]
 
 Rather install by hand? Download `better-passwords-<version>-chrome.zip` from the [latest release](https://github.com/fanckush/better-passwords-extension/releases/latest), unzip it, open `chrome://extensions`, turn on **Developer mode** and choose **Load unpacked**. Manual installs don't update themselves.
 
@@ -66,7 +66,7 @@ Apple's iCloud Passwords extension can stay installed, though two autofill menus
 
 ### 2. Connect your browser once
 
-Install the optional [companion Mac app](docs/companion.md), open **Better Passwords.app**, and choose **Connect**. It also enables Touch ID and contact email suggestions after you allow the required permissions.
+[Download the optional companion Mac app](https://betterpasswords.app/companion) ([how it works](docs/companion.md)), move it to Applications, open **Better Passwords.app**, and choose **Connect**. It also enables Touch ID and contact email suggestions after you allow the required permissions.
 
 Or run the setup script without the companion app:
 
@@ -90,10 +90,10 @@ Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup (Bun)
 
 ## Credits
 
-Better Passwords stands on the shoulders of two open source extensions:
+Better Passwords builds on two open source extensions:
 
-- [Open Passwords](https://github.com/ManiForoughi2/open-passwords), an extension for Apple Passwords in Chrome and Edge that showed the code prompts could be tamed.
-- [iCloud Hide My Email](https://github.com/dedoussis/icloud-hide-my-email-browser-extension) by Dimitrios Dedoussis, which worked out how to use Hide My Email from a browser.
+- [Open Passwords](https://github.com/ManiForoughi2/open-passwords) fills from Apple Passwords in Chrome and Edge. It showed that keeping the connection to Apple's helper open means far fewer six-digit codes.
+- [iCloud Hide My Email](https://github.com/dedoussis/icloud-hide-my-email-browser-extension) by Dimitrios Dedoussis showed how to use Hide My Email from a browser.
 
 Thank you to their authors. [NOTICE](NOTICE) lists every project this one builds on.
 

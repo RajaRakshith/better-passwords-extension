@@ -27,10 +27,9 @@
     orb.style.left = `${el.offsetLeft + Math.min(190, el.offsetWidth * 0.55)}px`;
     orb.style.top = `${el.offsetTop + el.offsetHeight / 2}px`;
   };
-  // Once the demo has been used, the dot and the "try it" note step aside.
+  // Once the demo has been used, the dot steps aside. The "try it" note stays.
   const done = () => {
     orb.hidden = true;
-    demoEl.closest(".hero-try").classList.add("used");
   };
   orb.addEventListener("click", () => {
     done();

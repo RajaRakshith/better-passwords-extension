@@ -53,6 +53,22 @@ test("moving to the next field opens a fresh menu that still fills", async ({ co
   await expect(page.locator("#pass")).toHaveValue("e2e-pass");
 });
 
+test("a site without saved logins says so on every focus, not only after unlocking", async ({ context, siteUrl }) => {
+  // the vault has logins for localhost only; 127.0.0.1 is the same page with none
+  const page = await context.newPage();
+  await page.goto(`${siteUrl.replace("localhost", "127.0.0.1")}/login.html`);
+  await page.locator("#pass").click();
+  let menu = await menuFrame(page);
+  await choose(menu, "Unlock to fill passwords");
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(menu.getByText("No saved passwords for 127.0.0.1.")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await page.locator("#user").click();
+  menu = await menuFrame(page);
+  await expect(menu.getByText("No saved passwords for 127.0.0.1.")).toBeVisible();
+});
+
 test("arrow keys move between the field and the menu", async ({ context, siteUrl }) => {
   const page = await context.newPage();
   await page.goto(`${siteUrl}/login.html`);
@@ -241,4 +257,16 @@ test("a long list of logins scrolls inside the menu", async ({ context, siteUrl 
   });
   expect(scrolled.overflows).toBe(true);
   expect(scrolled.scrollTop).toBeGreaterThan(0);
+});
+
+test("offers to unlock on a login form's email field too", async ({ context, siteUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
+  // like many sites: an email field that isn't marked as the username, next to a password field
+  await page.locator("#user").evaluate((el: HTMLInputElement) => {
+    el.autocomplete = "email";
+  });
+  await page.locator("#user").click();
+  const menu = await menuFrame(page);
+  await choose(menu, "Unlock to fill passwords");
 });

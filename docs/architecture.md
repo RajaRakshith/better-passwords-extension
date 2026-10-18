@@ -37,6 +37,10 @@ Chromium builds carry the Chrome Web Store's public key, so unpacked builds get 
 
 The helper's code signature has *parent launch constraints*: macOS kills it unless an approved browser is its parent process. So a helper of ours cannot sit between the browser and Apple's helper. The extension always talks to Apple's helper directly. Native code of ours, such as the [Touch ID companion](companion.md), runs beside it, never in front of it.
 
+## First run
+
+Until the bridge is registered, connecting fails with the browser's "host not found", and the extension treats that as "not set up yet", not as an error. A fresh install that can't reach the helper opens `setup.html`; password fields offer "Set Up Better Passwords", which opens the same page; and the popup shows the same flow (`src/ui/setup.ts`). It offers the companion app or the setup command, retries the connection every 1.5 seconds while on screen, and says when it worked. That is said once, even if the popup closed while the user ran the command: the background remembers that setup was pending until the user sees it or unlocks. On anything but macOS, it only says that a Mac is needed.
+
 ## Sessions
 
 Apple's helper keeps the pairing key only in its own memory. When the native port closes, the helper exits and the key is gone, and the next connection needs a new 6-digit code. Apple's extension lets that happen whenever its background worker goes idle, which is why it asks so often.
@@ -45,7 +49,7 @@ Our background worker keeps the port open. Chrome keeps an extension's worker al
 
 ## The inline menu
 
-When a login field gets focus, the content script asks the background one question: show logins, offer to unlock, or stay out of the way. That answer is all it learns; it never sees usernames or passwords.
+When a login field gets focus, the content script asks the background one question: show logins, offer to unlock, offer the setup (before this browser can reach Apple's helper), or stay out of the way. That answer is all it learns; it never sees usernames or passwords.
 
 To show the menu, the content script opens a top-layer popover holding a closed shadow root with an iframe of our own `menu.html`. The menu page is an extension page, so:
 - the web page can't read the usernames in it

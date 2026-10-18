@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mac app – Better Passwords</title>
+<meta name="description" content="The optional Mac app for the Better Passwords extension: connect your browsers in one click and unlock with Touch ID instead of the six-digit code." />
+<link rel="canonical" href="https://betterpasswords.app/companion" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#161618" media="(prefers-color-scheme: dark)" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Better Passwords" />
+<meta property="og:url" content="https://betterpasswords.app/companion" />
+<meta property="og:title" content="The Better Passwords Mac app" />
+<meta property="og:description" content="Optional and free: connect your browsers in one click and unlock with Touch ID." />
+<meta property="og:image" content="https://betterpasswords.app/og.png" />
+<link rel="stylesheet" href="assets/shared.css" />
+<style>
+  /* A sub-page of the extension's site: one narrow column, back to the main page at the top. */
+  .page { max-width: 600px; margin: 0 auto; padding: 40px 24px 96px; }
+  .back { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font: 500 15px var(--font); }
+  .back:hover { text-decoration: none; opacity: 0.8; }
+  .back img { width: 24px; height: 24px; }
+  h1 { margin: 64px 0 12px; font: 700 clamp(32px, 4vw, 44px)/1.08 var(--display); letter-spacing: -0.03em; }
+  .page .lede { margin-bottom: 28px; }
+  .page .ctas { gap: 14px 22px; }
+  .get svg { width: 30px; height: 30px; padding: 6px; border-radius: 50%; background: #fff; color: var(--blue); fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  h2 { margin: 56px 0 14px; font: 600 21px/1.2 var(--display); letter-spacing: -0.015em; }
+  .page ol, .page ul { margin: 0; padding-left: 1.3em; color: var(--muted); font-size: 17px; }
+  .page li + li { margin-top: 8px; }
+  .page li b { color: var(--ink); font-weight: 600; }
+  .page p.small { margin: 14px 0 0; font-size: 17px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="page">
+  <a class="back" href="/"><img src="icon.svg" alt="" />Better Passwords</a>
+
+  <h1>The Mac app</h1>
+  <p class="lede">Optional and free. It connects your browsers to Apple Passwords in one click, and lets the extension unlock with <b>Touch ID</b> instead of the six-digit code.</p>
+  <div class="ctas">
+    <a class="add get" href="/download/mac"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12M6.5 10.5 12 16l5.5-5.5M5 20h14"/></svg>Download for Mac</a>
+    <a class="other" href="/">Get the extension</a>
+  </div>
+  <p class="note">macOS 14 or later. Signed and notarized by Apple.</p>
+
+  <h2>Set it up</h2>
+  <ol>
+    <li>Move <b>Better Passwords</b> to Applications and open it.</li>
+    <li>Click <b>Connect</b>, then turn on Touch ID and allow Accessibility when macOS asks.</li>
+    <li>Reload the extension.</li>
+  </ol>
+
+  <h2>What it asks for</h2>
+  <ul>
+    <li><b>Accessibility</b>, only to read the code in Apple's own code window. Your browser never gets it.</li>
+    <li><b>Touch ID</b>, every time it enters a code for you.</li>
+    <li><b>Contacts</b> (optional), only your own card, to suggest your emails in sign-up forms.</li>
+  </ul>
+  <p class="small">It never sees your passwords. <a href="https://github.com/fanckush/better-passwords-extension/blob/main/docs/companion.md" target="_blank" rel="noopener">How it works</a></p>
+
+  <h2>Rather not install an app?</h2>
+  <p class="small">The extension works without it: you connect with <a href="https://github.com/fanckush/better-passwords-extension#2-connect-your-browser-once" target="_blank" rel="noopener">one command in Terminal</a> and type the six-digit code instead of using Touch ID.</p>
+</main>
+<footer class="foot">
+  <div class="wrap">
+    <p><a href="/">Better Passwords</a><a href="https://github.com/fanckush/better-passwords-extension">Source code</a><a href="https://github.com/fanckush/better-passwords-extension/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/fanckush/better-passwords-extension/blob/main/SECURITY.md">Security</a></p>
+    <p>Better Passwords is not affiliated with or endorsed by Apple Inc. Apple, iCloud, iCloud+, Safari and Touch ID are trademarks of Apple Inc.</p>
+  </div>
+</footer>
+</body>
+</html>

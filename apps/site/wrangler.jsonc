@@ -1,10 +1,13 @@
-// Serves this folder as static files on Cloudflare Workers at betterpasswords.app.
+// Serves this folder as static files on Cloudflare Workers at betterpasswords.app. worker.js handles
+// only the paths that aren't files, like /download/mac.
 // Deploy with `bunx wrangler deploy` from apps/site (see docs/release.md).
 {
   "name": "better-passwords-site",
   "compatibility_date": "2026-10-01",
+  "main": "worker.js",
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS"
   },
   "routes": [{ "pattern": "betterpasswords.app", "custom_domain": true }],
   "workers_dev": false

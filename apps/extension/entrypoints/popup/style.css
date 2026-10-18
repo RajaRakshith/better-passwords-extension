@@ -170,6 +170,21 @@ label.toggle {
   gap: 6px;
 }
 
+/* after the first unlock that followed setup */
+.all-set {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.all-set svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+
 .settings {
   display: grid;
   gap: 6px;
