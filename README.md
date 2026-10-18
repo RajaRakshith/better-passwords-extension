@@ -8,7 +8,20 @@
 
 **An alternative to Apple's iCloud Passwords extension for Chromium and firefox based browsers**
 
-Fill logins from Apple Passwords (iCloud Keychain) in any browser on your Mac. Pair once per browser launch instead of typing a six-digit code every few hours, or unlock with Touch ID. Free and open source.
+## Why
+
+I am honestly sick of seeing this all the time
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/apple-autofill-prompt-dark.png">
+  <img src="docs/images/apple-autofill-prompt-light.png" width="340" alt="Apple's extension asking again: Enable Password AutoFill. Click here to allow iCloud Passwords to AutoFill your passwords.">
+</picture>
+
+also, Apple's extension **doesn't** suggest passwords when signing up!
+
+## Demo
+
+Visit [betterpasswords.app](https://betterpasswords.app) for an interactive dummy form
 
 [Chrome Web Store][chrome-web-store] · [Firefox Add-ons][firefox-addons] · [Website](https://betterpasswords.app) · [Setup](#setup)
 
@@ -17,54 +30,24 @@ Fill logins from Apple Passwords (iCloud Keychain) in any browser on your Mac. P
   <img src="docs/images/screenshot-light.png" width="856" alt="Better Passwords suggesting saved Apple Passwords logins under a sign-in field, with its toolbar popup open">
 </picture>
 
-> Not affiliated with or endorsed by Apple Inc. "Apple" and "iCloud" are trademarks of Apple Inc.
-
 ## Features
 
-- Login suggestions right in the field, or fill from the toolbar button
-- Strong passwords on sign-up forms, saved to Apple Passwords
-- Hide My Email on sign-up forms (opt-in, needs iCloud+)
-- Unlock with Touch ID, and suggest the emails on your contact card, with the optional [companion app](docs/companion.md)
-- Lock any time, or automatically when your Mac locks
-- Open the Passwords app for the current site
-- Works in Chrome, Arc, Brave, Edge, Vivaldi, Chromium, Helium, Firefox and Zen
+- ✏️ login suggestions
+- 🔐 password generatino on sign-ups
+- ✨ NO MORE 6 DIGIT CODES!! *
+- ☁️ generate Hide My Email on sign-ups (needs iCloud+)
+- 👤 suggest yoru email addresses from your contact card *
 
-## Compared with Apple's iCloud Passwords extension
+\* Needs [companion Mac app](docs/companion.md)
 
-| | iCloud Passwords | Better Passwords |
-|---|---|---|
-| Made by | Apple | An indie developer, [@fanckush](https://github.com/fanckush) |
-| Fills your Apple Passwords | Yes | Yes |
-| Strong passwords for sign-ups | Opens the Passwords app | Suggested right in the field |
-| Hide My Email in sign-up forms | Not available | Yes, with iCloud+ |
-| Your own emails in sign-up forms | Not available | From your contact card\* |
-| Unlocks with | Six digits from your Mac | Six digits, or Touch ID\* |
-| How often | Each time the browser puts it to sleep | Once, until you quit the browser |
-| Windows | Yes, with iCloud for Windows | Mac only for now |
-| Price | Free | Free and open source |
-
-\* Needs the free [companion Mac app](docs/companion.md).
-
-## Why
-
-Apple's iCloud Passwords extension loses its connection whenever the browser idles its background worker, and every reconnect means typing a new code from your Mac. This extension keeps the connection open, so you pair **once per browser launch**.
-
-It talks to the same Apple helper that ships with macOS, through the same encrypted pairing, so your passwords never leave Apple's own software except to fill the page you choose.
-
-## Setup
-
-Requirements: macOS 14 (Sonoma) or later, signed in to iCloud with Passwords turned on.
-
-### 1. Install the extension
+## Installotion
 
 - **Chrome, Arc, Brave, Edge, Vivaldi and other Chromium browsers:** [Chrome Web Store][chrome-web-store]
 - **Firefox and Zen:** [Firefox Add-ons][firefox-addons]
 
-Rather install by hand? Download `better-passwords-<version>-chrome.zip` from the [latest release](https://github.com/fanckush/better-passwords-extension/releases/latest), unzip it, open `chrome://extensions`, turn on **Developer mode** and choose **Load unpacked**. Manual installs don't update themselves.
+Or manually download `better-passwords-<version>-chrome.zip` from the [latest release](https://github.com/fanckush/better-passwords-extension/releases/latest), unzip it, open `chrome://extensions`, turn on **Developer mode** and choose **Load unpacked**. Manual installs don't support auto updates (similar steps for FF)
 
-Apple's iCloud Passwords extension can stay installed, though two autofill menus on the same field can get in each other's way.
-
-### 2. Connect your browser once
+### Connect to apple passwords
 
 [Download the optional companion Mac app](https://betterpasswords.app/companion) ([how it works](docs/companion.md)), move it to Applications, open **Better Passwords.app**, and choose **Connect**. It also enables Touch ID and contact email suggestions after you allow the required permissions.
 
@@ -74,15 +57,7 @@ Or run the setup script without the companion app:
 curl -fsSL https://github.com/fanckush/better-passwords-extension/raw/main/scripts/setup-mac.sh | sh
 ```
 
-The script lets the extension reach Apple's built-in password helper. It writes one small file per browser and needs no admin rights. [Read it](scripts/setup-mac.sh) first, and undo it any time with `--uninstall`.
-
-### 3. Unlock
-
-Click the toolbar icon and enter the code your Mac shows, or unlock with Touch ID through the companion. Hide My Email is optional, requires iCloud+, and uses your icloud.com sign-in in this browser.
-
-## How it works
-
-See [docs/architecture.md](docs/architecture.md), [docs/protocol.md](docs/protocol.md) and [docs/threat-model.md](docs/threat-model.md). There is no project backend or tracking. Opt-in Hide My Email connects to Apple’s iCloud: see the [privacy policy](PRIVACY.md).
+The script lets the extension reach Apple's built-in password helper. You can find it [here](scripts/setup-mac.sh). To undo use it with `--uninstall`.
 
 ## Contributing
 
@@ -90,17 +65,18 @@ Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup (Bun)
 
 ## Credits
 
-Better Passwords builds on two open source extensions:
+Thanks to the authors of the following projects for inspiring me to build this:
 
 - [Open Passwords](https://github.com/ManiForoughi2/open-passwords) fills from Apple Passwords in Chrome and Edge. It showed that keeping the connection to Apple's helper open means far fewer six-digit codes.
 - [iCloud Hide My Email](https://github.com/dedoussis/icloud-hide-my-email-browser-extension) by Dimitrios Dedoussis showed how to use Hide My Email from a browser.
-
-Thank you to their authors. [NOTICE](NOTICE) lists every project this one builds on.
 
 ## License
 
 [MIT](LICENSE). The protocol knowledge builds on earlier Apache-2.0 projects, credited in [NOTICE](NOTICE).
 
 <!-- Store listings: apps/site/assets/browser.js links the same pages. -->
+
 [chrome-web-store]: https://chromewebstore.google.com/detail/better-passwords/ocongmkplhijgajnipnhhggfcjfdilgj
 [firefox-addons]: https://addons.mozilla.org/firefox/addon/better-passwords/
+
+> Not affiliated with or endorsed by Apple Inc. "Apple" and "iCloud" are trademarks of Apple Inc.
