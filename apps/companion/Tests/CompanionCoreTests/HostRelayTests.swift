@@ -7,9 +7,11 @@ private struct StubAgent: HostRelay.Agent {
     var statusResult: Result<Bool, CompanionError> = .success(true)
     var codeResult: Result<String, CompanionError> = .success("123456")
     var emailsResult: Result<[String], CompanionError> = .success(["jane@example.com"])
+    var update: String?
     func status() async -> Result<Bool, CompanionError> { statusResult }
     func myEmails() async -> Result<[String], CompanionError> { emailsResult }
     func readPairingCode() async -> Result<String, CompanionError> { codeResult }
+    func availableUpdate() async -> String? { update }
 }
 
 private final class Recorder: @unchecked Sendable {
@@ -28,6 +30,14 @@ private func json(_ response: HostResponse) -> [String: Any] {
         #expect(reply["ok"] as? Bool == true)
         #expect(reply["accessibility"] as? Bool == false)
         #expect(reply["version"] as? Int == HostResponse.protocolVersion)
+        #expect(reply["update"] == nil)
+    }
+
+    @Test func helloReportsTheAppVersionAndAnUpdate() async {
+        let relay = HostRelay(agent: StubAgent(update: "1.2.0"), appVersion: "1.1.0")
+        let reply = json(await relay.handle(Data(#"{"type":"hello"}"#.utf8)))
+        #expect(reply["app"] as? String == "1.1.0")
+        #expect(reply["update"] as? String == "1.2.0")
     }
 
     @Test func relaysTheCode() async {

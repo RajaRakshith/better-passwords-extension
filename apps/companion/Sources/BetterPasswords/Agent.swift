@@ -70,6 +70,11 @@ final class AgentSession: NSObject, CompanionAgentProtocol, @unchecked Sendable 
         }
     }
 
+    func availableUpdate(reply: @escaping @Sendable (String?) -> Void) {
+        IdleExit.shared.touch()
+        reply(UpdateCheck.shared.available())
+    }
+
     func readPairingCode(reply: @escaping @Sendable (String?, String?) -> Void) {
         IdleExit.shared.begin()
         let caller = caller

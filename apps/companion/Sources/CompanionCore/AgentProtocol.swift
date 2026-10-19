@@ -13,6 +13,9 @@ import Foundation
     /// The email addresses on the user's own contact card ("Me" in Contacts), for sign-up forms.
     /// Replies with them, or with one of `CompanionError`'s raw values.
     func myEmails(reply: @escaping @Sendable (_ emails: [String]?, _ error: String?) -> Void)
+
+    /// A newer version of the app, if the agent has seen one in the appcast. It looks once a day.
+    func availableUpdate(reply: @escaping @Sendable (_ version: String?) -> Void)
 }
 
 public enum CompanionError: String, Error, Codable, Sendable, CaseIterable {

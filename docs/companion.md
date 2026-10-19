@@ -79,4 +79,4 @@ Signed releases: `scripts/bundle.sh --version 1.2.3 --sign "Developer ID Applica
 
 - macOS reports Apple's helper at its real location (`/System/Volumes/Preboot/Cryptexes/…`), behind the `/System/Cryptexes` link. Both are accepted; the code-signature check is what matters.
 - The agent finds the browser through its parent process. A browser that launches native hosts through an intermediate process would not work. Chromium browsers and Firefox launch hosts directly.
-- Accessibility can be removed only in System Settings. **Remove Setup** in the app removes the browser connections and the agent.
+`- Accessibility can be removed only in System Settings. **Remove Setup** in the app removes the browser connections and the agent.

@@ -63,6 +63,14 @@ public final class XPCAgentClient: HostRelay.Agent, @unchecked Sendable {
         }
     }
 
+    /// An agent from before this question (still running during an update) doesn't answer it: no update then.
+    public func availableUpdate() async -> String? {
+        let result: Result<String?, CompanionError> = await withAgent(timeout: Self.quick) { agent, finish in
+            agent.availableUpdate { version in finish(.success(version)) }
+        }
+        return (try? result.get()) ?? nil
+    }
+
     public func readPairingCode() async -> Result<String, CompanionError> {
         await withAgent(timeout: Self.touchID) { agent, finish in
             agent.readPairingCode { code, error in

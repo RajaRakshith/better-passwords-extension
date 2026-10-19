@@ -327,10 +327,18 @@ function macAppSection(status: Status, option: Option) {
     option("suggestEmails", "Suggest my emails", "from your contact card", !ready),
   );
   if (ready) {
+    // an app that updates itself offers the update once opened; an older one is downloaded again
+    const update = status.companionUpdate;
+    let action = openApp("Open Companion App…");
+    if (update?.how === "app") action = openApp(`Update to ${update.version}…`);
+    if (update?.how === "download") {
+      action = h("button", { class: "link", textContent: "Update Available…" });
+      action.addEventListener("click", () => void openCompanion("open-companion-page"));
+    }
     return h(
       "section",
       { class: "mac-app" },
-      h("div", { class: "actions" }, h("h2", { textContent: "Companion app" }), openApp("Open Companion App…")),
+      h("div", { class: "actions" }, h("h2", { textContent: "Companion app" }), action),
       options,
     );
   }

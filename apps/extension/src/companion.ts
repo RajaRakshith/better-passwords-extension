@@ -7,9 +7,24 @@ import { COMPANION_HOST } from "./config.ts";
 /** "ready": installed and allowed; "needs-setup": installed but Accessibility is off. */
 export type CompanionState = "ready" | "needs-setup" | "not-installed";
 
+/**
+ * A newer companion app is out. "app": the app updates itself once opened. "download": an app from
+ * before it could, replaced by downloading the new one.
+ */
+export interface CompanionUpdate {
+  how: "app" | "download";
+  /** Unknown for "download": those apps don't say. */
+  version?: string;
+}
+
+/** The first protocol version whose hello reports updates (the app updates itself from then on). */
+const UPDATES_VERSION = 4;
+
 interface HostResponse {
   ok: boolean;
   version?: number;
+  /** On hello: a newer app version that's out. */
+  update?: string;
   code?: string;
   emails?: string[];
   accessibility?: boolean;
@@ -53,7 +68,7 @@ function within<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 export class Companion {
-  #cached: { state: CompanionState; at: number } | undefined;
+  #cached: { state: CompanionState; update: CompanionUpdate | undefined; at: number } | undefined;
 
   constructor(
     private readonly sendNative: SendNative = (host, message) =>
@@ -63,20 +78,32 @@ export class Companion {
 
   /** Whether the companion can unlock. Cached briefly: each check starts the host and the agent. */
   async state(): Promise<CompanionState> {
-    if (this.#cached && this.now() - this.#cached.at < STATE_TTL_MS) return this.#cached.state;
+    return (await this.#hello()).state;
+  }
+
+  /** A newer app that's out, as the agent last saw (it looks once a day). Shares state()'s cache. */
+  async update(): Promise<CompanionUpdate | undefined> {
+    return (await this.#hello()).update;
+  }
+
+  async #hello() {
+    if (this.#cached && this.now() - this.#cached.at < STATE_TTL_MS) return this.#cached;
     let state: CompanionState;
+    let update: CompanionUpdate | undefined;
     try {
       const reply = (await within(this.sendNative(COMPANION_HOST, { type: "hello" }), QUICK_MS)) as
         | HostResponse
         | undefined;
       state = reply?.ok ? (reply.accessibility ? "ready" : "needs-setup") : "needs-setup";
+      if (reply?.ok && (reply.version ?? 1) < UPDATES_VERSION) update = { how: "download" };
+      else if (reply?.ok && typeof reply.update === "string") update = { how: "app", version: reply.update };
     } catch (error) {
       // no answer in time: installed, but its agent isn't running properly
       // otherwise the host isn't registered: the app isn't installed, or its setup didn't run
       state = (error as { code?: string }).code === "timeout" ? "needs-setup" : "not-installed";
     }
-    this.#cached = { state, at: this.now() };
-    return state;
+    this.#cached = { state, update, at: this.now() };
+    return this.#cached;
   }
 
   /** Asks for Touch ID and returns the code Apple's helper shows. */

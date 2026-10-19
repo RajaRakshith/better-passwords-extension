@@ -7,14 +7,18 @@ public struct HostRelay: Sendable {
         func status() async -> Result<Bool, CompanionError>
         func readPairingCode() async -> Result<String, CompanionError>
         func myEmails() async -> Result<[String], CompanionError>
+        func availableUpdate() async -> String?
     }
 
     let agent: any Agent
+    let appVersion: String?
     let openApp: @Sendable () -> Bool
 
-    /// `openApp` brings the app's window up; it doesn't involve the agent.
-    public init(agent: any Agent, openApp: @escaping @Sendable () -> Bool = { false }) {
+    /// `appVersion` is the version of the app the host is part of. `openApp` brings the app's window
+    /// up; it doesn't involve the agent.
+    public init(agent: any Agent, appVersion: String? = nil, openApp: @escaping @Sendable () -> Bool = { false }) {
         self.agent = agent
+        self.appVersion = appVersion
         self.openApp = openApp
     }
 
@@ -26,7 +30,8 @@ public struct HostRelay: Sendable {
         case .hello:
             switch await agent.status() {
             case .success(let trusted):
-                return HostResponse(ok: true, accessibility: trusted)
+                let update = await agent.availableUpdate()
+                return HostResponse(ok: true, app: appVersion, update: update, accessibility: trusted)
             case .failure(let error):
                 return .failure(error)
             }

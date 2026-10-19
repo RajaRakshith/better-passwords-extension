@@ -45,6 +45,27 @@ describe("Companion", () => {
     expect(host.calls).toHaveLength(2);
   });
 
+  it("passes on an update the app has seen, from the same hello", async () => {
+    const host = fakeHost(() => ({ ok: true, version: 4, app: "1.1.0", update: "1.2.0", accessibility: true }));
+    const companion = new Companion(host.send);
+    expect(await companion.state()).toBe("ready");
+    expect(await companion.update()).toEqual({ how: "app", version: "1.2.0" });
+    expect(host.calls).toHaveLength(1);
+
+    const current = fakeHost(() => ({ ok: true, version: 4, app: "1.2.0", accessibility: true }));
+    expect(await new Companion(current.send).update()).toBeUndefined();
+  });
+
+  it("asks for a download for an app that can't update itself", async () => {
+    const old = fakeHost(() => ({ ok: true, version: 3, accessibility: true }));
+    expect(await new Companion(old.send).update()).toEqual({ how: "download" });
+    // an app that isn't reachable says nothing about its version
+    const off = fakeHost(() => ({ ok: false, version: 3, error: "agent-unavailable" }));
+    expect(await new Companion(off.send).update()).toBeUndefined();
+    const missing = fakeHost(() => new Error("Specified native messaging host not found."));
+    expect(await new Companion(missing.send).update()).toBeUndefined();
+  });
+
   it("returns the code read after Touch ID", async () => {
     const host = fakeHost(() => ({ ok: true, code: "123456" }));
     expect(await new Companion(host.send).readCode()).toBe("123456");

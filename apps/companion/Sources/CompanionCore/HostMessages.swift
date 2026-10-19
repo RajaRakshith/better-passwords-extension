@@ -22,14 +22,18 @@ public struct HostResponse: Codable, Equatable, Sendable {
     public var ok: Bool
     /// Protocol version of the companion, so the extension can tell old installs apart.
     public var version = HostResponse.protocolVersion
+    /// The app's own version, on hello.
+    public var app: String?
+    /// A newer version of the app that's out, on hello.
+    public var update: String?
     public var code: String?
     public var accessibility: Bool?
     public var emails: [String]?
     public var error: CompanionError?
     public var message: String?
 
-    /// 1: hello, read-code. 2: adds my-emails. 3: adds open-app.
-    public static let protocolVersion = 3
+    /// 1: hello, read-code. 2: adds my-emails. 3: adds open-app. 4: hello adds app and update.
+    public static let protocolVersion = 4
 
     public static func failure(_ error: CompanionError) -> HostResponse {
         HostResponse(ok: false, error: error, message: error.message)

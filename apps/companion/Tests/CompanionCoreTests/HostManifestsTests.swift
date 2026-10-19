@@ -41,9 +41,11 @@ import Testing
         let done = try HostManifests.install(hostPath: "/h", support: support)
         #expect(done.map(\.name) == ["Zen"])
         let mozilla = support.appendingPathComponent("Mozilla/NativeMessagingHosts")
-        #expect(FileManager.default.fileExists(
-            atPath: mozilla.appendingPathComponent("io.github.fanckush.betterpasswords.bridge.json").path))
-        #expect(!FileManager.default.fileExists(atPath: support.appendingPathComponent("zen/NativeMessagingHosts").path))
+        #expect(
+            FileManager.default.fileExists(
+                atPath: mozilla.appendingPathComponent("io.github.fanckush.betterpasswords.bridge.json").path))
+        #expect(
+            !FileManager.default.fileExists(atPath: support.appendingPathComponent("zen/NativeMessagingHosts").path))
         #expect(HostManifests.connected(hostPath: "/h", support: support).map(\.name) == ["Zen"])
     }
 
@@ -76,5 +78,16 @@ import Testing
         HostManifests.uninstall(support: support)
         let left = try FileManager.default.contentsOfDirectory(atPath: directory.path)
         #expect(left == ["com.apple.passwordmanager.json"])
+    }
+
+    @Test func tellsWhereConnectedBrowsersPoint() throws {
+        let support = try temporarySupport(with: ["Google/Chrome", "Firefox"])
+        defer { try? FileManager.default.removeItem(at: support) }
+        #expect(HostManifests.companionHostPaths(support: support).isEmpty)
+        try HostManifests.install(hostPath: "/Users/jane/Downloads/X.app/host", support: support)
+        #expect(
+            HostManifests.companionHostPaths(support: support) == [
+                "/Users/jane/Downloads/X.app/host", "/Users/jane/Downloads/X.app/host",
+            ])
     }
 }

@@ -13,6 +13,6 @@ export default {
         successCmd: 'echo "version=${nextRelease.version}" >> "$GITHUB_OUTPUT"',
       },
     ],
-    ["@semantic-release/github", { assets: [{ path: "dist/*.zip" }] }],
+    ["@semantic-release/github", { assets: [{ path: "dist/updates/*.dmg" }, { path: "dist/updates/appcast.xml" }] }],
   ],
 };

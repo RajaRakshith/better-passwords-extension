@@ -2,7 +2,7 @@
 // read-only question, from the autofill content script. Web pages never talk to the background.
 
 import type { FieldKind } from "./autofill/fields.ts";
-import type { CompanionState } from "./companion.ts";
+import type { CompanionState, CompanionUpdate } from "./companion.ts";
 import type { FieldRules, PasswordStyle } from "./passwords/generate.ts";
 import type { SessionStatus } from "./session/session.ts";
 
@@ -102,6 +102,8 @@ export const DEFAULT_SETTINGS: Settings = {
 export interface Status extends SessionStatus {
   /** The companion app, checked only while locked (unlocked sessions don't need it). */
   companion?: CompanionState;
+  /** A newer companion app is out. */
+  companionUpdate?: CompanionUpdate;
   /** True when the user wants Touch ID and the companion is ready for it. */
   touchId?: boolean;
   /** This browser was just set up and hasn't been unlocked yet: say it worked, once. */

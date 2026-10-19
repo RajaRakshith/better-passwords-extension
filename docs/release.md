@@ -36,10 +36,19 @@ The companion job stays off until the repository variable `COMPANION_RELEASE` is
 | `MACOS_SIGN_IDENTITY` | e.g. `Developer ID Application: Name (TEAMID)` |
 | `NOTARY_KEY` | App Store Connect API key (`.p8`), base64 |
 | `NOTARY_KEY_ID`, `NOTARY_ISSUER` | That key's ID and issuer |
+| `SPARKLE_PRIVATE_KEY` | Sparkle's EdDSA private key, as `generate_keys --account better-passwords -x <file>` exports it. Its public half is `SUPublicEDKey` in `apps/companion/Resources/Info.plist` |
 
-`apps/companion/scripts/release.sh` builds a universal app, signs it with the hardened runtime, notarizes it, staples the ticket, and attaches the zip to a `companion-vX.Y.Z` GitHub release with build provenance.
+`apps/companion/scripts/release.sh`:
 
-Everything links to the download as `https://betterpasswords.app/download/mac`: the extension, the landing page and the README. The site's Worker (`apps/site/worker.js`) redirects it to the zip of the newest `companion-v*` release, or to the release list while there is none.
+1. builds a universal app, signs it with the hardened runtime, notarizes it and staples the ticket,
+2. puts it in a disk image next to a link to Applications, then signs, notarizes and staples the disk image,
+3. runs Sparkle's `generate_appcast`, which signs the disk image and the appcast with the EdDSA key.
+
+semantic-release attaches the disk image and `appcast.xml` to a `companion-vX.Y.Z` GitHub release, and CI attests the disk image's build provenance.
+
+Everything links to the download as `https://betterpasswords.app/download/mac`: the extension, the landing page and the README. The site's Worker (`apps/site/worker.js`) redirects it to the disk image of the newest `companion-v*` release, or to the release list while there is none. It also serves that release's appcast at `https://betterpasswords.app/companion/appcast.xml`, the feed every installed app checks.
+
+**Keep the Sparkle key.** Installed apps accept only updates and appcasts signed with it. It lives in the maintainer's login keychain under the account `better-passwords`; back it up outside the keychain too. If it's lost, Sparkle still accepts a disk image signed with the same Developer ID, so a release can ship a new public key. Its appcast won't match the key in installed apps, though, so they only see that release once Sparkle's signed-feed fallback expires (20 days).
 
 Signed builds trust their native host by team ID, so the app and the host must be signed with the same Developer ID.
 

@@ -5,6 +5,7 @@
 // Env: FAKE_COMPANION_CODE    the code to "read" (the fake helper's fixed code)
 //      FAKE_COMPANION_RESULT  "ok" (default), "cancelled" or "needs-accessibility"
 //      FAKE_COMPANION_EMAILS  comma-separated emails on the "Me" card, or "needs-contacts"
+//      FAKE_COMPANION_UPDATE  a newer app version to report as out
 
 import { encodeFrame, FrameDecoder } from "./native-messaging.ts";
 
@@ -12,7 +13,10 @@ const result = process.env.FAKE_COMPANION_RESULT ?? "ok";
 const decoder = new FrameDecoder();
 
 function reply(message: { type?: string }) {
-  if (message.type === "hello") return { ok: true, version: 2, accessibility: result !== "needs-accessibility" };
+  if (message.type === "hello") {
+    const update = process.env.FAKE_COMPANION_UPDATE || undefined;
+    return { ok: true, version: 4, app: "1.0.0", update, accessibility: result !== "needs-accessibility" };
+  }
   if (message.type === "my-emails") {
     const emails = process.env.FAKE_COMPANION_EMAILS ?? "";
     if (emails === "needs-contacts") {

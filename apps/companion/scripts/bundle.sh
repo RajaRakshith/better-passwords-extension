@@ -5,6 +5,7 @@
 #
 # Without --sign the app is signed ad hoc, for local testing only. An ad-hoc agent trusts only the
 # exact native host built with it (pinned by cdhash); a Developer ID build trusts its own team.
+# Without --version it is a development build, which never updates itself.
 
 set -eu
 cd "$(dirname "$0")/.."
@@ -27,13 +28,20 @@ bin="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
 app="dist/Better Passwords.app"
 host="$app/Contents/MacOS/better-passwords-host"
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Library/LaunchAgents"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Library/LaunchAgents" "$app/Contents/Frameworks"
 cp "$bin/BetterPasswords" "$app/Contents/MacOS/"
+install_name_tool -add_rpath @executable_path/../Frameworks "$app/Contents/MacOS/BetterPasswords"
+sparkle="$app/Contents/Frameworks/Sparkle.framework"
+ditto "$bin/Sparkle.framework" "$sparkle"
+# Sparkle's XPC services are for sandboxed apps, which this one isn't
+rm -rf "$sparkle/XPCServices" "$sparkle/Versions/B/XPCServices"
 cp "$bin/better-passwords-host" "$host"
 cp Resources/Info.plist "$app/Contents/Info.plist"
 cp Resources/io.github.fanckush.betterpasswords.agent.plist "$app/Contents/Library/LaunchAgents/"
 plutil -replace CFBundleShortVersionString -string "$version" "$app/Contents/Info.plist"
 plutil -replace CFBundleVersion -string "$version" "$app/Contents/Info.plist"
+# no appcast: a development build would offer to replace itself with the release
+if [ "$version" = "0.0.0" ]; then plutil -remove SUFeedURL "$app/Contents/Info.plist"; fi
 
 iconset="$(mktemp -d)/AppIcon.iconset"
 swift scripts/make-iconset.swift ../extension/assets/icon.svg "$iconset"
@@ -46,8 +54,13 @@ else
     set -- --force --sign "$identity" --options runtime --timestamp
 fi
 
-# The host first: an ad-hoc app pins the host's exact build, so its hash goes into Info.plist
-# before the app itself is signed.
+# Inside out: Sparkle's helpers, then its framework.
+codesign "$@" "$sparkle/Versions/B/Autoupdate"
+codesign "$@" "$sparkle/Versions/B/Updater.app"
+codesign "$@" "$sparkle"
+
+# The host before the app: an ad-hoc app pins the host's exact build, so its hash goes into
+# Info.plist before the app itself is signed.
 codesign "$@" --identifier io.github.fanckush.betterpasswords.companion.host "$host"
 if [ "$identity" = "-" ]; then
     cdhash="$(codesign -dvvv "$host" 2>&1 | sed -n 's/^CDHash=//p')"

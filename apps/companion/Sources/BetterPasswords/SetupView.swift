@@ -7,19 +7,67 @@ struct SetupView: View {
     @State private var model = SetupModel()
     /// Once everything is set up, the window shows a finished screen; this brings the steps back.
     @State private var showingSetup = false
+    @State private var moveError: String?
+    private let installed = AppLocation.isInstalled
     private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     var body: some View {
         Group {
-            if model.ready && !showingSetup { done } else { steps }
+            if !installed {
+                move
+            } else if model.ready && !showingSetup {
+                done
+            } else {
+                steps
+            }
         }
         .padding(24)
         .frame(width: 480)
         .onAppear {
+            // outside Applications, nothing is set up: it would point at a copy that won't stay
+            guard installed else { return }
             model.reRegisterIfRebuilt()
+            model.reconnectIfMoved()
             model.refresh()
         }
         .onReceive(timer) { _ in model.refresh() }
+    }
+
+    /// Before anything else: the app has to be in Applications, where browsers and macOS find it.
+    private var move: some View {
+        VStack(spacing: 14) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 72, height: 72)
+            Text("Move to Applications").font(.title2.bold())
+            Text(
+                "Better Passwords runs from your Applications folder, where your browsers and macOS start it. "
+                    + "It opens again from there."
+            )
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            if let moveError {
+                Text(moveError).foregroundStyle(.red).font(.callout)
+            }
+            HStack {
+                Button("Quit") { NSApp.terminate(nil) }
+                Spacer()
+                Button("Move to Applications") {
+                    Task {
+                        do {
+                            try await AppLocation.moveToApplications()
+                            NSApp.terminate(nil)
+                        } catch {
+                            moveError = error.localizedDescription
+                        }
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.top, 10)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     /// The finished screen: it says plainly that the app works without this window.
@@ -48,6 +96,8 @@ struct SetupView: View {
                     .keyboardShortcut(.defaultAction)
             }
             .padding(.top, 10)
+            Divider()
+            UpdatesFooter(availableUpdate: model.availableUpdate)
         }
         .frame(maxWidth: .infinity)
     }
@@ -106,6 +156,8 @@ struct SetupView: View {
                         .keyboardShortcut(.defaultAction)
                 }
             }
+            Divider()
+            UpdatesFooter(availableUpdate: model.availableUpdate)
         }
     }
 
@@ -120,6 +172,31 @@ struct SetupView: View {
         case .requiresApproval: "Allow Better Passwords in System Settings → General → Login Items."
         default: "Starts by itself when the extension needs it, so this window doesn't need to stay open."
         }
+    }
+}
+
+/// The app's version, and updates: a notice when the agent has seen a newer version.
+private struct UpdatesFooter: View {
+    let availableUpdate: String?
+    @State private var automatically = Updater.shared.checksAutomatically
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let availableUpdate, Updater.shared.isRunning {
+                Label("Version \(availableUpdate) is available.", systemImage: "arrow.down.circle.fill")
+                Spacer()
+                Button("Update…") { Updater.shared.checkForUpdates() }
+            } else {
+                Text("Version \(AppInfo.version ?? "unknown")").foregroundStyle(.secondary)
+                Spacer()
+                if Updater.shared.isRunning {
+                    Toggle("Check for updates automatically", isOn: $automatically)
+                        .onChange(of: automatically) { Updater.shared.checksAutomatically = automatically }
+                    Button("Check Now") { Updater.shared.checkForUpdates() }
+                }
+            }
+        }
+        .font(.callout)
     }
 }
 
@@ -170,6 +247,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // the setup window is a normal app.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
+        Updater.shared.start()
+        // the extension says when the agent has seen an update, and its button opens this app
+        if AppInfo.availableUpdate != nil { Updater.shared.checkForUpdates() }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool { true }

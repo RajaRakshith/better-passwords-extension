@@ -13,6 +13,8 @@ final class SetupModel {
     private(set) var agentStatus: SMAppService.Status = .notRegistered
     private(set) var accessibilityTrusted = false
     private(set) var contactsAllowed = false
+    /// A newer version the agent has seen in the appcast.
+    private(set) var availableUpdate: String?
     private(set) var lastError: String?
 
     private let agent = SMAppService.agent(plistName: Identity.agentPlistName)
@@ -27,11 +29,11 @@ final class SetupModel {
     var ready: Bool { browsersConnected && agentEnabled && accessibilityTrusted }
 
     /// macOS ties a registered background agent to the exact build that registered it (for ad-hoc
-    /// signed builds, by code hash). After a rebuild the old registration can no longer start the
-    /// agent, so a new build re-registers it.
+    /// signed builds, by code hash), and to where that build was. After a rebuild, an update or a
+    /// move, the old registration can no longer start the agent, so the app re-registers it.
     func reRegisterIfRebuilt() {
         let key = "registeredBuild"
-        guard let build = CodeSigning.ownCDHash() else { return }
+        guard let build = registeredBuild else { return }
         // no record (an older build registered it) counts as a different build
         guard agent.status == .enabled, UserDefaults.standard.string(forKey: key) != build else {
             UserDefaults.standard.set(build, forKey: key)
@@ -47,12 +49,25 @@ final class SetupModel {
         }
     }
 
+    /// This build and where it is, as recorded when it registers the agent.
+    private var registeredBuild: String? {
+        CodeSigning.ownCDHash().map { "\($0) \(Bundle.main.bundleURL.path)" }
+    }
+
+    /// Browsers connected from a copy of the app somewhere else (say, Downloads) would start a host
+    /// that may be gone. Connect them to this copy.
+    func reconnectIfMoved() {
+        let paths = HostManifests.companionHostPaths(support: support)
+        if paths.contains(where: { $0 != hostPath }) { connectBrowsers() }
+    }
+
     func refresh() {
         installedBrowsers = HostManifests.installed(in: support)
         connectedBrowsers = HostManifests.connected(hostPath: hostPath, support: support)
         agentStatus = agent.status
         accessibilityTrusted = AXIsProcessTrusted()
         contactsAllowed = ContactCard.allowed
+        availableUpdate = AppInfo.availableUpdate
     }
 
     func connectBrowsers() {
@@ -60,7 +75,7 @@ final class SetupModel {
     }
 
     func enableAgent() {
-        if let build = CodeSigning.ownCDHash() { UserDefaults.standard.set(build, forKey: "registeredBuild") }
+        if let build = registeredBuild { UserDefaults.standard.set(build, forKey: "registeredBuild") }
         perform { try agent.register() }
         if agent.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
     }

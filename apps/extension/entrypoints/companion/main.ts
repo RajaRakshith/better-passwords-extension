@@ -19,13 +19,18 @@ function feature(path: string, title: string, detail: string) {
 async function render() {
   const status = await send({ type: "get-status" }).catch(() => undefined);
   const installed = status?.companion === "ready" || status?.companion === "needs-setup";
+  const update = installed ? status?.companionUpdate : undefined;
+  // an app from before updates were built in is replaced by downloading the new one
+  const download = !installed || update?.how === "download";
+  let label = installed ? "Open Companion App" : "Download for Mac";
+  if (update) label = update.how === "download" ? "Download the Update" : `Update to ${update.version}`;
 
   const primary = h("a", {
     class: "button primary",
-    href: installed ? "#" : COMPANION_DOWNLOAD_URL,
-    textContent: installed ? "Open Companion App" : "Download for Mac",
+    href: download ? COMPANION_DOWNLOAD_URL : "#",
+    textContent: label,
   });
-  if (installed) {
+  if (!download) {
     primary.addEventListener("click", async (event) => {
       event.preventDefault();
       await send({ type: "open-companion-app" }).catch(() => {});

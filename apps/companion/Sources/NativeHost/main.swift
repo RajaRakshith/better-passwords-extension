@@ -4,7 +4,9 @@
 import CompanionCore
 import Foundation
 
-let relay = HostRelay(agent: XPCAgentClient()) {
+// the host lives inside the app bundle, so the main bundle is the app's
+let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+let relay = HostRelay(agent: XPCAgentClient(), appVersion: appVersion) {
     // `open` finds the installed app by its bundle identifier, wherever it lives
     let open = Process()
     open.executableURL = URL(fileURLWithPath: "/usr/bin/open")

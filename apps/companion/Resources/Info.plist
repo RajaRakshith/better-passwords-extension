@@ -33,5 +33,18 @@
 	<string>Better Passwords suggests the email addresses on your contact card when you sign up for websites.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>MIT License. Not affiliated with Apple Inc.</string>
+	<!-- Sparkle: the site serves the newest release's appcast (apps/site/worker.js). Updates and the
+	     appcast itself must be signed with the EdDSA key below, and are checked before unpacking.
+	     Checks start without asking; the setup window can turn them off, for the agent too. -->
+	<key>SUPublicEDKey</key>
+	<string>5ek3Y+B4/CCAvErMmBr6BNf7+GWnvsBsYwVJ9rpygc0=</string>
+	<key>SUFeedURL</key>
+	<string>https://betterpasswords.app/companion/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
+	<key>SURequireSignedFeed</key>
+	<true/>
 </dict>
 </plist>

@@ -131,6 +131,16 @@ public enum HostManifests {
         }
     }
 
+    /// Where the companion manifests of installed browsers point. Another path than ours means the
+    /// browsers were connected from a copy of the app somewhere else.
+    public static func companionHostPaths(support: URL) -> [String] {
+        installed(in: support).compactMap { browser in
+            let file = directory(for: browser, in: support).appendingPathComponent("\(Identity.companionHost).json")
+            guard let data = try? Data(contentsOf: file) else { return nil }
+            return (try? JSONDecoder().decode(HostManifest.self, from: data))?.path
+        }
+    }
+
     /// Browsers that have both of our manifests, with the companion one pointing at `hostPath`.
     public static func connected(hostPath: String, support: URL) -> [Browser] {
         installed(in: support).filter { browser in

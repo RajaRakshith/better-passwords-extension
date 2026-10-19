@@ -101,12 +101,14 @@ export default defineBackground(() => {
     const base = status();
     if (base.state === "no-helper") return base;
     const state = await companion.state();
+    const update = await companion.update();
     const connected = base.state === "locked" || base.state === "awaiting-code";
     const justConnected = connected && (await browser.storage.local.get(SETUP_PENDING))[SETUP_PENDING];
     return {
       ...base,
       companion: state,
       touchId: state === "ready" && (await getSettings()).touchId,
+      ...(update ? { companionUpdate: update } : {}),
       ...(justConnected === true ? { justConnected } : {}),
     };
   }

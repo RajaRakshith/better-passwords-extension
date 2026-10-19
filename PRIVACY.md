@@ -15,7 +15,8 @@ Better Passwords (the browser extension and the optional Mac companion app) hand
 ## What it doesn't do
 
 - No analytics, telemetry, crash reporting or ads.
-- No servers. The project runs no backend. The only network requests are to Apple's iCloud, for Hide My Email, and only if you turn it on.
+- No servers. The project runs no backend. The extension's only network requests are to Apple's iCloud, for Hide My Email, and only if you turn it on.
+- **Update checks (companion app only).** Once a day the companion app fetches the list of releases from betterpasswords.app, and downloads an update from GitHub when you accept one. These requests carry the app's version and macOS version, as any download does, and your IP address; nothing else. You can turn the checks off in the app.
 - No sale of data or use for advertising. Information is shared only with Apple’s services, the local helper/companion, and the websites you choose, as described above.
 
 ## Contact
