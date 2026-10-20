@@ -21,7 +21,13 @@ When an extension release is due, CI:
 2. builds and zips the Chromium and Firefox packages, plus reviewer source,
 3. creates the `extension-vX.Y.Z` tag and a GitHub release with notes and the zips,
 4. attests build provenance for the zips (`gh attestation verify <zip> -R fanckush/better-passwords-extension`),
-5. submits to the Chrome Web Store and Firefox Add-ons, only once the repository variable `STORE_SUBMIT` is `true` and these secrets exist: `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`, `FIREFOX_EXTENSION_ID`, `FIREFOX_JWT_ISSUER`, `FIREFOX_JWT_SECRET`. `bunx wxt submit init` walks through creating them.
+5. submits to the Chrome Web Store (API v2, service account) and Firefox Add-ons, only once the repository variable `STORE_SUBMIT` is `true` and these secrets exist: `CHROME_PUBLISHER_ID`, `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`, `FIREFOX_JWT_ISSUER`, `FIREFOX_JWT_SECRET`. `bunx wxt submit init` (in `apps/extension`) writes them to the git-ignored `.env.submit`; the non-secret submit settings live in `release.yml`. To upload the secrets from that file:
+
+   ```sh
+   for n in CHROME_PUBLISHER_ID CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL CHROME_SERVICE_ACCOUNT_PRIVATE_KEY FIREFOX_JWT_ISSUER FIREFOX_JWT_SECRET; do
+     bun --env-file=apps/extension/.env.submit -e "process.stdout.write(process.env.$n)" | gh secret set "$n"
+   done
+   ```
 
 The Chrome Web Store extension ID is `ocongmkplhijgajnipnhhggfcjfdilgj`. Its public key is in `apps/extension/src/config.ts`; the setup script and companion allow this same ID. Store ZIPs omit the manifest `key` field, which Chrome rejects on upload; unpacked builds retain it. If the store identity ever changes, update the extension config, setup script, companion identity and tests, README and website links together.
 

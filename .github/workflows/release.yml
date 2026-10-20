@@ -41,7 +41,7 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: apps/extension/.output/*.zip
-      # Store uploads stay off until the listings exist and their secrets are added.
+      # Store uploads stay off until the repository variable STORE_SUBMIT is true.
       - if: steps.release.outputs.version != '' && vars.STORE_SUBMIT == 'true'
         working-directory: apps/extension
         run: >
@@ -50,11 +50,17 @@ jobs:
           --firefox-zip .output/better-passwords-*-firefox.zip
           --firefox-sources-zip .output/better-passwords-*-sources.zip
         env:
-          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          CHROME_API_VERSION: v2
+          CHROME_EXTENSION_ID: ocongmkplhijgajnipnhhggfcjfdilgj
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
+          CHROME_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.CHROME_SERVICE_ACCOUNT_PRIVATE_KEY }}
+          CHROME_PUBLISH_TYPE: DEFAULT_PUBLISH
+          CHROME_DEPLOY_PERCENTAGE: 100
+          CHROME_CANCEL_PENDING: true
+          CHROME_SKIP_REVIEW: true # only honoured when the update qualifies for it
+          FIREFOX_EXTENSION_ID: better-passwords
+          FIREFOX_CHANNEL: listed
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
 
