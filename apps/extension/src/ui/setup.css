@@ -37,8 +37,18 @@
   font-size: 12px;
 }
 
+.setup .report {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
 .setup a {
   color: var(--accent);
+}
+
+.setup .report a {
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 /* one route at a time: its button, a line under it, and the way to the other route */

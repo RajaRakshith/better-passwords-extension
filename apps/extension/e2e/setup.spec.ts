@@ -1,4 +1,4 @@
-import { EXTENSION_ID } from "../src/config.ts";
+import { EXTENSION_ID, REPO_URL } from "../src/config.ts";
 import { choose, expect, menuFrame, PAIRING_CODE, test } from "./fixtures.ts";
 
 // A browser the setup script hasn't run for yet. The extension welcomes the user, says what to
@@ -101,4 +101,13 @@ test("the setup is offered on a login form's email field too", async ({ context,
   await page.locator("#user").click();
   const menu = await menuFrame(page);
   await expect(menu.getByText("Set Up Better Passwords")).toBeVisible();
+});
+
+test("the welcome links to a bug form filled in with this browser's details", async ({ context, popupUrl }) => {
+  const popup = await context.newPage();
+  await popup.goto(popupUrl);
+  const github = popup.getByRole("link", { name: "report it on GitHub" });
+  await expect(github).toHaveAttribute("href", new RegExp(`^${REPO_URL}/issues/new\\?template=bug\\.yml&version=`));
+  // Chromium reads its own name and version from the client hints
+  await expect(github).toHaveAttribute("href", /&browser=/);
 });

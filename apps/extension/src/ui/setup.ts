@@ -7,6 +7,7 @@ import { COMPANION_DOWNLOAD_URL, REPO_URL, SETUP_COMMAND } from "../config.ts";
 import { type Status, send } from "../messages.ts";
 import { h } from "./h.ts";
 import { CHECK, icon } from "./icons.ts";
+import { reportProblem } from "./report.ts";
 
 /** How the user chose to connect. Remembered because the popup closes while they do it. */
 type Route = "app" | "terminal";
@@ -119,6 +120,8 @@ function showWelcome(root: HTMLElement, status: Status, options: SetupOptions) {
     repair && status.error
       ? h("details", { class: "details" }, h("summary", { textContent: "Details" }), status.error)
       : null,
+    // setup is where people get stuck, so the way to say so is right there
+    reportProblem(),
   );
 
   poll(root, async () => {

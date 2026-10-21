@@ -7,6 +7,7 @@ import { bindCodeInput } from "@/src/ui/code-input.ts";
 import { companionPitch } from "@/src/ui/companion-pitch.ts";
 import { h } from "@/src/ui/h.ts";
 import { CHECK, icon, OPEN } from "@/src/ui/icons.ts";
+import { reportProblem } from "@/src/ui/report.ts";
 import { setupFlow } from "@/src/ui/setup.ts";
 
 applySystemAccent();
@@ -97,7 +98,12 @@ async function showSetup(status: Status) {
 function showRetry(error: string) {
   const retry = h("button", { class: "primary", textContent: "Try again" });
   retry.addEventListener("click", () => void refresh());
-  show(h("h1", { textContent: DISPLAY_NAME }), errorLine(error), h("div", { class: "actions" }, retry));
+  show(
+    h("h1", { textContent: DISPLAY_NAME }),
+    errorLine(error),
+    h("div", { class: "actions" }, retry),
+    reportProblem(),
+  );
 }
 
 function showCodeEntry(status: Status, error?: string) {
@@ -139,6 +145,7 @@ function showCodeEntry(status: Status, error?: string) {
     status.companion === "needs-setup"
       ? h("p", { class: "hint" }, "To skip typing the code, finish setting up the companion app.")
       : null;
+  const report = reportProblem();
 
   show(
     h("h1", { textContent: "Enter the code shown on your Mac" }),
@@ -147,12 +154,13 @@ function showCodeEntry(status: Status, error?: string) {
     errorLine(error),
     h("div", { class: "actions" }, newCode, touchId),
     companionHint,
+    report,
   );
   void companionPitch(() => {
     void send({ type: "open-companion-page" }).catch(() => {});
     window.close();
   }).then((pitch) => {
-    if (pitch && input.isConnected) app.append(pitch);
+    if (pitch && input.isConnected) report.before(pitch);
   });
   // Apple's code window can take focus as it appears; take it back when the popup regains it
   const refocus = () => {
@@ -218,6 +226,7 @@ async function showLogins(status: Status, error?: string) {
     errorLine(error),
     h("div", { class: "actions" }, openApp),
     await footer(status),
+    reportProblem(),
   );
 }
 

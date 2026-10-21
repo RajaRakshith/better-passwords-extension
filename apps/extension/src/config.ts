@@ -4,6 +4,8 @@ export const DISPLAY_NAME = "Better Passwords";
 export const STORE_TITLE = "Better Passwords - for Apple Passwords";
 
 export const REPO_URL = "https://github.com/fanckush/better-passwords-extension";
+/** Where problems can be reported without a GitHub account. */
+export const SUPPORT_EMAIL = "fanckush@gmail.com";
 export const SETUP_COMMAND = `curl -fsSL ${REPO_URL}/raw/main/scripts/setup-mac.sh | sh`;
 
 /** Our own registration of Apple's helper, written by scripts/setup-mac.sh or the companion app. */

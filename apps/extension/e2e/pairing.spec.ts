@@ -72,3 +72,13 @@ test("suggests the companion app under the code box, until dismissed", async ({ 
   await again.waitForTimeout(500);
   await expect(again.getByText("Skip this step next time")).toHaveCount(0);
 });
+
+test("problems can be reported while unlocking and once unlocked", async ({ context, popupUrl }) => {
+  const popup = await context.newPage();
+  await popup.goto(popupUrl);
+  await expect(popup.getByRole("link", { name: "report it on GitHub" })).toBeVisible();
+
+  await popup.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(popup.getByText("Open a website to see its saved passwords.")).toBeVisible();
+  await expect(popup.getByRole("link", { name: "Email the developer" })).toHaveAttribute("href", /^mailto:/);
+});
