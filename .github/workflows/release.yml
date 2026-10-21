@@ -58,7 +58,6 @@ jobs:
           CHROME_PUBLISH_TYPE: DEFAULT_PUBLISH
           CHROME_DEPLOY_PERCENTAGE: 100
           CHROME_CANCEL_PENDING: true
-          CHROME_SKIP_REVIEW: true # only honoured when the update qualifies for it
           FIREFOX_EXTENSION_ID: better-passwords
           FIREFOX_CHANNEL: listed
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
