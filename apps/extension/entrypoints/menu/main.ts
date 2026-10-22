@@ -92,12 +92,16 @@ function message(text: string, isError = false) {
   return h("div", { class: isError ? "message error" : "message", textContent: text });
 }
 
+/** What the menu shows: what needs an unlocked session ("unlocked"), the way to unlock, or neither. */
+let view: "unlocked" | "locked" | "other" = "other";
+
 // the logins shown, so typing in the field can narrow them down without asking again
 let loginsView: { logins: { username: string }[]; hostname: string; error?: string } | undefined;
 /** What the user typed into the username field: only logins starting with it are listed. */
 let query = "";
 
 async function showLogins(error?: string) {
+  view = "unlocked";
   let result: Awaited<ReturnType<typeof send<{ type: "list-logins" }>>>;
   try {
     result = await send({ type: "list-logins" });
@@ -131,17 +135,23 @@ function renderLogins() {
   );
 }
 
-// sent straight here by our content script as the user types in the field (see MenuMessage)
 browser.runtime.onMessage.addListener((request: MenuMessage, sender) => {
-  if (sender.id !== browser.runtime.id || request.type !== "menu-filter" || !nonce || request.nonce !== nonce) {
-    return false;
+  if (sender.id !== browser.runtime.id) return false;
+  // sent straight here by our content script as the user types in the field
+  if (request.type === "menu-filter" && nonce && request.nonce === nonce) {
+    query = request.query;
+    renderLogins();
   }
-  query = request.query;
-  renderLogins();
+  // unlocked or locked elsewhere, like the popup
+  if (request.type === "session-changed") {
+    if (request.unlocked) void unlocked();
+    else if (view === "unlocked") void showLocked();
+  }
   return false;
 });
 
 async function showGenerate(error?: string) {
+  view = "unlocked";
   let passwords: { strong: string; alphanumeric: string };
   try {
     passwords = await send({ type: "generate-passwords", nonce });
@@ -343,7 +353,7 @@ function hintRow(): HTMLButtonElement {
   const hint = row(
     ENVELOPE,
     "Use Hide My Email",
-    "Sends site labels and aliases to Apple using your iCloud sign-in (iCloud+)",
+    "A unique iCloud+ address for each site, labeled with its name",
     () => void enableHideMyEmail(),
   );
   return dismissible(hint, "Don't suggest Hide My Email again", () => send({ type: "dismiss-hide-my-email-hint" }));
@@ -396,9 +406,10 @@ async function useAddress(address: string, reserve: boolean) {
   }
 }
 
-/** After unlocking: the menu's real content. */
-function showUnlocked() {
-  return kind === "new-password" ? showGenerate() : showLogins();
+/** After unlocking, here or elsewhere: the menu's real content, if it was waiting for that. */
+async function unlocked() {
+  if (view !== "locked") return;
+  await (kind === "new-password" ? showGenerate() : showLogins());
 }
 
 function openPasswordsRow(withDetail: boolean) {
@@ -424,6 +435,7 @@ async function fill(username: string) {
 }
 
 async function showLocked(error?: string) {
+  view = "locked";
   const status = await send({ type: "get-status" }).catch(() => undefined);
   const touchId = status?.touchId === true;
   render(
@@ -437,6 +449,8 @@ async function showLocked(error?: string) {
 
 /** Before this browser can reach Apple Passwords: one row that opens the setup page. */
 function showSetup() {
+  // set up and unlocked from the popup or the setup page: this menu shows the logins then
+  view = "locked";
   render(
     row(KEY, "Set Up Better Passwords", "One quick step to reach Apple Passwords", async () => {
       await send({ type: "open-setup-page" }).catch(() => {});
@@ -451,7 +465,8 @@ function unlockTitle() {
 
 async function startPairing() {
   try {
-    await send({ type: "request-code" });
+    // fresh, like the popup: a code asked for earlier may be valid still, but its window closed
+    await send({ type: "request-code", fresh: true });
   } catch (e) {
     return showLocked(messageOf(e));
   }
@@ -462,7 +477,7 @@ async function unlockWithTouchId() {
   render(message("Confirm with Touch ID…"));
   try {
     await send({ type: "unlock-with-touch-id" });
-    await showUnlocked();
+    await unlocked();
   } catch (e) {
     // the code is on screen either way, so typing it still works
     showCodeEntry(messageOf(e));
@@ -480,7 +495,7 @@ function showCodeEntry(error?: string) {
     input.disabled = true;
     try {
       await send({ type: "verify-code", code });
-      await showUnlocked();
+      await unlocked();
     } catch (e) {
       // a wrong code burns the challenge; ask the Mac for a fresh one
       await send({ type: "request-code", fresh: true }).catch(() => {});

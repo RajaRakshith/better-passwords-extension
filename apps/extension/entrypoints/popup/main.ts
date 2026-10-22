@@ -38,21 +38,18 @@ async function refresh(error?: string) {
   // not set up yet, or set up moments ago (the popup closes while the user does it)
   if (status.state === "no-helper" || status.justConnected) return showSetup(status);
 
-  switch (status.state) {
-    case "unlocked":
-      return showLogins(status, error);
-    case "awaiting-code":
-      return showCodeEntry(status, error ?? status.error);
-    default:
-      // locked or disconnected: start unlocking right away, saving the user a click
-      if (status.touchId && !error) return unlockWithTouchId(status);
-      codeRequest = popupSettled().then(() => send({ type: "request-code" }));
-      showCodeEntry(status, error);
-      try {
-        await codeRequest;
-      } catch (e) {
-        return showRetry(error ?? messageOf(e));
-      }
+  if (status.state === "unlocked") return showLogins(status, error);
+  // locked or disconnected: start unlocking right away, saving the user a click
+  const awaitingCode = status.state === "awaiting-code";
+  if (status.touchId && !error && !awaitingCode) return unlockWithTouchId(status);
+  // a fresh code even if one is still valid: the user may have closed Apple's window since, and
+  // nothing tells us
+  codeRequest = popupSettled().then(() => send({ type: "request-code", fresh: true }));
+  showCodeEntry(status, error ?? (awaitingCode ? status.error : undefined));
+  try {
+    await codeRequest;
+  } catch (e) {
+    return showRetry(error ?? messageOf(e));
   }
 }
 
@@ -219,7 +216,7 @@ async function showLogins(status: Status, error?: string) {
 }
 
 /** Logins shown before "Show more", so the settings below stay in view. */
-const COLLAPSED = 5;
+const COLLAPSED = 3;
 /** Past this many logins, a search field filters them. */
 const SEARCH_AFTER = 10;
 
@@ -349,7 +346,7 @@ async function footer(status: Status) {
     h("h2", { textContent: "Suggestions" }),
     option("inlineMenu", "When signing in", "saved passwords"),
     option("generatePasswords", "When signing up", "strong passwords and emails"),
-    option("hideMyEmail", "Hide My Email", "sends site labels and aliases to Apple using your iCloud sign-in"),
+    option("hideMyEmail", "Hide My Email", "iCloud+ addresses, labeled with the site's name"),
     h("hr"),
     macAppSection(status, option),
     h("hr"),

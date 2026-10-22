@@ -14,6 +14,7 @@ import {
   type Envelope,
   type GeneratedPasswords,
   type HideMyEmailState,
+  type MenuMessage,
   type NewPasswordContext,
   type NewPasswordResult,
   type Request,
@@ -61,6 +62,16 @@ export default defineBackground(() => {
     else if (state === "closed" || state === "disconnected") void browser.alarms.clear(KEEP_ALIVE);
   });
   browser.alarms.onAlarm.addListener(() => {});
+
+  // Open menus asked before an unlock (or a lock) elsewhere, e.g. the code typed into the popup:
+  // tell them, so they show what they would now
+  let unlocked = false;
+  session.onChange(({ state }) => {
+    if ((state === "unlocked") === unlocked) return;
+    unlocked = state === "unlocked";
+    const message: MenuMessage = { type: "session-changed", unlocked };
+    void browser.runtime.sendMessage(message).catch(() => {});
+  });
 
   // Remembered while this browser can't reach Apple's helper, so the first connection after setup
   // is announced once (by the popup or the setup page), even if the popup closed in between.

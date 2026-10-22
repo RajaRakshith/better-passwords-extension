@@ -111,6 +111,8 @@ type Fixtures = {
   popupUrl: string;
   /** Search URLs of the requests to open the Passwords app that reached the fake helper. */
   passwordsAppLaunches: () => string[];
+  /** How many codes the fake helper has shown on the "Mac". */
+  codesShown: () => number;
   /** Logins the fake helper saved (after the simulated "Save password?" prompt). */
   helperSaves: () => { hostname: string; username: string; password: string }[];
 };
@@ -188,6 +190,9 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
   },
   passwordsAppLaunches: async ({ context }, use) => {
     await use(() => helperLog(context, "launch").map((entry) => entry.url as string));
+  },
+  codesShown: async ({ context }, use) => {
+    await use(() => helperLog(context, "code").length);
   },
   helperSaves: async ({ context }, use) => {
     await use(() =>

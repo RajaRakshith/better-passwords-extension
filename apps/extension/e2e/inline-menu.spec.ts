@@ -272,6 +272,44 @@ test("offers to unlock on a login form's email field too", async ({ context, sit
   await choose(menu, "Unlock to fill passwords");
 });
 
+test("an open menu follows an unlock and a lock done in the popup", async ({ context, siteUrl, popupUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
+  await page.locator("#pass").click();
+  const menu = await menuFrame(page);
+  await expect(menu.getByText("Unlock to fill passwords")).toBeVisible();
+
+  // the code typed into the popup instead of the menu
+  const popup = await context.newPage();
+  await popup.goto(popupUrl);
+  await popup.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(menu.getByText("e2e-user")).toBeVisible();
+
+  await popup.getByRole("button", { name: "Lock" }).click();
+  await expect(menu.getByText("Unlock to fill passwords")).toBeVisible();
+});
+
+test("the menu's Unlock shows a fresh code after the popup asked for one", async ({
+  context,
+  siteUrl,
+  popupUrl,
+  codesShown,
+}) => {
+  const popup = await context.newPage();
+  await popup.goto(popupUrl);
+  await expect.poll(codesShown).toBe(1);
+  await popup.close();
+
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
+  await page.locator("#pass").click();
+  const menu = await menuFrame(page);
+  await choose(menu, "Unlock to fill passwords");
+  await expect.poll(codesShown).toBe(2);
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(menu.getByText("e2e-user")).toBeVisible();
+});
+
 test.describe("typing a username", () => {
   test.use({
     // Playwright reads a bare array here as [value, options], so the list goes in a pair of its own

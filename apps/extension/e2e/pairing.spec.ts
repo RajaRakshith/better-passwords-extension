@@ -31,6 +31,24 @@ test("a wrong code is rejected and a fresh one is requested", async ({ context, 
   await expect(popup.getByText("Open a website to see its saved passwords.")).toBeVisible();
 });
 
+test("reopening the popup shows a fresh code, in case the last one was closed", async ({
+  context,
+  popupUrl,
+  codesShown,
+}) => {
+  const popup = await context.newPage();
+  await popup.goto(popupUrl);
+  await expect(popup.getByText("Enter the code shown on your Mac")).toBeVisible();
+  await expect.poll(codesShown).toBe(1);
+  await popup.close();
+
+  const again = await context.newPage();
+  await again.goto(popupUrl);
+  await expect.poll(codesShown).toBe(2);
+  await again.getByLabel("Verification code").fill(PAIRING_CODE);
+  await expect(again.getByText("Open a website to see its saved passwords.")).toBeVisible();
+});
+
 test("lock ends the session", async ({ context, popupUrl }) => {
   const popup = await context.newPage();
   await popup.goto(popupUrl);
