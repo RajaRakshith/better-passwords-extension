@@ -108,7 +108,9 @@ export class MenuHost {
     // A new iframe every time: changing only the URL fragment of an existing one would not reload
     // the menu page, which would keep the previous menu's nonce and size.
     // The nonce ties requests to this menu; a copy of menu.html framed by the page itself has none.
-    this.#frame = createFrame(`${this.menuUrl}#${new URLSearchParams({ nonce: this.#nonce, mode, kind })}`);
+    // "password": the menu is on a password field, e.g. the step after the username in a multi-step sign-in
+    const field = anchor.type === "password" ? "password" : "username";
+    this.#frame = createFrame(`${this.menuUrl}#${new URLSearchParams({ nonce: this.#nonce, mode, kind, field })}`);
     this.#shadow.replaceChildren(this.#frame);
     if (!this.#host.isConnected) document.documentElement.append(this.#host);
     // re-entering the top layer puts us above anything the page opened before

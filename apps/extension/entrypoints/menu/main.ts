@@ -19,6 +19,8 @@ const nonce = params.get("nonce") ?? "";
 bindToMenu(nonce);
 /** The field the menu belongs to: "login", or "new-password" for sign-up and change-password forms. */
 const kind = params.get("kind") ?? "login";
+/** Whether the menu is on a password field, rather than a username one. */
+const onPasswordField = params.get("field") === "password";
 const panel = document.getElementById("menu") as HTMLElement;
 
 // --- clickjacking guard ------------------------------------------------------------------------
@@ -134,8 +136,9 @@ function renderLogins() {
     void send({ type: "menu-resize", nonce, height: 0 }).catch(() => {});
     return;
   }
-  // the step after one where a login was chosen: just that one (listed first), the others a click away
-  const focused = chosen !== undefined && !prefix && !showOthers && matches.length > 1;
+  // the password step after one where a login was chosen: just that one (listed first), the others
+  // a click away. Back on the username step, the user may well be after another one: all of them.
+  const focused = onPasswordField && chosen !== undefined && !prefix && !showOthers && matches.length > 1;
   const shown = focused ? matches.slice(0, 1) : matches;
   render(
     ...shown.map(({ username }) => row(KEY, username || "(no username)", hostname, () => void fill(username))),

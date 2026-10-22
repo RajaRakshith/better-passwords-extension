@@ -405,6 +405,13 @@ test.describe("a sign-in in two steps", () => {
     // no password field yet: no password read, so no Touch ID
     expect(passwordReads()).toBe(0);
 
+    // back in the email field, every account is offered (the user may want another one)
+    await page.locator("#email").click();
+    menu = await menuFrame(page);
+    await expect(menu.getByText("alice@example.com")).toBeVisible();
+    await expect(menu.getByText("bob@example.com")).toBeVisible();
+    await page.keyboard.press("Escape");
+
     await page.locator("#next").click();
     await page.locator("#password").click();
     menu = await menuFrame(page);
