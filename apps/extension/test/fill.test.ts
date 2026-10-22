@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fillCredentials, fillEmail, fillNewPassword, usernameNear } from "../src/fill.ts";
+import { asksForUsername, fillCredentials, fillEmail, fillNewPassword, usernameNear } from "../src/fill.ts";
 
 const origin = window.location.origin;
 
@@ -153,6 +153,25 @@ describe("fillEmail", () => {
     detached.remove();
     expect(fillEmail(origin, "jane@example.com", detached)).toBe("no-fields");
     expect([detached, input("#hidden"), input("#readonly")].map((el) => el.value)).toEqual(["", "", ""]);
+  });
+});
+
+describe("asksForUsername", () => {
+  it("is true for a sign-up with an email field, even an empty one", () => {
+    page(`<form><input id="email" type="email"><input id="new" type="password" autocomplete="new-password"></form>`);
+    expect(asksForUsername(document.querySelector("#new") as HTMLInputElement)).toBe(true);
+  });
+
+  it("is false for a password reset, which asks for new passwords only", () => {
+    page(
+      `<form><input id="new" type="password" autocomplete="new-password"><input type="password" autocomplete="new-password"></form>`,
+    );
+    expect(asksForUsername(document.querySelector("#new") as HTMLInputElement)).toBe(false);
+  });
+
+  it("ignores a hidden username field", () => {
+    page(`<form><input type="email" data-hidden><input id="new" type="password" autocomplete="new-password"></form>`);
+    expect(asksForUsername(document.querySelector("#new") as HTMLInputElement)).toBe(false);
   });
 });
 

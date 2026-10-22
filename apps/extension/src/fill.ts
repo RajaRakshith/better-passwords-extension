@@ -100,19 +100,29 @@ export function fillEmail(expectedOrigin: string, email: string, field: HTMLInpu
 
 /** The username or email typed into the same form as `anchor`, if any. */
 export function usernameNear(anchor: HTMLInputElement): string {
-  const scope = anchor.form ?? document;
-  const fields = Array.from(scope.querySelectorAll("input")).filter(
-    (el) => ["text", "email", "tel", ""].includes(el.type) && isFillable(el) && el.value.trim() !== "",
-  );
-  const score = (el: HTMLInputElement) => {
-    const autocomplete = el.autocomplete.toLowerCase();
-    if (/\busername\b/.test(autocomplete)) return 3;
-    if (/\bemail\b/.test(autocomplete) || el.type === "email") return 2;
-    if (/user|login|e-?mail|account/i.test(`${el.name} ${el.id}`)) return 1;
-    return 0;
-  };
-  const best = fields.filter((el) => score(el) > 0).sort((a, b) => score(b) - score(a))[0];
+  const fields = usernameFieldsNear(anchor).filter((el) => el.value.trim() !== "");
+  const best = fields.sort((a, b) => usernameScore(b) - usernameScore(a))[0];
   return best?.value.trim() ?? "";
+}
+
+/** Whether `anchor`'s form asks for a username or email, typed or not (a password reset doesn't). */
+export function asksForUsername(anchor: HTMLInputElement): boolean {
+  return usernameFieldsNear(anchor).length > 0;
+}
+
+function usernameFieldsNear(anchor: HTMLInputElement): HTMLInputElement[] {
+  const scope = anchor.form ?? document;
+  return Array.from(scope.querySelectorAll("input")).filter(
+    (el) => ["text", "email", "tel", ""].includes(el.type) && isFillable(el) && usernameScore(el) > 0,
+  );
+}
+
+function usernameScore(el: HTMLInputElement): number {
+  const autocomplete = el.autocomplete.toLowerCase();
+  if (/\busername\b/.test(autocomplete)) return 3;
+  if (/\bemail\b/.test(autocomplete) || el.type === "email") return 2;
+  if (/user|login|e-?mail|account/i.test(`${el.name} ${el.id}`)) return 1;
+  return 0;
 }
 
 function isFillable(el: HTMLInputElement): boolean {

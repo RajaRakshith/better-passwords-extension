@@ -39,6 +39,8 @@ const PROBE_TAB = { tabId: 2 ** 31 - 1, frameId: 0 };
 interface GeneratedLogin {
   hostname: string;
   password: string;
+  /** Saved with this username when the form has none (see GeneratedPasswords.account). */
+  account?: string;
   /** "unsaved": not asked yet, or the user declined; "saving": macOS's prompt is up. */
   state: "unsaved" | "saving" | "saved";
   /** The username it was (or is being) saved with. */
@@ -198,10 +200,26 @@ export default defineBackground(() => {
   // Filled passwords Apple Passwords may not have (not saved yet, declined, or an update that
   // can't be confirmed), kept in memory until the session ends for the popup to show.
   const unconfirmed: { hostname: string; username: string; password: string }[] = [];
-  // Logins chosen on a username-only step, by tab: the next step (the password) lists it first.
-  // Only the username is kept; the password is read when that step asks for it.
-  const chosenLogins = new Map<number, { origin: string; username: string; at: number }>();
+  // Logins chosen on a username-only step, by hostname: a sign-in's next step (the password, same
+  // tab) lists it alone, and a password reset (any tab: the link opens a new one) saves for it.
+  // Only the username is kept, briefly, and forgotten once used: rather no guess than a stale one.
+  const chosenLogins = new Map<string, { username: string; tabId: number; at: number }>();
   const CHOSEN_LOGIN_MS = 10 * 60_000;
+
+  /** The login just chosen on `hostname` (in `tabId`, if given), if any. */
+  function chosenLogin(hostname: string, tabId?: number): string | undefined {
+    const chosen = chosenLogins.get(hostname);
+    if (!chosen || Date.now() - chosen.at >= CHOSEN_LOGIN_MS) return undefined;
+    return tabId === undefined || chosen.tabId === tabId ? chosen.username : undefined;
+  }
+
+  /** Who a new password is for when the form doesn't say: the login just chosen, or the only one. */
+  async function accountFor(hostname: string): Promise<string | undefined> {
+    const chosen = chosenLogin(hostname);
+    if (chosen !== undefined) return chosen;
+    const usernames = await usernamesFor(hostname);
+    return usernames.length === 1 ? usernames[0] : undefined;
+  }
 
   // locking forgets every generated password, like the session key
   session.onChange(({ state }) => {
@@ -213,7 +231,6 @@ export default defineBackground(() => {
   });
   browser.tabs.onRemoved.addListener((tabId) => {
     generatedByTab.delete(tabId);
-    chosenLogins.delete(tabId);
     menuNonces.delete(tabId);
     for (const key of generatedForMenu.keys()) if (key.startsWith(`${tabId}:`)) generatedForMenu.delete(key);
   });
@@ -236,7 +253,12 @@ export default defineBackground(() => {
    * Fills a generated password right away, like Safari. Apple Passwords is asked to save it when
    * the form is submitted (see saveGenerated); until it has it, the popup keeps it.
    */
-  async function fillGenerated(tabId: number, nonce: string, password: string): Promise<NewPasswordResult> {
+  async function fillGenerated(
+    tabId: number,
+    nonce: string,
+    password: string,
+    account: string | undefined,
+  ): Promise<NewPasswordResult> {
     const context = await newPasswordContext(tabId, nonce);
     if (!context.visible) return "menu-hidden";
     const url = await tabUrl(tabId);
@@ -250,11 +272,12 @@ export default defineBackground(() => {
     generatedByTab.set(tabId, {
       hostname: url.hostname,
       password,
+      ...(account ? { account } : {}),
       state: "unsaved",
       formUsername: context.username,
       asked: false,
     });
-    unconfirmed.push({ hostname: url.hostname, username: context.username, password });
+    unconfirmed.push({ hostname: url.hostname, username: context.username || (account ?? ""), password });
     return result;
   }
 
@@ -285,6 +308,9 @@ export default defineBackground(() => {
     if (!generated || generated.asked) return;
     generated.asked = true;
     generated.state = "saving";
+    // a form without a username (a reset): the account the menu said; the login chosen for it is used up
+    username ||= generated.account ?? "";
+    chosenLogins.delete(generated.hostname);
     generated.username = username;
     const before = await usernamesFor(generated.hostname);
     const client = await session.unlockedClient();
@@ -461,11 +487,7 @@ export default defineBackground(() => {
         const client = await session.unlockedClient();
         const logins = (await client.getLogins(url.hostname, { tabId })).map(({ username }) => ({ username }));
         // the login chosen on this sign-in's previous step comes first
-        const chosen = chosenLogins.get(tabId);
-        const current =
-          chosen && chosen.origin === url.origin && Date.now() - chosen.at < CHOSEN_LOGIN_MS
-            ? chosen.username
-            : undefined;
+        const current = chosenLogin(url.hostname, tabId);
         const first = logins.filter(({ username }) => username === current);
         return {
           hostname: url.hostname,
@@ -487,10 +509,16 @@ export default defineBackground(() => {
       }
       case "generate-passwords": {
         const tabId = tabOf(caller);
-        const { rules } = await newPasswordContext(tabId, request.nonce);
-        const passwords = {
-          strong: generatePassword("strong", rules),
-          alphanumeric: generatePassword("alphanumeric", rules),
+        const context = await newPasswordContext(tabId, request.nonce);
+        const url = await tabUrl(tabId);
+        // only a form that asks for no username at all (a reset, a change of password) gets a guess;
+        // a sign-up's empty email field is the user's to fill
+        const guess = !context.username && !context.asksForUsername && url;
+        const account = guess ? await accountFor(url.hostname).catch(() => undefined) : undefined;
+        const passwords: GeneratedPasswords = {
+          strong: generatePassword("strong", context.rules),
+          alphanumeric: generatePassword("alphanumeric", context.rules),
+          ...(account ? { account } : {}),
         };
         generatedForMenu.set(`${tabId}:${request.nonce}`, passwords);
         return passwords;
@@ -499,7 +527,7 @@ export default defineBackground(() => {
         const tabId = tabOf(caller);
         const passwords = generatedForMenu.get(`${tabId}:${request.nonce}`);
         if (!passwords) throw new Error("That password expired. Try again.");
-        return { result: await fillGenerated(tabId, request.nonce, passwords[request.style]) };
+        return { result: await fillGenerated(tabId, request.nonce, passwords[request.style], passwords.account) };
       }
       case "unconfirmed-passwords": {
         const url = await tabUrl(tabOf(caller, request.tabId));
@@ -620,12 +648,13 @@ export default defineBackground(() => {
     const url = await tabUrl(tabId);
     if (!url) throw new Error("this page can't be filled");
     const result = await fill(url.origin, null);
-    if (result === "filled") chosenLogins.set(tabId, { origin: url.origin, username, at: Date.now() });
+    if (result === "filled") chosenLogins.set(url.hostname, { username, tabId, at: Date.now() });
     if (result !== "needs-password") return result;
     // the tab may have moved on meanwhile: the password is for the site it's on now, and only fills there
     const { url: now, credential } = await credentialFor(tabId, username);
     const filled = await fill(now.origin, credential.password);
-    if (filled === "filled") chosenLogins.delete(tabId);
+    // signed in: no reset to save for
+    if (filled === "filled") chosenLogins.delete(now.hostname);
     return filled;
   }
 

@@ -132,6 +132,11 @@ export interface AutofillStatus {
 export interface GeneratedPasswords {
   strong: string;
   alphanumeric: string;
+  /**
+   * The account they'd be saved for when the form has no username (a password reset): the login
+   * just chosen on this site, or its only one. macOS's save prompt has the final say.
+   */
+  account?: string;
 }
 
 /**
@@ -230,6 +235,8 @@ export type MenuMessage =
 export interface NewPasswordContext {
   rules: FieldRules;
   username: string;
+  /** Whether the form has a username or email field, even an empty one (a sign-up does, a reset doesn't). */
+  asksForUsername: boolean;
   visible: boolean;
 }
 

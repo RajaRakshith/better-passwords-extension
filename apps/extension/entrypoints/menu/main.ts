@@ -1,7 +1,7 @@
 import "./style.css";
 import { DISPLAY_NAME } from "@/src/config.ts";
 import { requestHideMyEmailConsent } from "@/src/icloud/consent.ts";
-import type { EmailSuggestions, MenuMessage } from "@/src/messages.ts";
+import type { EmailSuggestions, GeneratedPasswords, MenuMessage } from "@/src/messages.ts";
 import { bindToMenu, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { bindCodeInput } from "@/src/ui/code-input.ts";
@@ -178,13 +178,15 @@ browser.runtime.onMessage.addListener((request: MenuMessage, sender) => {
 
 async function showGenerate(error?: string) {
   view = "unlocked";
-  let passwords: { strong: string; alphanumeric: string };
+  let passwords: GeneratedPasswords;
   try {
     passwords = await send({ type: "generate-passwords", nonce });
   } catch (e) {
     return render(message(messageOf(e), true));
   }
   render(
+    // a form that doesn't say whose password this is (a reset): say who we'll save it for
+    passwords.account ? message(`For ${passwords.account}`) : null,
     passwordRow("Strong Password", passwords.strong, () => void useGenerated("strong")),
     passwordRow("Without Special Characters", passwords.alphanumeric, () => void useGenerated("alphanumeric")),
     error ? message(error, true) : null,

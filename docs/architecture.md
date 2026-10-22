@@ -66,7 +66,7 @@ The content script runs in the top frame only. Logins inside cross-origin iframe
 
 1. The popup asks the background for the active tab's logins.
 2. The background reads the tab URL itself (granted by `activeTab` when the user opens the popup) and refuses anything that is not `https:` (or `http://localhost`).
-3. On click, the background first injects `fillCredentials` without the password. On a username-only step of a multi-step sign-in, that fills the username and nothing else: no password is read, so no Touch ID. The background remembers the choice for that tab and site (only the username, for 10 minutes or until locking), and the next step lists that login first.
+3. On click, the background first injects `fillCredentials` without the password. On a username-only step of a multi-step sign-in, that fills the username and nothing else: no password is read, so no Touch ID. The background remembers the choice for that site (only the username, for 10 minutes, until it's used, or until locking): the sign-in's next step in that tab lists that login alone, the others a click away, and a password reset on that site saves for it (see below).
 4. On a form with a password field, the background fetches the password from the helper (macOS may ask for Touch ID here) and injects `fillCredentials` again with it, with the expected origin. If the page navigated elsewhere in the meantime, nothing is filled.
 5. The fill function skips hidden and zero-size fields, and fills the username field from the password field's own form.
 
@@ -80,7 +80,7 @@ Like Safari, the chosen password is filled right away, and Apple Passwords is as
 
 "Moves on" means the tab navigates or changes URL (watched by the background, so leaving the page can't lose it), or the password field goes away: a dialog closes, or a multi-step form moves on (`src/autofill/submission.ts`). An invalid or rejected form keeps the field and the URL, so nothing is asked then. Otherwise, asking once too often beats missing a save: the prompt has Not Now, and it's asked only once per generated password.
 
-The username is the one in the form, tracked as the user types, or the last username or email typed on the page (multi-step sign-ups). Without one, macOS asks for it in its dialog, and the new login that appears tells us which name was saved.
+The username is the one in the form, tracked as the user types, or the last username or email typed on the page (multi-step sign-ups). A form with no username or email field at all (a password reset, or a change of password) gets a guess: the login just chosen on that site (say, in its "forgot password" form, even in another tab, since reset links open a new one), or the site's only login. The menu shows it ("For bob@example.com"), and macOS's own prompt confirms the update. A remembered choice is forgotten once a password is saved with it, after a completed sign-in on that site, after 10 minutes, or on locking; no guess is better than a stale one. A sign-up's email field, even empty, means no guess. Without a username, macOS asks for it in its dialog, and the new login that appears tells us which name was saved.
 
 Until Apple Passwords confirms a new login, the password is kept in memory and listed in the popup with a Copy button for the rest of the session. An update to an existing login can't be confirmed (the list looks the same), so it is assumed and kept listed too.
 

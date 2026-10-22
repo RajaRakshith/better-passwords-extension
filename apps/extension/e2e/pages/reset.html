@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test reset password</title>
+    <style>
+      body { font: 16px system-ui; padding: 40px; }
+      input { display: block; margin: 8px 0 16px; padding: 6px; width: 260px; }
+    </style>
+  </head>
+  <body>
+    <!-- where a reset link lands: new password fields, and no username -->
+    <form id="reset">
+      <label>New password <input id="new" type="password" autocomplete="new-password" /></label>
+      <label>Confirm <input id="confirm" type="password" autocomplete="new-password" /></label>
+      <button id="save" type="button">Reset password</button>
+    </form>
+    <script>
+      document.getElementById("save").addEventListener("click", () => {
+        document.getElementById("reset").replaceWith(Object.assign(document.createElement("p"), { textContent: "Done" }));
+      });
+    </script>
+  </body>
+</html>

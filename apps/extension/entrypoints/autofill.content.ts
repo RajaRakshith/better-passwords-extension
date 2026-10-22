@@ -2,7 +2,7 @@ import { type FieldKind, fieldKind } from "@/src/autofill/fields.ts";
 import { MenuHost } from "@/src/autofill/menu-host.ts";
 import { isGone, isUsernameInput, watchUntilGone } from "@/src/autofill/submission.ts";
 import { FILL_MATCHES } from "@/src/config.ts";
-import { fillCredentials, fillEmail, fillNewPassword, usernameNear } from "@/src/fill.ts";
+import { asksForUsername, fillCredentials, fillEmail, fillNewPassword, usernameNear } from "@/src/fill.ts";
 import { type ContentMessage, type MenuMessage, type NewPasswordContext, send } from "@/src/messages.ts";
 
 // Top frame only for now. Logins inside cross-origin iframes need their own origin rules.
@@ -222,7 +222,9 @@ export default defineContentScript({
                 ? { passwordRules: field.getAttribute("passwordrules") ?? "" }
                 : {}),
             },
-            username: usernameNear(field),
+            // or the one typed on an earlier step (multi-step sign-ups): then nobody's account is guessed
+            username: usernameNear(field) || lastUsername,
+            asksForUsername: asksForUsername(field),
             visible: menu.isTrustworthy(),
           };
           sendResponse(context);
