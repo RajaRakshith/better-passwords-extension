@@ -96,9 +96,11 @@ function message(text: string, isError = false) {
 let view: "unlocked" | "locked" | "other" = "other";
 
 // the logins shown, so typing in the field can narrow them down without asking again
-let loginsView: { logins: { username: string }[]; hostname: string; error?: string } | undefined;
+let loginsView: { logins: { username: string }[]; hostname: string; chosen?: string; error?: string } | undefined;
 /** What the user typed into the username field: only logins starting with it are listed. */
 let query = "";
+/** Whether the user asked for the logins besides the one chosen on the sign-in's previous step. */
+let showOthers = false;
 
 async function showLogins(error?: string) {
   view = "unlocked";
@@ -112,13 +114,18 @@ async function showLogins(error?: string) {
     loginsView = undefined;
     return render(message(`No saved passwords for ${result.hostname ?? "this site"}.`), openPasswordsRow(true));
   }
-  loginsView = { logins: result.logins, hostname: result.hostname ?? "", ...(error ? { error } : {}) };
+  loginsView = {
+    logins: result.logins,
+    hostname: result.hostname ?? "",
+    ...(result.chosen !== undefined ? { chosen: result.chosen } : {}),
+    ...(error ? { error } : {}),
+  };
   renderLogins();
 }
 
 function renderLogins() {
   if (!loginsView) return;
-  const { logins, hostname, error } = loginsView;
+  const { logins, hostname, chosen, error } = loginsView;
   const prefix = query.trim().toLowerCase();
   const matches = logins.filter(({ username }) => username.toLowerCase().startsWith(prefix));
   // nothing starts with what's typed (a new username, probably): out of the way, like Safari
@@ -127,12 +134,31 @@ function renderLogins() {
     void send({ type: "menu-resize", nonce, height: 0 }).catch(() => {});
     return;
   }
+  // the step after one where a login was chosen: just that one (listed first), the others a click away
+  const focused = chosen !== undefined && !prefix && !showOthers && matches.length > 1;
+  const shown = focused ? matches.slice(0, 1) : matches;
   render(
-    ...matches.map(({ username }) => row(KEY, username || "(no username)", hostname, () => void fill(username))),
+    ...shown.map(({ username }) => row(KEY, username || "(no username)", hostname, () => void fill(username))),
+    focused ? othersRow(matches.length - 1) : null,
     error ? message(error, true) : null,
     h("hr", { class: "separator" }),
     openPasswordsRow(false),
   );
+}
+
+function othersRow(count: number) {
+  const button = h("button", {
+    class: "row others",
+    textContent: count === 1 ? "1 other account" : `${count} other accounts`,
+    attrs: { role: "option" },
+  });
+  button.addEventListener("click", () => {
+    showOthers = true;
+    renderLogins();
+    // keyboard users carry on at the first account that just appeared
+    panel.querySelectorAll<HTMLElement>(".row")[1]?.focus();
+  });
+  return button;
 }
 
 browser.runtime.onMessage.addListener((request: MenuMessage, sender) => {

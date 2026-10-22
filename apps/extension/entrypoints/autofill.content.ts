@@ -249,8 +249,11 @@ export default defineContentScript({
             return false;
           }
           const result = fillCredentials(message.origin, message.username, message.password, anchor);
-          dismissed = anchor;
-          menu.close();
+          // "needs-password": the background reads the password and asks again, menu still open
+          if (result !== "needs-password") {
+            dismissed = anchor;
+            menu.close();
+          }
           sendResponse({ result });
           return false;
         }

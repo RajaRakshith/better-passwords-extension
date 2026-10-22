@@ -114,6 +114,8 @@ export interface LoginsResult {
   /** Undefined when the tab is not a page we fill (e.g. chrome:// or plain http). */
   hostname?: string;
   logins: { username: string }[];
+  /** The login chosen on this sign-in's previous step (a username-only one); listed first. */
+  chosen?: string;
 }
 
 export interface AutofillStatus {
@@ -199,7 +201,8 @@ export type Response<R extends Request> = R["type"] extends keyof Responses ? Re
 
 /** Messages the background relays to the autofill content script. */
 export type ContentMessage =
-  | { type: "menu-fill"; nonce: string; origin: string; username: string; password: string }
+  /** `password` null: fill a username-only step, or answer "needs-password" (see fillCredentials). */
+  | { type: "menu-fill"; nonce: string; origin: string; username: string; password: string | null }
   | { type: "menu-resize"; nonce: string; height: number }
   | { type: "menu-close"; nonce: string }
   /** Moves focus back to the field, keeping the menu open. */

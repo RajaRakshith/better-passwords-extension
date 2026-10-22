@@ -5,12 +5,18 @@ import { isNewPasswordField } from "./autofill/fields.ts";
 // It refuses to fill if the page navigated to another origin since the user chose the login, and
 // only touches visible fields. The functions after it are used by the content script only.
 
-export type FillResult = "filled" | "origin-mismatch" | "no-fields";
+/** "needs-password": asked to fill without the password, but the form has a password field. */
+export type FillResult = "filled" | "origin-mismatch" | "no-fields" | "needs-password";
 
+/**
+ * Fills a login. Without the password (null), it fills a username-only step of a multi-step sign-in,
+ * so the password (and its Touch ID) waits for the step that asks for it; on a form with a password
+ * field it changes nothing and says so.
+ */
 export function fillCredentials(
   expectedOrigin: string,
   username: string,
-  password: string,
+  password: string | null,
   /** The field the inline menu was opened on; otherwise the focused field is used. */
   anchor?: HTMLInputElement,
 ): FillResult {
@@ -59,8 +65,9 @@ export function fillCredentials(
     candidates[0];
 
   if (!passwordField && !usernameField) return "no-fields";
+  if (passwordField && password === null) return "needs-password";
   if (usernameField && username) setValue(usernameField, username);
-  if (passwordField) setValue(passwordField, password);
+  if (passwordField && password !== null) setValue(passwordField, password);
   // leave the filled fields unfocused: the login is ready, and there's nothing left to type
   const focused = document.activeElement;
   if (focused instanceof HTMLElement && (focused === passwordField || focused === usernameField)) focused.blur();

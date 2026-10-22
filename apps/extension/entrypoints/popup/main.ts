@@ -183,7 +183,7 @@ async function showLogins(status: Status, error?: string) {
   } else if (result.logins.length === 0) {
     body = h("p", {}, `No saved passwords for ${result.hostname}.`);
   } else {
-    body = loginList(tabId as number, result.logins);
+    body = loginList(tabId as number, result.logins, result.chosen);
   }
 
   const openApp = h("button", { class: "link with-icon" }, icon(OPEN), "Open Passwords App");
@@ -220,7 +220,8 @@ const COLLAPSED = 3;
 /** Past this many logins, a search field filters them. */
 const SEARCH_AFTER = 10;
 
-function loginList(tabId: number, logins: LoginsResult["logins"]) {
+/** `chosen`: the login picked on the sign-in's previous step (listed first), shown alone at first. */
+function loginList(tabId: number, logins: LoginsResult["logins"], chosen?: string) {
   const items = logins.map(({ username }) => {
     const name = username || "(no username)";
     const button = h(
@@ -233,9 +234,16 @@ function loginList(tabId: number, logins: LoginsResult["logins"]) {
     return { name: name.toLowerCase(), username, li: h("li", {}, button) };
   });
 
-  // hiding a single login behind a button the same size as it saves nothing
-  let expanded = items.length <= COLLAPSED + 1;
-  const more = h("button", { class: "login more", textContent: `Show ${items.length - COLLAPSED} more` });
+  const collapsed = chosen === undefined ? COLLAPSED : 1;
+  // hiding a single login behind a button the same size as it saves nothing, unless it's to single
+  // out the chosen one
+  let expanded = chosen === undefined ? items.length <= COLLAPSED + 1 : items.length <= 1;
+  const others = items.length - collapsed;
+  const more = h("button", {
+    class: "login more",
+    textContent:
+      chosen === undefined ? `Show ${others} more` : others === 1 ? "1 other account" : `${others} other accounts`,
+  });
   const moreItem = h("li", {}, more);
   const noMatches = h("li", { class: "hint no-matches", textContent: "No matching accounts." });
   const search =
@@ -248,7 +256,7 @@ function loginList(tabId: number, logins: LoginsResult["logins"]) {
   const update = () => {
     const query = search?.value.trim().toLowerCase() ?? "";
     matches = items.filter((item) => item.name.includes(query));
-    const shown = new Set(query || expanded ? matches : matches.slice(0, COLLAPSED));
+    const shown = new Set(query || expanded ? matches : matches.slice(0, collapsed));
     for (const item of items) item.li.hidden = !shown.has(item);
     moreItem.hidden = Boolean(query) || expanded;
     noMatches.hidden = matches.length > 0;
@@ -256,7 +264,7 @@ function loginList(tabId: number, logins: LoginsResult["logins"]) {
   more.addEventListener("click", () => {
     expanded = true;
     update();
-    items[COLLAPSED]?.li.querySelector("button")?.focus();
+    items[collapsed]?.li.querySelector("button")?.focus();
   });
   search?.addEventListener("input", update);
   search?.addEventListener("keydown", (event) => {

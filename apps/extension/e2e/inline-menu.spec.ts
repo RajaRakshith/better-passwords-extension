@@ -377,3 +377,44 @@ test.describe("typing a username", () => {
     await expect(menu.getByText("bob@example.com")).toBeVisible();
   });
 });
+
+test.describe("a sign-in in two steps", () => {
+  test.use({
+    vaultEntries: [
+      [
+        { hostname: "localhost", username: "alice@example.com", password: "alice-pass" },
+        { hostname: "localhost", username: "bob@example.com", password: "bob-pass" },
+      ],
+      { scope: "test" },
+    ],
+  });
+
+  test("fills the email without reading the password, then offers just that login for the password", async ({
+    context,
+    siteUrl,
+    passwordReads,
+  }) => {
+    const page = await context.newPage();
+    await page.goto(`${siteUrl}/two-step.html`);
+    await page.locator("#email").click();
+    let menu = await menuFrame(page);
+    await choose(menu, "Unlock to fill passwords");
+    await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+    await choose(menu, "bob@example.com");
+    await expect(page.locator("#email")).toHaveValue("bob@example.com");
+    // no password field yet: no password read, so no Touch ID
+    expect(passwordReads()).toBe(0);
+
+    await page.locator("#next").click();
+    await page.locator("#password").click();
+    menu = await menuFrame(page);
+    await expect(menu.getByText("bob@example.com")).toBeVisible();
+    await expect(menu.getByText("alice@example.com")).toHaveCount(0);
+    // the others are a click away
+    await choose(menu, "1 other account");
+    await expect(menu.getByText("alice@example.com")).toBeVisible();
+    await choose(menu, "bob@example.com");
+    await expect(page.locator("#password")).toHaveValue("bob-pass");
+    expect(passwordReads()).toBe(1);
+  });
+});

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test two-step login</title>
+    <style>
+      body { font: 16px system-ui; padding: 40px; }
+      input { display: block; margin: 8px 0 16px; padding: 6px; width: 260px; }
+    </style>
+  </head>
+  <body>
+    <!-- like many sign-ins: the email first, then the password on its own step -->
+    <form id="step-email">
+      <label>Email <input id="email" type="email" autocomplete="username" /></label>
+      <button id="next" type="button">Next</button>
+    </form>
+    <script>
+      document.getElementById("next").addEventListener("click", () => {
+        const step = document.createElement("form");
+        step.innerHTML = '<label>Password <input id="password" type="password" autocomplete="current-password" /></label>';
+        document.getElementById("step-email").replaceWith(step);
+      });
+    </script>
+  </body>
+</html>

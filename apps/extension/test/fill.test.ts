@@ -62,6 +62,19 @@ describe("fillCredentials", () => {
     expect(value("#user")).toBe("dave");
   });
 
+  it("without the password, fills a username-only step", () => {
+    page(`<form><input id="user" type="email" autocomplete="username"></form>`);
+    expect(fillCredentials(origin, "dave", null)).toBe("filled");
+    expect(value("#user")).toBe("dave");
+  });
+
+  it("without the password, leaves a form with a password field untouched", () => {
+    page(`<form><input id="user" autocomplete="username"><input id="pass" type="password"></form>`);
+    expect(fillCredentials(origin, "dave", null)).toBe("needs-password");
+    expect(value("#user")).toBe("");
+    expect(value("#pass")).toBe("");
+  });
+
   it("does not put a username into a one-time-code field", () => {
     page(`<form><input id="otp" type="text" autocomplete="one-time-code"></form>`);
     expect(fillCredentials(origin, "erin", "pw")).toBe("no-fields");

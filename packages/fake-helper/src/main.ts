@@ -4,7 +4,7 @@
 // Env: FAKE_HELPER_CODE  fixed pairing code (default 123456)
 //      FAKE_HELPER_VAULT path to a JSON array of { hostname, username, password }
 //      FAKE_HELPER_LOG   file to append a JSON line to for each request to open the Passwords app,
-//                        each code shown and each save
+//                        each code shown, each password read and each save
 //      FAKE_HELPER_SAVE  "decline" answers every "Save password?" prompt with Don't Save
 
 import { appendFileSync } from "node:fs";
@@ -37,6 +37,9 @@ for (;;) {
     const msg = (message as HelperMessage).msg as { QID?: string } | undefined;
     if (logPath && (message as HelperMessage).cmd === Command.Handshake && msg?.QID === "m0") {
       appendFileSync(logPath, `${JSON.stringify({ type: "code" })}\n`);
+    }
+    if (logPath && (message as HelperMessage).cmd === Command.GetPasswordForLoginName) {
+      appendFileSync(logPath, `${JSON.stringify({ type: "password-read" })}\n`);
     }
     for (const reply of await helper.handle(message as HelperMessage)) {
       await Bun.write(Bun.stdout, encodeFrame(reply));

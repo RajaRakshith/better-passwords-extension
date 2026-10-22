@@ -66,9 +66,11 @@ The content script runs in the top frame only. Logins inside cross-origin iframe
 
 1. The popup asks the background for the active tab's logins.
 2. The background reads the tab URL itself (granted by `activeTab` when the user opens the popup) and refuses anything that is not `https:` (or `http://localhost`).
-3. On click, the background fetches the password from the helper. macOS may ask for Touch ID here.
-4. It injects `fillCredentials` into the tab's top frame with the expected origin. If the page navigated elsewhere in the meantime, nothing is filled.
+3. On click, the background first injects `fillCredentials` without the password. On a username-only step of a multi-step sign-in, that fills the username and nothing else: no password is read, so no Touch ID. The background remembers the choice for that tab and site (only the username, for 10 minutes or until locking), and the next step lists that login first.
+4. On a form with a password field, the background fetches the password from the helper (macOS may ask for Touch ID here) and injects `fillCredentials` again with it, with the expected origin. If the page navigated elsewhere in the meantime, nothing is filled.
 5. The fill function skips hidden and zero-size fields, and fills the username field from the password field's own form.
+
+The inline menu fills the same way, through the content script.
 
 ## New passwords (sign-up and change-password forms)
 

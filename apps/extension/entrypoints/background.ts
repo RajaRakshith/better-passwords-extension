@@ -198,15 +198,22 @@ export default defineBackground(() => {
   // Filled passwords Apple Passwords may not have (not saved yet, declined, or an update that
   // can't be confirmed), kept in memory until the session ends for the popup to show.
   const unconfirmed: { hostname: string; username: string; password: string }[] = [];
+  // Logins chosen on a username-only step, by tab: the next step (the password) lists it first.
+  // Only the username is kept; the password is read when that step asks for it.
+  const chosenLogins = new Map<number, { origin: string; username: string; at: number }>();
+  const CHOSEN_LOGIN_MS = 10 * 60_000;
+
   // locking forgets every generated password, like the session key
   session.onChange(({ state }) => {
     if (state === "unlocked") return;
+    chosenLogins.clear();
     unconfirmed.length = 0;
     generatedByTab.clear();
     generatedForMenu.clear();
   });
   browser.tabs.onRemoved.addListener((tabId) => {
     generatedByTab.delete(tabId);
+    chosenLogins.delete(tabId);
     menuNonces.delete(tabId);
     for (const key of generatedForMenu.keys()) if (key.startsWith(`${tabId}:`)) generatedForMenu.delete(key);
   });
@@ -452,18 +459,31 @@ export default defineBackground(() => {
         const url = await tabUrl(tabId);
         if (!url) return { logins: [] };
         const client = await session.unlockedClient();
-        const logins = await client.getLogins(url.hostname, { tabId });
-        return { hostname: url.hostname, logins: logins.map(({ username }) => ({ username })) };
+        const logins = (await client.getLogins(url.hostname, { tabId })).map(({ username }) => ({ username }));
+        // the login chosen on this sign-in's previous step comes first
+        const chosen = chosenLogins.get(tabId);
+        const current =
+          chosen && chosen.origin === url.origin && Date.now() - chosen.at < CHOSEN_LOGIN_MS
+            ? chosen.username
+            : undefined;
+        const first = logins.filter(({ username }) => username === current);
+        return {
+          hostname: url.hostname,
+          logins: [...first, ...logins.filter((login) => !first.includes(login))],
+          ...(first.length > 0 ? { chosen: current } : {}),
+        };
       }
       case "fill": {
         const tabId = tabOf(caller, request.tabId);
-        const { url, credential } = await credentialFor(tabId, request.username);
-        const [injection] = await browser.scripting.executeScript({
-          target: { tabId, frameIds: [0] },
-          func: fillCredentials,
-          args: [url.origin, credential.username, credential.password],
+        const result = await fillLogin(tabId, request.username, async (origin, password) => {
+          const [injection] = await browser.scripting.executeScript({
+            target: { tabId, frameIds: [0] },
+            func: fillCredentials,
+            args: [origin, request.username, password],
+          });
+          return String(injection?.result ?? "no-fields");
         });
-        return { result: String(injection?.result ?? "no-fields") };
+        return { result };
       }
       case "generate-passwords": {
         const tabId = tabOf(caller);
@@ -492,15 +512,17 @@ export default defineBackground(() => {
         throw new Error("content scripts only");
       case "fill-from-menu": {
         const tabId = tabOf(caller);
-        const { url, credential } = await credentialFor(tabId, request.username);
-        const reply = (await relay(tabId, {
-          type: "menu-fill",
-          nonce: request.nonce,
-          origin: url.origin,
-          username: credential.username,
-          password: credential.password,
-        })) as { result: string } | undefined;
-        return { result: reply?.result ?? "menu-hidden" };
+        const result = await fillLogin(tabId, request.username, async (origin, password) => {
+          const reply = (await relay(tabId, {
+            type: "menu-fill",
+            nonce: request.nonce,
+            origin,
+            username: request.username,
+            password,
+          })) as { result: string } | undefined;
+          return reply?.result ?? "menu-hidden";
+        });
+        return { result };
       }
       case "open-passwords-app": {
         const tabId = caller.tabId ?? request.tabId;
@@ -583,6 +605,28 @@ export default defineBackground(() => {
       case "autofill-status":
         throw new Error("content scripts only");
     }
+  }
+
+  /**
+   * Fills `username`'s login with `fill`. A username-only step (a multi-step sign-in) gets just the
+   * username, and the choice is remembered for the next step; the password is read (macOS may ask
+   * for Touch ID) only for a form with a password field.
+   */
+  async function fillLogin(
+    tabId: number,
+    username: string,
+    fill: (origin: string, password: string | null) => Promise<string>,
+  ): Promise<string> {
+    const url = await tabUrl(tabId);
+    if (!url) throw new Error("this page can't be filled");
+    const result = await fill(url.origin, null);
+    if (result === "filled") chosenLogins.set(tabId, { origin: url.origin, username, at: Date.now() });
+    if (result !== "needs-password") return result;
+    // the tab may have moved on meanwhile: the password is for the site it's on now, and only fills there
+    const { url: now, credential } = await credentialFor(tabId, username);
+    const filled = await fill(now.origin, credential.password);
+    if (filled === "filled") chosenLogins.delete(tabId);
+    return filled;
   }
 
   async function credentialFor(tabId: number, username: string) {

@@ -113,6 +113,8 @@ type Fixtures = {
   passwordsAppLaunches: () => string[];
   /** How many codes the fake helper has shown on the "Mac". */
   codesShown: () => number;
+  /** How many passwords the fake helper was asked for (each one may cost a Touch ID). */
+  passwordReads: () => number;
   /** Logins the fake helper saved (after the simulated "Save password?" prompt). */
   helperSaves: () => { hostname: string; username: string; password: string }[];
 };
@@ -193,6 +195,9 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
   },
   codesShown: async ({ context }, use) => {
     await use(() => helperLog(context, "code").length);
+  },
+  passwordReads: async ({ context }, use) => {
+    await use(() => helperLog(context, "password-read").length);
   },
   helperSaves: async ({ context }, use) => {
     await use(() =>

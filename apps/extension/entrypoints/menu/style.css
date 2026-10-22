@@ -63,6 +63,13 @@ body {
   color: inherit;
 }
 
+/* "3 other accounts", under the login chosen on the sign-in's previous step: smaller, lined up with the titles */
+.row.others {
+  padding-left: 35px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 .separator {
   margin: 3px 6px;
   border: 0;
