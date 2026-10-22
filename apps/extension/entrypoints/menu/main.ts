@@ -171,6 +171,10 @@ browser.runtime.onMessage.addListener((request: MenuMessage, sender) => {
     query = request.query;
     renderLogins();
   }
+  // the menu sits above its field: listed bottom-up, the first item nearest the field
+  if (request.type === "menu-placement" && nonce && request.nonce === nonce) {
+    document.documentElement.classList.toggle("above", request.above);
+  }
   // unlocked or locked elsewhere, like the popup
   if (request.type === "session-changed") {
     if (request.unlocked) void unlocked();
@@ -563,8 +567,10 @@ document.addEventListener("keydown", (event) => {
   if (items.length === 0) return;
   event.preventDefault();
   const index = items.indexOf(document.activeElement as HTMLElement);
-  if (event.key === "ArrowDown") return items[Math.min(index + 1, items.length - 1)]?.focus();
-  // ↑ from the first item goes back to the field on the page, keeping the menu open
+  // above its field, the list runs bottom-up: ↑ moves on, ↓ goes back
+  const onward = document.documentElement.classList.contains("above") ? "ArrowUp" : "ArrowDown";
+  if (event.key === onward) return items[Math.min(index + 1, items.length - 1)]?.focus();
+  // back from the first item goes to the field on the page, keeping the menu open
   if (index <= 0) return returnToField();
   items[index - 1]?.focus();
 });

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test login at the bottom of the window</title>
+    <style>
+      body { font: 16px system-ui; margin: 0; padding: 0 40px; }
+      /* no room for the menu under the fields */
+      form { position: absolute; bottom: 20px; }
+      input { display: block; margin: 8px 0; padding: 6px; width: 260px; }
+    </style>
+  </head>
+  <body>
+    <form id="login">
+      <label>Email <input id="user" type="email" autocomplete="username" /></label>
+      <label>Password <input id="pass" type="password" autocomplete="current-password" /></label>
+    </form>
+  </body>
+</html>

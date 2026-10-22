@@ -229,6 +229,8 @@ export type MenuMessage =
    * this way; usernames never reach the content script.
    */
   | { type: "menu-filter"; nonce: string; query: string }
+  /** Also from the content script: the menu sits above its field, so it lists its items bottom-up. */
+  | { type: "menu-placement"; nonce: string; above: boolean }
   /** Sent by the background to every extension page when the session unlocks or locks (say, from the popup). */
   | { type: "session-changed"; unlocked: boolean };
 

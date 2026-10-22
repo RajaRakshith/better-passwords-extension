@@ -29,6 +29,12 @@ body {
   overscroll-behavior: none;
 }
 
+/* above its field: bottom-up, the first item nearest the field (and a long list starts scrolled there) */
+.above .panel {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
 .row {
   display: flex;
   align-items: center;

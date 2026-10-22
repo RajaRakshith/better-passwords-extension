@@ -62,9 +62,17 @@ export class MenuHost {
   #empty = false;
   /** Focus asked for while hidden: a hidden frame can't take it, so it's given once the menu shows. */
   #focusWhenShown = false;
+  /** Whether the menu sits above its field. */
+  #above = false;
+  /** What the menu page was last told of that (see onPlacement); it can't hear before it has loaded. */
+  #toldAbove: boolean | undefined;
   readonly #watch = new VisibilityWatch(() => isMenuGenuinelyVisible(this.#host));
 
-  constructor(private readonly menuUrl: string) {
+  /** `onPlacement` tells the menu page when it moves above its field, or back under it. */
+  constructor(
+    private readonly menuUrl: string,
+    private readonly onPlacement: (above: boolean) => void = () => {},
+  ) {
     this.#host = document.createElement("app-autofill-menu");
     this.#host.setAttribute("popover", "manual");
     this.#shadow = this.#host.attachShadow({ mode: "closed" });
@@ -92,6 +100,11 @@ export class MenuHost {
     return this.#nonce !== undefined;
   }
 
+  /** Whether the menu sits above its field (then ↑ leads into it, not ↓). */
+  get isAbove(): boolean {
+    return this.#above;
+  }
+
   /** Open and on screen: not waiting for its first size, nor hidden for having nothing to show. */
   get isShowing(): boolean {
     return this.isOpen && this.#rendered && !this.#empty;
@@ -105,6 +118,8 @@ export class MenuHost {
     this.#rendered = false;
     this.#empty = false;
     this.#focusWhenShown = false;
+    this.#above = false;
+    this.#toldAbove = undefined;
     // A new iframe every time: changing only the URL fragment of an existing one would not reload
     // the menu page, which would keep the previous menu's nonce and size.
     // The nonce ties requests to this menu; a copy of menu.html framed by the page itself has none.
@@ -149,8 +164,16 @@ export class MenuHost {
     const width = Math.min(Math.max(rect.width, WIDTH), window.innerWidth - 2 * GAP);
     const left = Math.min(Math.max(GAP, rect.left), window.innerWidth - width - GAP);
     const below = rect.bottom + GAP;
-    const top =
-      below + this.#height > window.innerHeight && rect.top > this.#height ? rect.top - GAP - this.#height : below;
+    const above = rect.top - GAP - this.#height;
+    const fitsAbove = above >= GAP;
+    const isAbove = below + this.#height > window.innerHeight && fitsAbove;
+    const top = isAbove ? above : below;
+    this.#above = isAbove;
+    // once rendered, the page is listening
+    if (this.#rendered && isAbove !== (this.#toldAbove ?? false)) {
+      this.#toldAbove = isAbove;
+      this.onPlacement(isAbove);
+    }
     this.#applyStyle({
       left: `${left}px`,
       top: `${top}px`,

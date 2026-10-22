@@ -5,12 +5,17 @@ import { FILL_MATCHES } from "@/src/config.ts";
 import { asksForUsername, fillCredentials, fillEmail, fillNewPassword, usernameNear } from "@/src/fill.ts";
 import { type ContentMessage, type MenuMessage, type NewPasswordContext, send } from "@/src/messages.ts";
 
+/** Omit for each member of a union. */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
 // Top frame only for now. Logins inside cross-origin iframes need their own origin rules.
 export default defineContentScript({
   matches: FILL_MATCHES,
   runAt: "document_idle",
   main(ctx) {
-    const menu = new MenuHost(browser.runtime.getURL("/menu.html"));
+    const menu = new MenuHost(browser.runtime.getURL("/menu.html"), (above) =>
+      tellMenu({ type: "menu-placement", above }),
+    );
     let request = 0;
     // the field whose menu the user just dismissed; it stays closed there until they ask again
     let dismissed: HTMLInputElement | undefined;
@@ -48,12 +53,16 @@ export default defineContentScript({
       }
     }
 
-    /** Tells the open menu what's typed in its username field, so it lists only the logins that match. */
-    function filterMenu(query: string) {
+    /** Sends the open menu a message straight (see MenuMessage). */
+    function tellMenu(message: DistributiveOmit<MenuMessage, "nonce">) {
       const nonce = menu.nonce;
       if (!nonce) return;
-      const message: MenuMessage = { type: "menu-filter", nonce, query };
-      void browser.runtime.sendMessage(message).catch(() => {});
+      void browser.runtime.sendMessage({ ...message, nonce } as MenuMessage).catch(() => {});
+    }
+
+    /** Tells the open menu what's typed in its username field, so it lists only the logins that match. */
+    function filterMenu(query: string) {
+      tellMenu({ type: "menu-filter", query });
     }
 
     /** Offers a menu for `target` if it gets one; returns whether it does. */
@@ -104,7 +113,8 @@ export default defineContentScript({
           dismissed = menu.anchor;
           menu.close();
         }
-        if (event.key === "ArrowDown") {
+        // the arrow pointing at the menu leads into it (↑ when it sits above the field)
+        if (event.key === (menu.isAbove ? "ArrowUp" : "ArrowDown")) {
           event.preventDefault();
           if (!menu.isShowing) filterMenu("");
           menu.focusMenu();

@@ -310,6 +310,38 @@ test("the menu's Unlock shows a fresh code after the popup asked for one", async
   await expect(menu.getByText("e2e-user")).toBeVisible();
 });
 
+test("without room under the field, opens above it, listed bottom-up and entered with ↑", async ({
+  context,
+  siteUrl,
+}) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/low.html`);
+  await page.locator("#pass").click();
+  const menu = await menuFrame(page);
+  await choose(menu, "Unlock to fill passwords");
+  await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+  const login = menu.getByRole("option", { name: /e2e-user/ });
+  const openApp = menu.getByRole("option", { name: /Open Passwords App/ });
+  await expect(login).toBeVisible();
+  const [field, host] = await Promise.all([
+    page.locator("#pass").boundingBox(),
+    page.locator("app-autofill-menu").boundingBox(),
+  ]);
+  expect(field && host && host.y + host.height <= field.y).toBe(true);
+  // the login sits nearest the field, at the bottom
+  const [loginBox, openAppBox] = await Promise.all([login.boundingBox(), openApp.boundingBox()]);
+  expect(loginBox && openAppBox && loginBox.y > openAppBox.y).toBe(true);
+
+  await page.locator("#pass").click();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#pass")).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(login).toBeFocused();
+  // ↓ heads back toward the field
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#pass")).toBeFocused();
+});
+
 test.describe("typing a username", () => {
   test.use({
     // Playwright reads a bare array here as [value, options], so the list goes in a pair of its own
