@@ -1,3 +1,4 @@
+import type { ScriptPublicPath } from "wxt/utils/inject-script";
 import type { FieldKind } from "@/src/autofill/fields.ts";
 import { Companion } from "@/src/companion.ts";
 import { BRIDGE_HOST } from "@/src/config.ts";
@@ -25,6 +26,7 @@ import { PortTransport } from "@/src/native/port-transport.ts";
 import { generatePassword } from "@/src/passwords/generate.ts";
 import { waitForLogin } from "@/src/passwords/wait-for-login.ts";
 import { Session } from "@/src/session/session.ts";
+import { PendingUpdate } from "@/src/updates.ts";
 import { fillableUrl } from "@/src/url-policy.ts";
 
 const KEEP_ALIVE = "keep-alive";
@@ -101,10 +103,49 @@ export default defineBackground(() => {
     return browser.tabs.create({ url: browser.runtime.getURL("/setup.html") });
   }
 
-  browser.idle.onStateChanged.addListener(async (state) => {
-    if (state !== "locked") return;
-    if ((await getSettings()).lockOnScreenLock) session.lock();
+  // A downloaded version installs when that loses nothing: right away while locked, else once the
+  // session ends, or when the user asks in the popup. One waiting a day takes the user's next break
+  // (Firefox on macOS reports no screen lock, so an hour away counts too).
+  const updates = new PendingUpdate({
+    busy: () => session.status.state === "unlocked" || session.status.state === "awaiting-code",
+    restart: () => browser.runtime.reload(),
   });
+  browser.runtime.onUpdateAvailable.addListener(({ version }) => updates.available(version));
+  session.onChange(() => updates.applyIfHarmless());
+  browser.idle.setDetectionInterval(60 * 60);
+
+  browser.idle.onStateChanged.addListener(async (state) => {
+    if (state === "active") return;
+    if (updates.overdue) session.lock();
+    else if (state === "locked" && (await getSettings()).lockOnScreenLock) session.lock();
+  });
+
+  // Chromium leaves open tabs without the content script after an update; Firefox injects it itself.
+  // The old copy notices the new one and gets out of the way (WXT's ContentScriptContext).
+  browser.runtime.onInstalled.addListener(async ({ reason }) => {
+    if (reason !== "update" || import.meta.env.FIREFOX) return;
+    for (const script of browser.runtime.getManifest().content_scripts ?? []) {
+      const tabs = await browser.tabs.query({ url: script.matches ?? [] });
+      for (const { id } of tabs) {
+        if (id === undefined) continue;
+        void browser.scripting
+          .executeScript({ target: { tabId: id }, files: (script.js ?? []) as ScriptPublicPath[] })
+          .catch(() => {});
+      }
+    }
+  });
+
+  // For trying the update flow in a local build: WXT_SIMULATE_UPDATE=9.9.9 announces that version
+  // on the first unlock, once per profile; "installing" it restarts the extension as it is.
+  const simulated = import.meta.env.WXT_SIMULATE_UPDATE as string | undefined;
+  if (simulated) {
+    session.onChange(async ({ state }) => {
+      if (state !== "unlocked" || updates.version) return;
+      if ((await browser.storage.local.get("simulatedUpdate")).simulatedUpdate) return;
+      await browser.storage.local.set({ simulatedUpdate: true });
+      updates.available(simulated);
+    });
+  }
 
   const companion = new Companion();
   const status = (): Status => ({ ...session.status });
@@ -122,6 +163,7 @@ export default defineBackground(() => {
       companion: state,
       touchId: state === "ready" && (await getSettings()).touchId,
       ...(update ? { companionUpdate: update } : {}),
+      ...(updates.version ? { extensionUpdate: updates.version } : {}),
       ...(justConnected === true ? { justConnected } : {}),
     };
   }
@@ -479,6 +521,10 @@ export default defineBackground(() => {
         return status();
       case "lock":
         session.lock();
+        return status();
+      case "install-update":
+        // restarting ends the session with Apple's helper anyway
+        updates.apply();
         return status();
       case "list-logins": {
         const tabId = tabOf(caller, request.tabId);

@@ -205,6 +205,7 @@ async function showLogins(status: Status, error?: string) {
   show(
     h("h1", { textContent: result.hostname ?? DISPLAY_NAME }),
     allSet,
+    extensionUpdate(status.extensionUpdate),
     body,
     await unconfirmedPasswords(tabId),
     errorLine(error),
@@ -213,6 +214,23 @@ async function showLogins(status: Status, error?: string) {
     reportProblem(),
   );
   app.querySelector<HTMLInputElement>(".search")?.focus();
+}
+
+/** A downloaded version waits for the session to end; installing it now ends it. */
+function extensionUpdate(version: string | undefined) {
+  if (!version) return null;
+  const install = h("button", { class: "primary", textContent: "Update" });
+  install.addEventListener("click", () => {
+    // the extension restarts before it can answer
+    void send({ type: "install-update" }).catch(() => {});
+    window.close();
+  });
+  return h(
+    "section",
+    { class: "card padded" },
+    h("div", { class: "actions" }, h("span", { textContent: `Version ${version} is ready` }), install),
+    h("p", { class: "hint" }, "Updating locks Better Passwords, so you'll enter the code again."),
+  );
 }
 
 /** Logins shown before "Show more", so the settings below stay in view. */

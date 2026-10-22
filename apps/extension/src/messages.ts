@@ -16,6 +16,8 @@ export type Request =
   | { type: "list-logins"; tabId?: number }
   | { type: "fill"; tabId: number; username: string }
   | { type: "lock" }
+  /** Ends the session and restarts the extension, installing the version the browser downloaded. */
+  | { type: "install-update" }
   | { type: "get-settings" }
   | { type: "set-settings"; settings: Partial<Settings> }
   // inline menu → background → content script of the same tab
@@ -104,6 +106,8 @@ export interface Status extends SessionStatus {
   companion?: CompanionState;
   /** A newer companion app is out. */
   companionUpdate?: CompanionUpdate;
+  /** A newer version of the extension, downloaded and waiting for the session to end. */
+  extensionUpdate?: string;
   /** True when the user wants Touch ID and the companion is ready for it. */
   touchId?: boolean;
   /** This browser was just set up and hasn't been unlocked yet: say it worked, once. */

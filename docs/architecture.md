@@ -47,6 +47,10 @@ Apple's helper keeps the pairing key only in its own memory. When the native por
 
 Our background worker keeps the port open. Chrome keeps an extension's worker alive while it has an open native-messaging port (Chrome 105+), and a 30-second `chrome.alarms` fallback is armed while unlocked. The result is one pairing per browser launch. Optionally, the session also ends when the Mac locks (`idle.onStateChanged`).
 
+## Updates
+
+The browser installs a downloaded version only once the extension is idle, and ours never is while the port is open, so updates would wait for a browser restart. Instead the background worker restarts itself (`runtime.reload()`) when that ends nothing: as soon as `runtime.onUpdateAvailable` fires while locked, and otherwise the moment the session ends (Lock, the Mac locking with that setting on, the helper going away). While unlocked, the popup offers the update, warning that the code is needed again. A version waiting a day ends the session at the user's next break: the screen locking, or an hour without input (Firefox on macOS doesn't report screen locks). After an update Chromium leaves open tabs without the content script, so the worker injects it again; the old copy notices the new one and steps aside. A local build with `WXT_SIMULATE_UPDATE=<version>` pretends that version arrived at the first unlock, to try this flow.
+
 ## The inline menu
 
 When a login field gets focus, the content script asks the background one question: show logins, offer to unlock, offer the setup (before this browser can reach Apple's helper), or stay out of the way. That answer is all it learns; it never sees usernames or passwords.
