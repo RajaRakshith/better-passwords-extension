@@ -306,6 +306,8 @@ async function fill(tabId: number, username: string) {
     if (result === "filled") return window.close();
     await refresh(result === "no-fields" ? "No login fields found on this page." : "The page changed, try again.");
   } catch (e) {
+    // chosen again (say, after dismissing Touch ID): that newer choice carries on
+    if ((e as { code?: string }).code === "superseded") return;
     await refresh(messageOf(e));
   }
 }

@@ -430,6 +430,8 @@ async function fill(username: string) {
       );
     }
   } catch (e) {
+    // chosen again (say, after dismissing Touch ID): that newer choice carries on
+    if ((e as { code?: string }).code === "superseded") return;
     await showLogins(messageOf(e));
   }
 }

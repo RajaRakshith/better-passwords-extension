@@ -168,7 +168,7 @@ describe("ApplePasswordsClient", () => {
     await expect(client.requestChallenge()).rejects.toMatchObject({ code: "closed" });
   });
 
-  it("serializes concurrent queries so replies cannot cross", async () => {
+  it("serializes concurrent queries of one kind so replies cannot cross", async () => {
     const { helper, transport, client } = await setup();
     await pair(helper, client);
     const before = transport.sent.length;
@@ -180,11 +180,9 @@ describe("ApplePasswordsClient", () => {
     expect(results[0]).toHaveLength(2);
     expect(results[1]?.[0]).toMatchObject({ username: "carol" });
     expect(results[2]).toEqual({ username: "carol", password: "hunter2" });
-    expect(transport.sent.slice(before).map((m) => (m as { cmd: number }).cmd)).toEqual([
-      Command.GetLoginNamesForUrl,
-      Command.GetLoginNamesForUrl,
-      Command.GetPasswordForLoginName,
-    ]);
+    const sent = transport.sent.slice(before).map((m) => (m as { cmd: number }).cmd);
+    expect(sent.filter((cmd) => cmd === Command.GetLoginNamesForUrl)).toHaveLength(2);
+    expect(sent.filter((cmd) => cmd === Command.GetPasswordForLoginName)).toHaveLength(1);
   });
 
   it("never sends the code or password in clear text", async () => {
@@ -241,6 +239,61 @@ describe("ApplePasswordsClient", () => {
     const client = await ApplePasswordsClient.connect(new MemoryTransport(helper));
     await pair(helper, client);
     await expect(client.getLogins("example.com", tab)).rejects.toMatchObject({ code: "invalid-reply" });
+  });
+
+  describe("when a password never comes (Touch ID dismissed)", () => {
+    /** Drops the reply to the first password read, as the helper does when its prompt is dismissed. */
+    function silentOnce() {
+      let dropped = false;
+      return new TamperingHelper((request, reply) => {
+        if (request.cmd !== Command.GetPasswordForLoginName || dropped) return reply;
+        dropped = true;
+        return undefined;
+      });
+    }
+
+    it("still lists logins meanwhile", async () => {
+      const helper = silentOnce();
+      const client = await ApplePasswordsClient.connect(new MemoryTransport(helper));
+      await pair(helper, client);
+      const password = client.getPassword("example.com", "bob", tab).catch((error: unknown) => error);
+      expect(await client.getLogins("example.com", tab)).toHaveLength(2);
+      client.close();
+      expect(await password).toMatchObject({ code: "closed" });
+    });
+
+    it("lets a new read replace it, keeping the session", async () => {
+      const helper = silentOnce();
+      const client = await ApplePasswordsClient.connect(new MemoryTransport(helper));
+      await pair(helper, client);
+      const first = client.getPassword("example.com", "bob", tab).catch((error: unknown) => error);
+      expect(await client.getPassword("example.com", "bob", tab)).toEqual({
+        username: "bob",
+        password: "battery staple",
+      });
+      expect(await first).toMatchObject({ code: "superseded" });
+      expect(client.state).toBe("unlocked");
+    });
+
+    it("refuses its late answer when another login was asked for since", async () => {
+      // bob's answer comes late, just as alice's is expected
+      let late: HelperMessage | undefined;
+      const helper = new TamperingHelper((request, reply) => {
+        if (request.cmd !== Command.GetPasswordForLoginName) return reply;
+        if (!late) {
+          late = reply;
+          return undefined;
+        }
+        return late;
+      });
+      const client = await ApplePasswordsClient.connect(new MemoryTransport(helper));
+      await pair(helper, client);
+      const first = client.getPassword("example.com", "bob", tab).catch((error: unknown) => error);
+      await expect(client.getPassword("example.com", "alice@example.com", tab)).rejects.toMatchObject({
+        code: "invalid-reply",
+      });
+      expect(await first).toMatchObject({ code: "superseded" });
+    });
   });
 
   it("gives up on a reply that never comes, and keeps working after", async () => {

@@ -4,7 +4,7 @@ Apple doesn't document this protocol. What follows was learned from earlier open
 
 ## Transport
 
-Chrome native messaging: every message is a 32-bit little-endian length followed by UTF-8 JSON. Replies echo the request's `cmd` and carry **no correlation id**, so the client sends one request at a time.
+Chrome native messaging: every message is a 32-bit little-endian length followed by UTF-8 JSON. Replies echo the request's `cmd` and carry **no correlation id**, so the client never has two requests with the same `cmd` waiting at once: listing logins, pairing and saving each queue on their own, and a new password read replaces one still waiting (a dismissed Touch ID prompt leaves it unanswered). A password reply is used only if its `USR` is the login asked for, in case a replaced read's answer arrives late.
 
 ## Commands
 

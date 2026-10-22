@@ -45,6 +45,8 @@ export class ProtocolError extends Error {
       | "challenge-expired"
       | "unsupported"
       | "invalid-reply"
+      /** A newer request of the same kind replaced this one (see getPassword). */
+      | "superseded"
       | "server-proof-mismatch"
       | "query-failed",
   ) {
@@ -100,7 +102,8 @@ export class ApplePasswordsClient {
   #challenge: PendingChallenge | undefined;
   #channel: SecureChannel | undefined;
   #waiters = new Map<number, Waiter>();
-  #queue: Promise<unknown> = Promise.resolve();
+  /** One queue per kind of request (see #serialized). */
+  #queues = new Map<string, Promise<unknown>>();
   #stateListeners = new Set<(state: ClientState) => void>();
 
   readonly #options: Required<ClientOptions>;
@@ -152,7 +155,7 @@ export class ApplePasswordsClient {
 
   /** Asks the helper to start pairing; macOS then shows a 6-digit code. */
   requestChallenge(): Promise<void> {
-    return this.#serialized(async () => {
+    return this.#serialized("pairing", async () => {
       this.#assertOpen();
       const username = this.#codec.encode(randomBytes(16));
       const srp = new SrpClient(username);
@@ -193,7 +196,7 @@ export class ApplePasswordsClient {
 
   /** Completes pairing with the code shown on the Mac. Each challenge allows one attempt. */
   verifyCode(code: string): Promise<void> {
-    return this.#serialized(async () => {
+    return this.#serialized("pairing", async () => {
       this.#assertOpen();
       const challenge = this.#challenge;
       if (!challenge || !this.hasLiveChallenge) {
@@ -236,7 +239,7 @@ export class ApplePasswordsClient {
 
   /** Lists saved logins for a hostname, without passwords. */
   getLogins(hostname: string, tab: { tabId: number; frameId?: number }): Promise<Login[]> {
-    return this.#serialized(async () => {
+    return this.#serialized("logins", async () => {
       const reply = await this.#query(Command.GetLoginNamesForUrl, hostname, tab, {
         ACT: Action.GhostSearch,
         URL: hostname,
@@ -247,15 +250,17 @@ export class ApplePasswordsClient {
   }
 
   /**
-   * Reads one password. No timeout by default: macOS may ask for Touch ID or the login
-   * password before the helper answers.
+   * Reads one password. No timeout: macOS may ask for Touch ID or the login password before the
+   * helper answers. With that prompt dismissed, the helper never answers, so a newer read replaces
+   * one still waiting instead of queueing behind it.
    */
   getPassword(
     hostname: string,
     username: string,
     tab: { tabId: number; frameId?: number },
   ): Promise<Credential | undefined> {
-    return this.#serialized(async () => {
+    // not serialized: a new read replaces one still waiting (see #request)
+    return (async () => {
       const reply = await this.#query(
         Command.GetPasswordForLoginName,
         hostname,
@@ -265,8 +270,11 @@ export class ApplePasswordsClient {
       );
       const entry = reply.Entries?.[0];
       if (!entry || typeof entry.PWD !== "string") return undefined;
-      return { username: entry.USR ?? "", password: entry.PWD };
-    });
+      // Replies carry no id: a late answer to a replaced read could arrive now. Use only the
+      // password of the login asked for.
+      if ((entry.USR ?? "") !== username) throw new ProtocolError("reply for another login", "invalid-reply");
+      return { username, password: entry.PWD };
+    })();
   }
 
   /**
@@ -286,7 +294,7 @@ export class ApplePasswordsClient {
    * look the login up afterwards (see `getLogins`).
    */
   savePassword(login: { hostname: string; username: string; password: string }, tab: Tab): Promise<void> {
-    return this.#serialized(async () => {
+    return this.#serialized("save", async () => {
       this.transport.send(
         await this.#secureMessage(Command.SetPassword, tab, {
           ACT: Action.MaybeAdd,
@@ -355,10 +363,16 @@ export class ApplePasswordsClient {
     return (await channel.decryptReply(this.#codec.decode(smsg.SDATA))) as QueryReply;
   }
 
-  /** Runs `task` after every earlier one: replies carry no correlation id. */
-  #serialized<T>(task: () => Promise<T>): Promise<T> {
-    const run = this.#queue.then(task, task);
-    this.#queue = run.catch(() => undefined);
+  /**
+   * Runs `task` after every earlier one in its `lane`. Replies carry no correlation id but are told
+   * apart by command, so different kinds of request may overlap; the same kind may not.
+   */
+  #serialized<T>(lane: string, task: () => Promise<T>): Promise<T> {
+    const run = (this.#queues.get(lane) ?? Promise.resolve()).then(task, task);
+    this.#queues.set(
+      lane,
+      run.catch(() => undefined),
+    );
     return run;
   }
 
@@ -378,16 +392,22 @@ export class ApplePasswordsClient {
           ms === null
             ? undefined
             : setTimeout(() => {
-                this.#waiters.delete(message.cmd);
+                if (this.#waiters.get(message.cmd) === waiter) this.#waiters.delete(message.cmd);
                 reject(new ProtocolError("the helper did not answer in time", "timeout"));
               }, ms),
       };
+      // only serialized requests' commands can't overlap; any other one replaces its predecessor
+      const previous = this.#waiters.get(message.cmd);
+      if (previous) {
+        clearTimeout(previous.timer);
+        previous.reject(new ProtocolError("replaced by a newer request", "superseded"));
+      }
       this.#waiters.set(message.cmd, waiter);
       try {
         this.transport.send(message);
       } catch (error) {
         clearTimeout(waiter.timer);
-        this.#waiters.delete(message.cmd);
+        if (this.#waiters.get(message.cmd) === waiter) this.#waiters.delete(message.cmd);
         reject(error instanceof Error ? error : new Error(String(error)));
       }
     });
