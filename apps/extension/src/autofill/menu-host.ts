@@ -58,6 +58,10 @@ export class MenuHost {
   #height = 48;
   /** Hidden until the menu page reports its size, so an empty frame never shows. */
   #rendered = false;
+  /** Hidden while the menu has nothing to show (no login starts with what was typed). */
+  #empty = false;
+  /** Focus asked for while hidden: a hidden frame can't take it, so it's given once the menu shows. */
+  #focusWhenShown = false;
   readonly #watch = new VisibilityWatch(() => isMenuGenuinelyVisible(this.#host));
 
   constructor(private readonly menuUrl: string) {
@@ -69,6 +73,11 @@ export class MenuHost {
 
   get anchor(): HTMLInputElement | undefined {
     return this.#nonce ? this.#anchor : undefined;
+  }
+
+  /** The open menu's nonce, which the menu page checks on messages sent straight to it. */
+  get nonce(): string | undefined {
+    return this.#nonce;
   }
 
   get element(): HTMLElement {
@@ -83,12 +92,19 @@ export class MenuHost {
     return this.#nonce !== undefined;
   }
 
+  /** Open and on screen: not waiting for its first size, nor hidden for having nothing to show. */
+  get isShowing(): boolean {
+    return this.isOpen && this.#rendered && !this.#empty;
+  }
+
   /** `nonce` comes from the background, which accepts requests from this menu only with it. */
   open(anchor: HTMLInputElement, mode: MenuMode, kind: FieldKind, nonce: string): void {
     this.#anchor = anchor;
     this.#nonce = nonce;
     this.#height = 48;
     this.#rendered = false;
+    this.#empty = false;
+    this.#focusWhenShown = false;
     // A new iframe every time: changing only the URL fragment of an existing one would not reload
     // the menu page, which would keep the previous menu's nonce and size.
     // The nonce ties requests to this menu; a copy of menu.html framed by the page itself has none.
@@ -110,10 +126,13 @@ export class MenuHost {
     return this.#watch.steadilyVisible(STEADY_MS);
   }
 
+  /** A height of 0 hides the menu, keeping it open so it can show again. */
   resize(height: number): void {
     this.#rendered = true;
-    this.#height = Math.max(24, Math.min(MAX_HEIGHT, Math.ceil(height)));
+    this.#empty = height === 0;
+    if (!this.#empty) this.#height = Math.max(24, Math.min(MAX_HEIGHT, Math.ceil(height)));
     this.position();
+    if (this.#focusWhenShown && this.isShowing) this.focusMenu();
   }
 
   /** Places the menu under the field, or above it when there is no room below. */
@@ -135,12 +154,13 @@ export class MenuHost {
       top: `${top}px`,
       width: `${width}px`,
       height: `${this.#height}px`,
-      visibility: this.#rendered ? "visible" : "hidden",
+      visibility: this.isShowing ? "visible" : "hidden",
     });
   }
 
   focusMenu(): void {
-    this.#frame?.focus();
+    this.#focusWhenShown = !this.isShowing;
+    if (!this.#focusWhenShown) this.#frame?.focus();
   }
 
   close(): void {

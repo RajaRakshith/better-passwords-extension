@@ -1,7 +1,7 @@
 import "./style.css";
 import { DISPLAY_NAME } from "@/src/config.ts";
 import { requestHideMyEmailConsent } from "@/src/icloud/consent.ts";
-import type { EmailSuggestions } from "@/src/messages.ts";
+import type { EmailSuggestions, MenuMessage } from "@/src/messages.ts";
 import { bindToMenu, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { bindCodeInput } from "@/src/ui/code-input.ts";
@@ -92,6 +92,11 @@ function message(text: string, isError = false) {
   return h("div", { class: isError ? "message error" : "message", textContent: text });
 }
 
+// the logins shown, so typing in the field can narrow them down without asking again
+let loginsView: { logins: { username: string }[]; hostname: string; error?: string } | undefined;
+/** What the user typed into the username field: only logins starting with it are listed. */
+let query = "";
+
 async function showLogins(error?: string) {
   let result: Awaited<ReturnType<typeof send<{ type: "list-logins" }>>>;
   try {
@@ -100,16 +105,41 @@ async function showLogins(error?: string) {
     return render(message(messageOf(e), true));
   }
   if (result.logins.length === 0) {
+    loginsView = undefined;
     return render(message(`No saved passwords for ${result.hostname ?? "this site"}.`), openPasswordsRow(true));
   }
-  const hostname = result.hostname ?? "";
+  loginsView = { logins: result.logins, hostname: result.hostname ?? "", ...(error ? { error } : {}) };
+  renderLogins();
+}
+
+function renderLogins() {
+  if (!loginsView) return;
+  const { logins, hostname, error } = loginsView;
+  const prefix = query.trim().toLowerCase();
+  const matches = logins.filter(({ username }) => username.toLowerCase().startsWith(prefix));
+  // nothing starts with what's typed (a new username, probably): out of the way, like Safari
+  if (matches.length === 0) {
+    panel.replaceChildren();
+    void send({ type: "menu-resize", nonce, height: 0 }).catch(() => {});
+    return;
+  }
   render(
-    ...result.logins.map(({ username }) => row(KEY, username || "(no username)", hostname, () => void fill(username))),
+    ...matches.map(({ username }) => row(KEY, username || "(no username)", hostname, () => void fill(username))),
     error ? message(error, true) : null,
     h("hr", { class: "separator" }),
     openPasswordsRow(false),
   );
 }
+
+// sent straight here by our content script as the user types in the field (see MenuMessage)
+browser.runtime.onMessage.addListener((request: MenuMessage, sender) => {
+  if (sender.id !== browser.runtime.id || request.type !== "menu-filter" || !nonce || request.nonce !== nonce) {
+    return false;
+  }
+  query = request.query;
+  renderLogins();
+  return false;
+});
 
 async function showGenerate(error?: string) {
   let passwords: { strong: string; alphanumeric: string };

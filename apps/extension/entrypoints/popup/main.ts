@@ -186,20 +186,7 @@ async function showLogins(status: Status, error?: string) {
   } else if (result.logins.length === 0) {
     body = h("p", {}, `No saved passwords for ${result.hostname}.`);
   } else {
-    body = h(
-      "ul",
-      { class: "card logins" },
-      ...result.logins.map(({ username }) => {
-        const button = h(
-          "button",
-          { class: "login", title: `Fill ${username}` },
-          h("span", { class: "avatar", textContent: (username[0] ?? "?").toUpperCase() }),
-          h("span", { class: "name", textContent: username || "(no username)" }),
-        );
-        button.addEventListener("click", () => void fill(tabId as number, username));
-        return h("li", {}, button);
-      }),
-    );
+    body = loginList(tabId as number, result.logins);
   }
 
   const openApp = h("button", { class: "link with-icon" }, icon(OPEN), "Open Passwords App");
@@ -227,6 +214,64 @@ async function showLogins(status: Status, error?: string) {
     h("div", { class: "actions" }, openApp),
     await footer(status),
     reportProblem(),
+  );
+  app.querySelector<HTMLInputElement>(".search")?.focus();
+}
+
+/** Logins shown before "Show more", so the settings below stay in view. */
+const COLLAPSED = 5;
+/** Past this many logins, a search field filters them. */
+const SEARCH_AFTER = 10;
+
+function loginList(tabId: number, logins: LoginsResult["logins"]) {
+  const items = logins.map(({ username }) => {
+    const name = username || "(no username)";
+    const button = h(
+      "button",
+      { class: "login", title: `Fill ${username}` },
+      h("span", { class: "avatar", textContent: (username[0] ?? "?").toUpperCase() }),
+      h("span", { class: "name", textContent: name }),
+    );
+    button.addEventListener("click", () => void fill(tabId, username));
+    return { name: name.toLowerCase(), username, li: h("li", {}, button) };
+  });
+
+  // hiding a single login behind a button the same size as it saves nothing
+  let expanded = items.length <= COLLAPSED + 1;
+  const more = h("button", { class: "login more", textContent: `Show ${items.length - COLLAPSED} more` });
+  const moreItem = h("li", {}, more);
+  const noMatches = h("li", { class: "hint no-matches", textContent: "No matching accounts." });
+  const search =
+    items.length > SEARCH_AFTER
+      ? h("input", { class: "search", type: "search", placeholder: `Search ${items.length} accounts` })
+      : null;
+  search?.setAttribute("aria-label", "Search accounts");
+
+  let matches = items;
+  const update = () => {
+    const query = search?.value.trim().toLowerCase() ?? "";
+    matches = items.filter((item) => item.name.includes(query));
+    const shown = new Set(query || expanded ? matches : matches.slice(0, COLLAPSED));
+    for (const item of items) item.li.hidden = !shown.has(item);
+    moreItem.hidden = Boolean(query) || expanded;
+    noMatches.hidden = matches.length > 0;
+  };
+  more.addEventListener("click", () => {
+    expanded = true;
+    update();
+    items[COLLAPSED]?.li.querySelector("button")?.focus();
+  });
+  search?.addEventListener("input", update);
+  search?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && matches[0]) void fill(tabId, matches[0].username);
+  });
+  update();
+
+  return h(
+    "div",
+    { class: "card" },
+    search,
+    h("ul", { class: "logins" }, ...items.map((item) => item.li), moreItem, noMatches),
   );
 }
 

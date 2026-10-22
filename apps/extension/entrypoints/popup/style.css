@@ -80,6 +80,30 @@ code {
   font-weight: 600;
 }
 
+/* lines up with the usernames above it */
+.login.more {
+  padding-left: 46px;
+  color: var(--accent);
+}
+
+.search {
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--separator);
+  background: none;
+  color: var(--text);
+  font: inherit;
+}
+
+.search:focus {
+  outline: none;
+}
+
+.no-matches {
+  padding: 6px 8px;
+}
+
 .login .name {
   overflow: hidden;
   text-overflow: ellipsis;

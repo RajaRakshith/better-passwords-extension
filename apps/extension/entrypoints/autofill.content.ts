@@ -3,7 +3,7 @@ import { MenuHost } from "@/src/autofill/menu-host.ts";
 import { isGone, isUsernameInput, watchUntilGone } from "@/src/autofill/submission.ts";
 import { FILL_MATCHES } from "@/src/config.ts";
 import { fillCredentials, fillEmail, fillNewPassword, usernameNear } from "@/src/fill.ts";
-import { type ContentMessage, type NewPasswordContext, send } from "@/src/messages.ts";
+import { type ContentMessage, type MenuMessage, type NewPasswordContext, send } from "@/src/messages.ts";
 
 // Top frame only for now. Logins inside cross-origin iframes need their own origin rules.
 export default defineContentScript({
@@ -48,6 +48,14 @@ export default defineContentScript({
       }
     }
 
+    /** Tells the open menu what's typed in its username field, so it lists only the logins that match. */
+    function filterMenu(query: string) {
+      const nonce = menu.nonce;
+      if (!nonce) return;
+      const message: MenuMessage = { type: "menu-filter", nonce, query };
+      void browser.runtime.sendMessage(message).catch(() => {});
+    }
+
     /** Offers a menu for `target` if it gets one; returns whether it does. */
     function offerFor(target: EventTarget | null): boolean {
       const kind = fieldKind(target);
@@ -71,6 +79,8 @@ export default defineContentScript({
       "mousedown",
       (event) => {
         if (menu.isOpen && event.target !== menu.element && event.target !== menu.anchor) menu.close();
+        // clicking the field while nothing typed matches brings every login back
+        if (menu.isOpen && !menu.isShowing && event.target === menu.anchor) filterMenu("");
         // clicking a field whose menu was dismissed asks for it again
         if (event.target === dismissed) {
           dismissed = undefined;
@@ -96,18 +106,22 @@ export default defineContentScript({
         }
         if (event.key === "ArrowDown") {
           event.preventDefault();
+          if (!menu.isShowing) filterMenu("");
           menu.focusMenu();
         }
       },
       { capture: true },
     );
-    // typing a password of one's own closes the suggestions
+    // typing a username narrows the logins down; typing a password of one's own closes the suggestions
     ctx.addEventListener(
       document,
       "input",
       (event) => {
+        // only the user's own typing: text the page sets itself must not probe which logins match
         if (!event.isTrusted || !menu.isOpen || event.target !== menu.anchor) return;
-        if (fieldKind(event.target) !== "new-password") return;
+        const kind = fieldKind(event.target);
+        if (kind === "login" && menu.anchor.type !== "password") filterMenu(menu.anchor.value);
+        if (kind !== "new-password") return;
         dismissed = menu.anchor;
         menu.close();
       },

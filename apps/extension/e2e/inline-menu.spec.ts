@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { EXTENSION_ID } from "../src/config.ts";
 import { choose, expect, menuFrame, PAIRING_CODE, test } from "./fixtures.ts";
 
@@ -269,4 +270,72 @@ test("offers to unlock on a login form's email field too", async ({ context, sit
   await page.locator("#user").click();
   const menu = await menuFrame(page);
   await choose(menu, "Unlock to fill passwords");
+});
+
+test.describe("typing a username", () => {
+  test.use({
+    // Playwright reads a bare array here as [value, options], so the list goes in a pair of its own
+    vaultEntries: [
+      [
+        { hostname: "localhost", username: "alice@example.com", password: "alice-pass" },
+        { hostname: "localhost", username: "alex@example.com", password: "alex-pass" },
+        { hostname: "localhost", username: "bob@example.com", password: "bob-pass" },
+      ],
+      { scope: "test" },
+    ],
+  });
+
+  async function unlockedMenu(page: Page, siteUrl: string) {
+    await page.goto(`${siteUrl}/login.html`);
+    await page.locator("#user").click();
+    const menu = await menuFrame(page);
+    await choose(menu, "Unlock to fill passwords");
+    await menu.getByLabel("Verification code").fill(PAIRING_CODE);
+    await expect(menu.getByText("bob@example.com")).toBeVisible();
+    await page.locator("#user").click();
+    return menu;
+  }
+
+  test("narrows the menu to the logins it starts", async ({ context, siteUrl }) => {
+    const page = await context.newPage();
+    const menu = await unlockedMenu(page, siteUrl);
+    await page.locator("#user").pressSequentially("AL");
+    await expect(menu.getByText("alice@example.com")).toBeVisible();
+    await expect(menu.getByText("alex@example.com")).toBeVisible();
+    await expect(menu.getByText("bob@example.com")).toHaveCount(0);
+
+    // nothing starts with "alx": the menu gets out of the way, and comes back on Backspace
+    await page.locator("#user").press("x");
+    await expect(page.locator("app-autofill-menu")).toBeHidden();
+    await page.locator("#user").press("Backspace");
+    await expect(page.locator("app-autofill-menu")).toBeVisible();
+    await choose(menu, "alex@example.com");
+    await expect(page.locator("#user")).toHaveValue("alex@example.com");
+    await expect(page.locator("#pass")).toHaveValue("alex-pass");
+  });
+
+  test("↓ brings every login back when nothing matches", async ({ context, siteUrl }) => {
+    const page = await context.newPage();
+    const menu = await unlockedMenu(page, siteUrl);
+    await page.locator("#user").pressSequentially("new-user");
+    await expect(page.locator("app-autofill-menu")).toBeHidden();
+    await page.locator("#user").press("ArrowDown");
+    await expect(page.locator("app-autofill-menu")).toBeVisible();
+    await expect(menu.getByText("alice@example.com")).toBeVisible();
+    await expect(menu.getByText("bob@example.com")).toBeVisible();
+    await expect(menu.getByRole("option", { name: /alice@example.com/ })).toBeFocused();
+  });
+
+  test("ignores text the page puts in the field", async ({ context, siteUrl }) => {
+    const page = await context.newPage();
+    const menu = await unlockedMenu(page, siteUrl);
+    await page.locator("#user").evaluate((field: HTMLInputElement) => {
+      field.value = "zzz";
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await page.waitForTimeout(300);
+    await expect(page.locator("app-autofill-menu")).toBeVisible();
+    await expect(menu.getByText("alice@example.com")).toBeVisible();
+    await expect(menu.getByText("bob@example.com")).toBeVisible();
+  });
 });

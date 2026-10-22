@@ -103,6 +103,8 @@ type Fixtures = {
   browserArgs: string[];
   /** Whether the setup script has run for this browser; see `runSetup`. */
   setUp: boolean;
+  /** The logins saved in the fake helper (one for localhost by default). */
+  vaultEntries: VaultEntry[] | undefined;
   /** Runs the setup (registers the fake helper) while the browser is open. */
   runSetup: () => void;
   context: BrowserContext;
@@ -169,8 +171,9 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
   companionEmails: ["jane@example.com,jane.work@example.com", { option: true }],
   browserArgs: [[], { option: true }],
   setUp: [true, { option: true }],
-  context: async ({ companion, declineSaves, companionEmails, browserArgs, setUp }, use) => {
-    const dir = profileWithFakeHelper(companion, declineSaves, companionEmails, undefined, setUp);
+  vaultEntries: [undefined, { option: true }],
+  context: async ({ companion, declineSaves, companionEmails, browserArgs, setUp, vaultEntries }, use) => {
+    const dir = profileWithFakeHelper(companion, declineSaves, companionEmails, vaultEntries, setUp);
     const context = await chromium.launchPersistentContext(join(dir, "profile"), {
       channel: "chromium",
       args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`, ...browserArgs],

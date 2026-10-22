@@ -213,6 +213,13 @@ export type ContentMessage =
   /** Apple Passwords has the generated password filled into this page. */
   | { type: "generated-password-saved"; password: string };
 
+/**
+ * Sent by the content script straight to the inline menu (the background ignores it): what the user
+ * typed into the username field, so the menu lists only the logins it starts. Only the text goes
+ * this way; usernames never reach the content script.
+ */
+export type MenuMessage = { type: "menu-filter"; nonce: string; query: string };
+
 export interface NewPasswordContext {
   rules: FieldRules;
   username: string;

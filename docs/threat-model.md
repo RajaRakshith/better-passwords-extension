@@ -40,7 +40,7 @@ What we protect: the user's passwords in Apple Passwords, and the session that c
 ## Known gaps
 
 - On Firefox (no IntersectionObserver v2), an overlay with `pointer-events: none` placed in the page's own *closed* shadow root and in the top layer could evade the content script's checks, which rely on hit-testing. Overlays that take clicks, transparency and revealing the menu only as the click lands are caught.
-- A page can see that our menu element exists. From that it can tell the extension is installed, and, when the menu opens, whether this site has a saved login or the session is locked. It never sees usernames, passwords or the code. Other password managers' inline menus have the same property.
+- A page can see that our menu element exists. From that it can tell the extension is installed, and, when the menu opens, whether this site has a saved login or the session is locked. While the user types in a username field, the menu narrows its logins to those starting with the typed text and hides when none do, so the menu's size tells the page whether a saved username starts with what was typed. It reacts only to the user's own keystrokes, never to text the page puts in the field. It never sees usernames, passwords or the code. Other password managers' inline menus have the same property.
 - Logins in cross-origin iframes are not offered yet.
 - Firefox can't tell when the Mac locks (its idle API never reports "locked"), so "Lock when my Mac locks" is Chromium-only. On Firefox the session ends when Firefox quits or you press Lock.
 
