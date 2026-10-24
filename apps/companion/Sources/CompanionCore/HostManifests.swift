@@ -37,6 +37,7 @@ public struct Browser: Equatable, Sendable {
 }
 
 public enum HostManifests {
+    /// Keep in sync with BROWSERS in scripts/setup-mac.sh.
     public static let browsers: [Browser] = [
         Browser(name: "Google Chrome", dataDirectory: "Google/Chrome", kind: .chromium),
         Browser(name: "Google Chrome Beta", dataDirectory: "Google/Chrome Beta", kind: .chromium),
@@ -49,6 +50,7 @@ public enum HostManifests {
         Browser(name: "Vivaldi", dataDirectory: "Vivaldi", kind: .chromium),
         Browser(name: "Arc", dataDirectory: "Arc/User Data", kind: .chromium),
         Browser(name: "Helium", dataDirectory: "net.imput.helium", kind: .chromium),
+        Browser(name: "Crest", dataDirectory: "Crest/Chromium", kind: .chromium),
         Browser(name: "Firefox", dataDirectory: "Firefox", kind: .firefox),
         Browser(name: "Zen", dataDirectory: "zen", kind: .firefox),
     ]

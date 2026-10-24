@@ -1,0 +1,30 @@
+name: Browser support
+description: Ask for a browser the setup doesn't connect yet
+title: "Support <browser name>"
+labels: [enhancement]
+body:
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: Its name and a link to its website or source.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Browser version
+  - type: textarea
+    id: data-directory
+    attributes:
+      label: Data folder
+      description: >-
+        The folder under ~/Library/Application Support where the browser keeps its profiles, if you
+        know it. The setup script prints it when it finds Better Passwords installed in a browser it
+        doesn't know.
+  - type: textarea
+    id: output
+    attributes:
+      label: Setup output
+      description: What the setup script or the companion app showed.
+      render: text

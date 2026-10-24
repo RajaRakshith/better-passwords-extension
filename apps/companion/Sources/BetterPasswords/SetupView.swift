@@ -161,10 +161,15 @@ struct SetupView: View {
         }
     }
 
+    /// Markdown: Step renders the link.
     private var browsersDetail: String {
-        if model.installedBrowsers.isEmpty { return "No supported browser found." }
+        let request = "https://github.com/fanckush/better-passwords-extension/issues/new?template=browser.yml"
+        if model.installedBrowsers.isEmpty {
+            return "No supported browser found. Using another one? [Ask for it](\(request))."
+        }
         let names = model.installedBrowsers.map(\.name).formatted(.list(type: .and))
-        return "Lets the extension in \(names) reach Apple's password helper and this app."
+        return "Lets the extension in \(names) reach Apple's password helper and this app. "
+            + "Missing a browser? [Ask for it](\(request))."
     }
 
     private var agentDetail: String {
@@ -220,7 +225,7 @@ private struct Step: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.headline)
-                Text(detail).foregroundStyle(.secondary).font(.callout).fixedSize(horizontal: false, vertical: true)
+                Text(LocalizedStringKey(detail)).foregroundStyle(.secondary).font(.callout).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
             if !done, let actionTitle {

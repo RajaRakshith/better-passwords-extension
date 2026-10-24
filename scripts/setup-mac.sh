@@ -18,18 +18,21 @@ CHROMIUM_IDS="ocongmkplhijgajnipnhhggfcjfdilgj"
 FIREFOX_ID="better-passwords@fanckush.github.io"
 SUPPORT="$HOME/Library/Application Support"
 
-# Chromium-based browsers, as paths of their user data directory under Application Support
-BROWSERS="Google/Chrome
-Google/Chrome Beta
-Google/Chrome Dev
-Google/Chrome Canary
-Chromium
-BraveSoftware/Brave-Browser
-BraveSoftware/Brave-Browser-Beta
-Microsoft Edge
-Vivaldi
-Arc/User Data
-net.imput.helium"
+# Chromium-based browsers: the path of their user data directory under Application Support, and
+# their name. Keep in sync with HostManifests.browsers in the companion app.
+BROWSERS="Google/Chrome|Google Chrome
+Google/Chrome Beta|Google Chrome Beta
+Google/Chrome Dev|Google Chrome Dev
+Google/Chrome Canary|Google Chrome Canary
+Chromium|Chromium
+BraveSoftware/Brave-Browser|Brave
+BraveSoftware/Brave-Browser-Beta|Brave Beta
+Microsoft Edge|Microsoft Edge
+Vivaldi|Vivaldi
+Arc/User Data|Arc
+net.imput.helium|Helium
+Crest/Chromium|Crest"
+REQUEST_URL="https://github.com/fanckush/better-passwords-extension/issues/new?template=browser.yml"
 
 uninstall=0
 user_data_dir=""
@@ -106,19 +109,70 @@ if [ -n "$user_data_dir" ]; then
     exit 0
 fi
 
-echo "$BROWSERS" | while IFS= read -r browser; do
+# Names of the browsers set up below, separated by ", "
+connected=""
+add_connected() { connected="$connected${connected:+, }$1"; }
+
+while IFS='|' read -r browser name; do
     [ -d "$SUPPORT/$browser" ] || continue
     dir="$SUPPORT/$browser/NativeMessagingHosts"
     if [ "$uninstall" -eq 1 ]; then remove_manifest "$dir"; else write_manifest "$dir" allowed_origins "$origins"; fi
-done
+    add_connected "$name"
+done <<EOF
+$BROWSERS
+EOF
 # Firefox and its fork Zen both read manifests from Mozilla's shared folder
 if [ -d "$SUPPORT/Firefox" ] || [ -d "$SUPPORT/zen" ]; then
     dir="$SUPPORT/Mozilla/NativeMessagingHosts"
     if [ "$uninstall" -eq 1 ]; then remove_manifest "$dir"; else write_manifest "$dir" allowed_extensions "\"$FIREFOX_ID\""; fi
+    [ -d "$SUPPORT/Firefox" ] && add_connected "Firefox"
+    [ -d "$SUPPORT/zen" ] && add_connected "Zen"
 fi
 
 if [ "$uninstall" -eq 1 ]; then
     echo "Done. Better Passwords can no longer reach Apple's helper."
-else
-    echo "Done. Click the Better Passwords icon in your browser to pair."
+    exit 0
 fi
+
+# Chromium browsers this script doesn't know yet but that have the extension installed: a profile
+# folder in their user data directory holds Extensions/<id>.
+is_known() {
+    while IFS='|' read -r browser _; do
+        [ "$SUPPORT/$browser" = "$1" ] && return 0
+    done <<EOF
+$BROWSERS
+EOF
+    return 1
+}
+unknown=""
+for id in $CHROMIUM_IDS; do
+    for extension in "$SUPPORT"/*/*/Extensions/"$id" "$SUPPORT"/*/*/*/Extensions/"$id"; do
+        [ -d "$extension" ] || continue
+        data="${extension%/*/Extensions/*}"
+        is_known "$data" || unknown="$unknown$data
+"
+    done
+done
+
+if [ -n "$unknown" ]; then
+    echo
+    echo "Better Passwords is installed in a browser this script doesn't support yet:"
+    printf '%s' "$unknown" | sort -u | sed 's/^/  /'
+    echo "Ask for it here: $REQUEST_URL"
+    echo "Until then you can try connecting it with --user-data-dir, for example:"
+    printf '%s' "$unknown" | sort -u | head -n 1 | while IFS= read -r data; do
+        echo "  curl -fsSL https://github.com/fanckush/better-passwords-extension/raw/main/scripts/setup-mac.sh | sh -s -- --user-data-dir \"$data\""
+    done
+fi
+
+echo
+if [ -z "$connected" ]; then
+    supported=$(printf '%s\n' "$BROWSERS" | cut -d'|' -f2 | paste -sd, - | sed 's/,/, /g')
+    echo "No supported browser found, so nothing was connected." >&2
+    echo "Supported: $supported, Firefox and Zen." >&2
+    echo "Using another browser? Ask for it here: $REQUEST_URL" >&2
+    exit 1
+fi
+echo "Connected: $connected."
+echo "Done. Click the Better Passwords icon in your browser to pair."
+[ -n "$unknown" ] || echo "Missing a browser? Ask for it here: $REQUEST_URL"
