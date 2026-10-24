@@ -46,7 +46,7 @@ jobs:
         working-directory: apps/extension
         run: >
           bunx wxt submit
-          --chrome-zip .output/better-passwords-*-chrome.zip
+          --chrome-zip .output/store/better-passwords-*-chrome.zip
           --firefox-zip .output/better-passwords-*-firefox.zip
           --firefox-sources-zip .output/better-passwords-*-sources.zip
         env:

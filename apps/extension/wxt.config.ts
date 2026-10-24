@@ -1,5 +1,6 @@
-import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "wxt";
 import { DISPLAY_NAME, EXTENSION_PUBLIC_KEY, FILL_MATCHES, FIREFOX_EXTENSION_ID, STORE_TITLE } from "./src/config.ts";
@@ -7,20 +8,23 @@ import { DISPLAY_NAME, EXTENSION_PUBLIC_KEY, FILL_MATCHES, FIREFOX_EXTENSION_ID,
 export default defineConfig({
   outDirTemplate: "{{browser}}-mv{{manifestVersion}}{{modeSuffix}}",
   hooks: {
-    // Chrome rejects the development identity field in store uploads. Keep it in unpacked
-    // builds so native messaging still uses the same ID during local development.
-    "zip:extension:start": async (wxt) => {
+    // The GitHub ZIP keeps the identity field so unpacked installs get the store's ID, which
+    // native messaging allows. Chrome rejects that field in store uploads, so the store gets a
+    // copy without it in .output/store, outside the release's asset glob.
+    "zip:extension:done": async (wxt, zipPath) => {
       if (wxt.config.browser !== "chrome") return;
       const path = join(wxt.config.outDir, "manifest.json");
       const manifest = JSON.parse(await readFile(path, "utf8"));
-      delete manifest.key;
-      await writeFile(path, JSON.stringify(manifest));
-    },
-    "zip:extension:done": async (wxt) => {
-      if (wxt.config.browser !== "chrome") return;
-      const path = join(wxt.config.outDir, "manifest.json");
-      const manifest = JSON.parse(await readFile(path, "utf8"));
-      await writeFile(path, JSON.stringify({ ...manifest, key: EXTENSION_PUBLIC_KEY }));
+      const { key: _, ...storeManifest } = manifest;
+      const storeZip = join(dirname(zipPath), "store", basename(zipPath));
+      await mkdir(dirname(storeZip), { recursive: true });
+      await rm(storeZip, { force: true });
+      await writeFile(path, JSON.stringify(storeManifest));
+      try {
+        execFileSync("zip", ["-qrX", storeZip, "."], { cwd: wxt.config.outDir });
+      } finally {
+        await writeFile(path, JSON.stringify({ ...manifest, key: EXTENSION_PUBLIC_KEY }));
+      }
     },
   },
   zip: {

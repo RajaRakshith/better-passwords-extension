@@ -29,7 +29,7 @@ When an extension release is due, CI:
    done
    ```
 
-The Chrome Web Store extension ID is `ocongmkplhijgajnipnhhggfcjfdilgj`. Its public key is in `apps/extension/src/config.ts`; the setup script and companion allow this same ID. Store ZIPs omit the manifest `key` field, which Chrome rejects on upload; unpacked builds retain it. If the store identity ever changes, update the extension config, setup script, companion identity and tests, README and website links together.
+The Chrome Web Store extension ID is `ocongmkplhijgajnipnhhggfcjfdilgj`. Its public key is in `apps/extension/src/config.ts`; the setup script and companion allow this same ID. The Chrome ZIP attached to GitHub releases keeps the manifest `key` field, so unpacked installs get this ID too; Chrome rejects that field on upload, so the store gets a copy without it from `.output/store/`. If the store identity ever changes, update the extension config, setup script, companion identity and tests, README and website links together.
 
 ## Companion app
 

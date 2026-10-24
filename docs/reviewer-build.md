@@ -12,7 +12,7 @@ bun run --filter @app/extension build:chrome
 bun run --filter @app/extension build:firefox
 ```
 
-Outputs are `apps/extension/.output/chrome-mv3` and `apps/extension/.output/firefox-mv2`. To reproduce the submitted ZIPs, run `bun run --filter @app/extension zip:all`. The Chrome ZIP omits the manifest `key` field required only for unpacked development builds.
+Outputs are `apps/extension/.output/chrome-mv3` and `apps/extension/.output/firefox-mv2`. To reproduce the submitted ZIPs, run `bun run --filter @app/extension zip:all`. The submitted Chrome ZIP is `.output/store/better-passwords-<version>-chrome.zip`, which omits the manifest `key` field that only unpacked installs need.
 
 ## Test on macOS
 
