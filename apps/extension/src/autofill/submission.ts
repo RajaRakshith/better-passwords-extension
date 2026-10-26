@@ -1,8 +1,12 @@
-// When a sign-up has moved on, so Apple Passwords is asked to save a generated password then.
+// When a sign-up or sign-in has moved on, so Apple Passwords is asked to save a generated password
+// then, as is any other password a sign-in sends.
 //
 // Like Safari, the cue is the page moving on with the password: its field goes away (a dialog
 // closes, a multi-step form moves on; watchUntilGone) or the tab navigates (watched by the
 // background). An invalid or rejected form keeps the field, so nothing is asked.
+
+import { usernameNear } from "../fill.ts";
+import { isNewPasswordField } from "./fields.ts";
 
 /** Whether the field is gone from the page or no longer shown. */
 export function isGone(field: HTMLInputElement): boolean {
@@ -32,4 +36,50 @@ export function isUsernameInput(el: EventTarget | null): el is HTMLInputElement 
     /\b(username|email)\b/.test(autocomplete) ||
     /user|login|e-?mail|account|identifier/i.test(`${el.name} ${el.id}`)
   );
+}
+
+// Other logins are saved the same way: captured as the form is sent (a submit, Enter in a field,
+// a click on a button), saved once the page has moved on.
+
+/** The password a form was sent with, and the username next to it. */
+export interface SentLogin {
+  field: HTMLInputElement;
+  username: string;
+  password: string;
+}
+
+/**
+ * The login filled into `scope` (a form, or the part of a page around formless fields): the new
+ * password on a sign-up or a change of password, else the password. `fallbackUsername` is the one
+ * typed on an earlier step (multi-step sign-ins).
+ */
+export function sentLogin(scope: ParentNode, fallbackUsername = ""): SentLogin | undefined {
+  const filled = Array.from(scope.querySelectorAll("input")).filter(
+    (el) => el.type === "password" && el.value !== "" && !isGone(el),
+  );
+  const field = filled.find(isNewPasswordField) ?? filled[0];
+  if (!field) return undefined;
+  return { field, username: usernameNear(field) || fallbackUsername, password: field.value };
+}
+
+/**
+ * What a click on `target`, or Enter in it, would send: its form, or for fields outside any form
+ * the nearest element around it that has a password field (not the whole page: a cookie banner's
+ * button is no sign-in). Undefined when the click isn't on a button.
+ */
+export function submittedScope(target: EventTarget | null, key?: string): ParentNode | undefined {
+  if (!(target instanceof Element)) return undefined;
+  const sender =
+    key === "Enter"
+      ? target instanceof HTMLInputElement
+        ? target
+        : undefined
+      : target.closest("button, input[type=submit], input[type=image], [role=button]");
+  if (!sender) return undefined;
+  const form = (sender as HTMLButtonElement | HTMLInputElement).form ?? sender.closest("form");
+  if (form) return form;
+  for (let el = sender.parentElement; el && el !== el.ownerDocument.body; el = el.parentElement) {
+    if (el.querySelector("input[type=password]")) return el;
+  }
+  return undefined;
 }

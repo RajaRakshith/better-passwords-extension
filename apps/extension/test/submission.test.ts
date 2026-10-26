@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { isGone, isUsernameInput, watchUntilGone } from "../src/autofill/submission.ts";
+import { isGone, isUsernameInput, sentLogin, submittedScope, watchUntilGone } from "../src/autofill/submission.ts";
 
 beforeEach(() => {
   // happy-dom has no layout; treat everything as visible unless marked hidden
@@ -53,5 +53,62 @@ describe("isUsernameInput", () => {
   ])("%s → %s", (html, expected) => {
     document.body.innerHTML = html;
     expect(isUsernameInput($("#f"))).toBe(expected);
+  });
+});
+
+describe("sentLogin", () => {
+  const typeInto = (selector: string, value: string) => {
+    $<HTMLInputElement>(selector).value = value;
+  };
+
+  it("takes the password and the username of a sign-in form", () => {
+    document.body.innerHTML = `<form><input id="u" autocomplete="username"><input id="p" type="password"></form>`;
+    typeInto("#u", " jane@example.com ");
+    typeInto("#p", "hunter2");
+    expect(sentLogin($("form"))).toEqual({ field: $("#p"), username: "jane@example.com", password: "hunter2" });
+  });
+
+  it("takes the new password when changing it", () => {
+    document.body.innerHTML = `<form>
+      <input id="old" type="password" autocomplete="current-password">
+      <input id="new" type="password" autocomplete="new-password">
+      <input id="again" type="password" autocomplete="new-password"></form>`;
+    typeInto("#old", "old-one");
+    typeInto("#new", "new-one");
+    typeInto("#again", "new-one");
+    expect(sentLogin($("form"))?.password).toBe("new-one");
+  });
+
+  it("uses the username from an earlier step when the form has none", () => {
+    document.body.innerHTML = `<form><input id="p" type="password"></form>`;
+    typeInto("#p", "hunter2");
+    expect(sentLogin($("form"), "steps@example.com")?.username).toBe("steps@example.com");
+  });
+
+  it("ignores empty and hidden password fields", () => {
+    document.body.innerHTML = `<form><input id="p" type="password"><div data-hidden><input id="h" type="password"></div></form>`;
+    typeInto("#h", "autofilled-by-someone");
+    expect(sentLogin($("form"))).toBeUndefined();
+  });
+});
+
+describe("submittedScope", () => {
+  it("is the form of a clicked button", () => {
+    document.body.innerHTML = `<form><input type="password"><button><span id="label">Sign in</span></button></form>`;
+    expect(submittedScope($("#label"))).toBe($("form"));
+  });
+
+  it("is the part of a formless page around the password field", () => {
+    document.body.innerHTML = `<div id="banner"><button id="ok">OK</button></div>
+      <div id="signin"><input type="password"><div id="go" role="button">Sign in</div></div>`;
+    expect(submittedScope($("#go"))).toBe($("#signin"));
+    // a button elsewhere on the page sends no login
+    expect(submittedScope($("#ok"))).toBeUndefined();
+  });
+
+  it("is the form of a field Enter was pressed in, and nothing for clicks on plain text", () => {
+    document.body.innerHTML = `<form><input id="p" type="password"><p id="text">Forgot?</p></form>`;
+    expect(submittedScope($("#p"), "Enter")).toBe($("form"));
+    expect(submittedScope($("#text"))).toBeUndefined();
   });
 });

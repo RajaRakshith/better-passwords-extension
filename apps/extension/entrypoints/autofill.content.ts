@@ -1,9 +1,22 @@
 import { type FieldKind, fieldKind } from "@/src/autofill/fields.ts";
 import { MenuHost } from "@/src/autofill/menu-host.ts";
-import { isGone, isUsernameInput, watchUntilGone } from "@/src/autofill/submission.ts";
+import {
+  isGone,
+  isUsernameInput,
+  type SentLogin,
+  sentLogin,
+  submittedScope,
+  watchUntilGone,
+} from "@/src/autofill/submission.ts";
 import { FILL_MATCHES } from "@/src/config.ts";
 import { asksForUsername, fillCredentials, fillEmail, fillNewPassword, usernameNear } from "@/src/fill.ts";
-import { type ContentMessage, type MenuMessage, type NewPasswordContext, send } from "@/src/messages.ts";
+import {
+  type ContentMessage,
+  type MenuMessage,
+  type NewPasswordContext,
+  type SignInState,
+  send,
+} from "@/src/messages.ts";
 
 /** Omit for each member of a union. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
@@ -175,6 +188,67 @@ export default defineContentScript({
       });
     }
 
+    // A password (typed, or filled) is captured as its form is sent (a submit, Enter, a click on a
+    // button) and Apple Passwords is asked to save it once the page moves on, as with a generated
+    // one: its field goes away, or the tab navigates (the background then asks, see
+    // saveSentLogin). Apple's helper asks only about a new account or password.
+    let sent: SentLogin | undefined;
+    let stopWatchingSent = () => {};
+
+    function noteSent(scope: ParentNode | undefined) {
+      const login = scope && sentLogin(scope, lastUsername);
+      // a password we generated has its own save
+      if (!login || login.password === generated?.value) return;
+      const same = sent?.field === login.field && sent.password === login.password;
+      if (same && sent?.username === login.username) return;
+      sent = login;
+      void send({ type: "login-sent", username: login.username, password: login.password }).catch(() => {});
+      stopWatchingSent();
+      // the background has it from here; the page keeps no copy past the form
+      stopWatchingSent = watchUntilGone(login.field, () => {
+        if (sent?.field !== login.field) return;
+        sent = undefined;
+        void send({ type: "login-form-gone" }).catch(() => {});
+      });
+    }
+    ctx.addEventListener(document, "submit", (event) => noteSent(event.target as HTMLFormElement), { capture: true });
+    ctx.addEventListener(
+      document,
+      "click",
+      (event) => {
+        if (event.isTrusted) noteSent(submittedScope(event.target));
+      },
+      { capture: true },
+    );
+    ctx.addEventListener(
+      document,
+      "keydown",
+      (event) => {
+        if (event.isTrusted && event.key === "Enter") noteSent(submittedScope(event.target, "Enter"));
+      },
+      { capture: true },
+    );
+    // typing the password again (the site said it was wrong): the one sent is no good
+    ctx.addEventListener(
+      document,
+      "input",
+      (event) => {
+        if (!event.isTrusted || !sent || event.target !== sent.field || sent.field.value === sent.password) return;
+        sent = undefined;
+        stopWatchingSent();
+        void send({ type: "login-edited" }).catch(() => {});
+      },
+      { capture: true },
+    );
+
+    /** Whether the sign-in with the sent login went through: the page moved on without asking again. */
+    function signInState(): SignInState {
+      if (sent && !isGone(sent.field)) return "watching";
+      // a password field on the page that loaded next: back at the sign-in, the password was wrong
+      const inputs = Array.from(document.querySelectorAll("input"));
+      return inputs.some((el) => el.type === "password" && !isGone(el)) ? "failed" : "moved-on";
+    }
+
     // messages relayed by the background from our menu page; only our extension can send these
     browser.runtime.onMessage.addListener((message: ContentMessage, sender, sendResponse) => {
       if (sender.id !== browser.runtime.id) return false;
@@ -200,6 +274,10 @@ export default defineContentScript({
           menu.close();
         }
         sendResponse({ result });
+        return false;
+      }
+      if (message.type === "sign-in-state") {
+        sendResponse(signInState());
         return false;
       }
       if (!menu.isCurrent(message.nonce)) return false;

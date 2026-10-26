@@ -207,7 +207,8 @@ export class FakeHelper {
   /**
    * "Maybe add", as the real helper does it: no reply to the request, and the login is saved once
    * the user clicks Save in macOS's prompt. Like the real helper, it also sends the tab an update
-   * that lists no logins, which callers must not mistake for an answer.
+   * that lists no logins, which callers must not mistake for an answer. A login saved already,
+   * with that password, gets no prompt.
    */
   async #save(message: HelperMessage): Promise<HelperMessage[]> {
     const opened = await this.#open<{ ACT?: number; NURL?: string; NUSR?: string; NPWD?: string }>(message);
@@ -216,8 +217,8 @@ export class FakeHelper {
     const { NURL: hostname, NUSR: username = "", NPWD: password } = request;
     if (request.ACT !== Action.MaybeAdd || !hostname || !password) return [];
     const update = await this.#reply(session, message, Command.GetLoginNamesForUrl, { STATUS: QueryStatus.Success });
-    if (this.#declineSaves) return [update];
     const existing = this.vault.find((e) => e.hostname === hostname && e.username === username);
+    if (this.#declineSaves || existing?.password === password) return [update];
     if (existing) existing.password = password;
     else this.vault.push({ hostname, username, password });
     this.saved.push({ hostname, username, password });

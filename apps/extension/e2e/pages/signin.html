@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test sign-in</title>
+    <style>
+      body { font: 16px system-ui; padding: 40px; }
+      input { display: block; margin: 8px 0 16px; padding: 6px; width: 260px; }
+    </style>
+  </head>
+  <body>
+    <!-- ?mode= navigate (default): a real submit to welcome.html; replace: the form is replaced by a
+         welcome message; error: the site rejects it, the form stays; reload: the site sends the
+         form back, as a page asking for the password again -->
+    <form id="signin" action="welcome.html" method="post">
+      <label>Email <input id="user" name="user" type="email" autocomplete="username" /></label>
+      <label>Password <input id="pass" name="pass" type="password" autocomplete="current-password" /></label>
+      <p id="error" role="alert"></p>
+      <button type="submit">Sign in</button>
+    </form>
+    <script>
+      const mode = new URLSearchParams(location.search).get("mode") ?? "navigate";
+      const form = document.getElementById("signin");
+      if (mode === "reload") form.action = "signin.html?mode=reload";
+      form.addEventListener("submit", (event) => {
+        if (mode === "navigate" || mode === "reload") return;
+        event.preventDefault();
+        if (mode === "error") document.getElementById("error").textContent = "Wrong password.";
+        else setTimeout(() => form.replaceWith(Object.assign(document.createElement("p"), { textContent: "Welcome!" })), 100);
+      });
+    </script>
+  </body>
+</html>

@@ -20,6 +20,7 @@ import {
   type NewPasswordResult,
   type Request,
   type Settings,
+  type SignInState,
   type Status,
 } from "@/src/messages.ts";
 import { PortTransport } from "@/src/native/port-transport.ts";
@@ -52,6 +53,19 @@ interface GeneratedLogin {
   /** Whether Apple Passwords was asked already: once per generated password. */
   asked: boolean;
 }
+
+/** A login sent with a form (not a generated one), until the page moves on and it's saved (or dropped). */
+interface SentLogin {
+  hostname: string;
+  password: string;
+  /** The account to save it as: its spelling in Apple Passwords if saved there; undefined when unknown. */
+  saveAs: Promise<string | undefined>;
+  /** The page is being asked whether the sign-in went through (the field went away while the tab navigated). */
+  checking: boolean;
+}
+
+/** How long a sent login waits for the page to move on before it's forgotten. */
+const SENT_LOGIN_MS = 60_000;
 
 export default defineBackground(() => {
   const session = new Session({
@@ -263,15 +277,20 @@ export default defineBackground(() => {
     return usernames.length === 1 ? usernames[0] : undefined;
   }
 
-  // locking forgets every generated password, like the session key
+  // Logins sent with a form, by tab, until the page moves on (see saveSentLogin)
+  const sentLogins = new Map<number, SentLogin>();
+
+  // locking forgets every generated and sent password, like the session key
   session.onChange(({ state }) => {
     if (state === "unlocked") return;
+    sentLogins.clear();
     chosenLogins.clear();
     unconfirmed.length = 0;
     generatedByTab.clear();
     generatedForMenu.clear();
   });
   browser.tabs.onRemoved.addListener((tabId) => {
+    sentLogins.delete(tabId);
     generatedByTab.delete(tabId);
     menuNonces.delete(tabId);
     for (const key of generatedForMenu.keys()) if (key.startsWith(`${tabId}:`)) generatedForMenu.delete(key);
@@ -335,9 +354,11 @@ export default defineBackground(() => {
   }
 
   // The tab navigated or changed URL while holding a generated password: the page moved on.
+  // A sent login is saved once the next page has loaded, unless that page asks for it again.
   browser.tabs.onUpdated.addListener((tabId, change) => {
     const generated = generatedByTab.get(tabId);
     if (generated && (change.url || change.status === "loading")) void saveGenerated(tabId, generated.formUsername);
+    if (change.status === "complete" && sentLogins.has(tabId)) void saveSentLogin(tabId);
   });
 
   /**
@@ -372,6 +393,80 @@ export default defineBackground(() => {
     generated.username = username;
     if (confirmed) forget(generated.password);
     void relay(tabId, { type: "generated-password-saved", password: generated.password }).catch(() => {});
+  }
+
+  /**
+   * A form was sent with a password (typed, or filled). It's kept (in memory, until the page
+   * moves on) to be saved then, as a new account or a saved account's new password (macOS then
+   * offers to update it). Apple's helper doesn't ask about a password it has already, so it isn't
+   * compared here, which would take Touch ID. Unlike a generated password, it needn't be kept if
+   * the user doesn't save it: they know it.
+   */
+  function noteSentLogin(caller: Caller & { kind: "content-script" }, username: string, password: string) {
+    sentLogins.delete(caller.tabId);
+    const url = fillableUrl(caller.url);
+    // locked, nothing can be looked up or saved; asking to unlock for this would be a nuisance
+    if (!url || !password || !session.isUnlocked) return;
+    // a password we generated has its own save
+    if (generatedByTab.get(caller.tabId)?.password === password) return;
+    const login: SentLogin = {
+      hostname: url.hostname,
+      password,
+      saveAs: accountToSave(url.hostname, username, caller.tabId),
+      checking: false,
+    };
+    sentLogins.set(caller.tabId, login);
+    const drop = () => {
+      if (sentLogins.get(caller.tabId) === login) sentLogins.delete(caller.tabId);
+    };
+    // not worth it: forget the password right away; else once the page has had time to move on
+    void login.saveAs.then((account) => account ?? drop());
+    setTimeout(drop, SENT_LOGIN_MS);
+  }
+
+  /**
+   * The account to save a sent login as: a new one, or a saved one (spelled as saved, so macOS
+   * offers an update). Undefined when it can't be told.
+   */
+  async function accountToSave(hostname: string, username: string, tabId: number): Promise<string | undefined> {
+    // a password-only step: the account chosen on the username step
+    username ||= chosenLogin(hostname, tabId) ?? "";
+    const saved = await usernamesFor(hostname).catch(() => undefined);
+    if (!saved) return undefined;
+    // no username: one of the site's saved accounts, unless it has none
+    if (!username) return saved.length === 0 ? "" : undefined;
+    const lower = username.toLowerCase();
+    return saved.find((name) => name.toLowerCase() === lower) ?? username;
+  }
+
+  /**
+   * Asks Apple Passwords to save the tab's sent login (macOS asks the user first) if the page it
+   * shows now went past the sign-in. The content script may not be listening yet right after a
+   * page loads, so it's asked a few times.
+   */
+  async function saveSentLogin(tabId: number) {
+    const login = sentLogins.get(tabId);
+    if (!login || login.checking) return;
+    login.checking = true;
+    try {
+      const username = await login.saveAs;
+      if (username === undefined) return;
+      for (let attempt = 0; attempt < 5 && sentLogins.get(tabId) === login; attempt++) {
+        const state = (await relay(tabId, { type: "sign-in-state" }).catch(() => undefined)) as SignInState | undefined;
+        if (state === "watching") return;
+        if (state) {
+          sentLogins.delete(tabId);
+          if (state === "failed") return;
+          const { hostname, password } = login;
+          const client = await session.unlockedClient();
+          await client.savePassword({ hostname, username, password }, { tabId, frameId: 0 });
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      }
+    } finally {
+      login.checking = false;
+    }
   }
 
   // Hide My Email: the header rule exists only while the user has it turned on (session rules
@@ -492,6 +587,18 @@ export default defineBackground(() => {
         void saveGenerated(caller.tabId, request.username);
         return null;
       }
+      if (request.type === "login-sent") {
+        noteSentLogin(caller, request.username, request.password);
+        return null;
+      }
+      if (request.type === "login-edited") {
+        sentLogins.delete(caller.tabId);
+        return null;
+      }
+      if (request.type === "login-form-gone") {
+        void saveSentLogin(caller.tabId);
+        return null;
+      }
       throw new Error("not allowed");
     }
     switch (request.type) {
@@ -583,6 +690,9 @@ export default defineBackground(() => {
       }
       case "generated-username":
       case "generated-form-gone":
+      case "login-sent":
+      case "login-edited":
+      case "login-form-gone":
         throw new Error("content scripts only");
       case "fill-from-menu": {
         const tabId = tabOf(caller);

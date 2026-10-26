@@ -59,13 +59,22 @@ export type Request =
   /** The username next to a password we generated (as it's typed). */
   | { type: "generated-username"; username: string }
   /** The field holding a password we generated went away (a dialog closed, a step moved on). */
-  | { type: "generated-form-gone"; username: string };
+  | { type: "generated-form-gone"; username: string }
+  /** A form was sent with a password (not a generated one); saved once the page moves on. */
+  | { type: "login-sent"; username: string; password: string }
+  /** The user changed the password after sending it (the site said it was wrong): forget it. */
+  | { type: "login-edited" }
+  /** The field of the sent login went away (a dialog closed, a step moved on). */
+  | { type: "login-form-gone" };
 
 /** Requests content scripts are allowed to send. */
 export const CONTENT_SCRIPT_REQUESTS: ReadonlySet<Request["type"]> = new Set([
   "autofill-status",
   "generated-username",
   "generated-form-gone",
+  "login-sent",
+  "login-edited",
+  "login-form-gone",
 ]);
 
 export interface Settings {
@@ -204,6 +213,9 @@ interface Responses {
   "open-passwords-app": null;
   "generated-username": null;
   "generated-form-gone": null;
+  "login-sent": null;
+  "login-edited": null;
+  "login-form-gone": null;
 }
 
 export type Response<R extends Request> = R["type"] extends keyof Responses ? Responses[R["type"]] : Status;
@@ -223,7 +235,15 @@ export type ContentMessage =
   /** Fills an email address into the field the menu was opened on. */
   | { type: "menu-fill-email"; nonce: string; origin: string; email: string }
   /** Apple Passwords has the generated password filled into this page. */
-  | { type: "generated-password-saved"; password: string };
+  | { type: "generated-password-saved"; password: string }
+  /** Whether the sign-in with the login sent in this tab went through. Answered with a SignInState. */
+  | { type: "sign-in-state" };
+
+/**
+ * "moved-on": the sign-in went through; "watching": the login's field is still shown, so the page
+ * hasn't moved on yet; "failed": the page asks for a password again.
+ */
+export type SignInState = "moved-on" | "watching" | "failed";
 
 /** Messages the inline menu receives without asking for them. */
 export type MenuMessage =
