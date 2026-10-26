@@ -24,6 +24,30 @@ test.describe("with the companion app", () => {
     await expect(page.locator("#pass")).toHaveValue("e2e-pass");
   });
 
+  test("Touch ID shows a fresh code, in case an earlier one was closed", async ({
+    context,
+    popupUrl,
+    siteUrl,
+    codesShown,
+  }) => {
+    // a code asked for earlier (say, to type it) whose window the user then closed
+    const page = await context.newPage();
+    await page.goto(popupUrl.replace("popup.html", "companion.html"));
+    await page.evaluate(() => {
+      type Runtime = { runtime: { sendMessage(message: unknown): Promise<unknown> } };
+      const { chrome } = globalThis as unknown as { chrome: Runtime };
+      return chrome.runtime.sendMessage({ type: "request-code" });
+    });
+    await expect.poll(codesShown).toBe(1);
+
+    await page.goto(`${siteUrl}/login.html`);
+    await page.locator("#pass").click();
+    const menu = await menuFrame(page);
+    await choose(menu, "Unlock to fill passwords");
+    await choose(menu, "e2e-user");
+    expect(codesShown()).toBe(2);
+  });
+
   test("turning Touch ID off goes back to typing the code", async ({ context, popupUrl }) => {
     const popup = await context.newPage();
     await popup.goto(popupUrl);

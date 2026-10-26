@@ -609,7 +609,9 @@ export default defineBackground(() => {
         }
         return fullStatus();
       case "unlock-with-touch-id": {
-        await session.requestCode();
+        if (session.isUnlocked) return status();
+        // fresh, like typing the code: one asked for earlier may be valid still, but its window closed
+        await session.requestNewCode();
         const code = await companion.readCode();
         try {
           await session.verifyCode(code);
