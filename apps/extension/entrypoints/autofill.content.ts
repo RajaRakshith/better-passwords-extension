@@ -135,8 +135,9 @@ export default defineContentScript({
       },
       { capture: true },
     );
-    // typing a username narrows the logins down; typing a sign-in password hides them until it's
-    // emptied or they're asked for again; typing a new password of one's own closes the suggestions
+    // typing a username (or a sign-up email) narrows the suggestions down; typing a sign-in password
+    // hides them until it's emptied or they're asked for again; typing a new password of one's own
+    // closes the suggestions
     ctx.addEventListener(
       document,
       "input",
@@ -145,6 +146,7 @@ export default defineContentScript({
         if (!event.isTrusted || !menu.isOpen || event.target !== menu.anchor) return;
         const kind = fieldKind(event.target);
         if (kind === "login" && menu.anchor.type !== "password") filterMenu(menu.anchor.value);
+        if (kind === "signup-email") filterMenu(menu.anchor.value);
         if (kind === "login" && menu.anchor.type === "password") {
           tellMenu({ type: "menu-typing", typing: menu.anchor.value !== "" });
         }

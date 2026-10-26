@@ -196,6 +196,56 @@ test.describe("with the companion app", () => {
     await choose(menu, "jane@example.com");
     await expect(page.locator("#email")).toHaveValue("jane@example.com");
   });
+
+  test("typing an address narrows them down; the hints step aside", async ({ context, siteUrl }) => {
+    const page = await context.newPage();
+    await page.goto(`${siteUrl}/signup.html`);
+    const menu = await emailMenu(page);
+    await expect(menu.getByText("Use Hide My Email")).toBeVisible();
+    await page.locator("#email").pressSequentially("JANE.");
+    await expect(menu.getByText("jane.work@example.com")).toBeVisible();
+    await expect(menu.getByText("jane@example.com")).toHaveCount(0);
+    await expect(menu.getByText("Use Hide My Email")).toHaveCount(0);
+
+    // nothing starts with it: out of the way; emptied, everything comes back
+    await page.locator("#email").press("x");
+    await expect(page.locator("app-autofill-menu")).toBeHidden();
+    await page.locator("#email").press("Backspace");
+    await expect(menu.getByText("jane.work@example.com")).toBeVisible();
+    await page.locator("#email").selectText();
+    await page.locator("#email").press("Backspace");
+    await expect(menu.getByText("Use Hide My Email")).toBeVisible();
+
+    // typed in full: nothing left to suggest; ↓ brings everything back
+    await page.locator("#email").pressSequentially("jane@example.com");
+    await expect(page.locator("app-autofill-menu")).toBeHidden();
+    await page.locator("#email").press("ArrowDown");
+    await expect(menu.getByText("Use Hide My Email")).toBeVisible();
+    await expect(menu.getByText("jane@example.com")).toBeVisible();
+  });
+
+  test("while typing, Hide My Email comes after the addresses left, never on its own", async ({ context, siteUrl }) => {
+    await fakeICloud(context, { existing: "kept@icloud.com" });
+    const page = await context.newPage();
+    await page.goto(`${siteUrl}/signup.html`);
+    const menu = await emailMenu(page);
+    await choose(menu, "Use Hide My Email");
+    await expect(menu.getByText("kept@icloud.com")).toBeVisible();
+    await page.locator("#email").click();
+    await page.locator("#email").pressSequentially("jane.");
+    // the match first, where ↓ lands
+    await expect(menu.getByRole("option")).toHaveText([/jane\.work@example\.com/, /kept@icloud\.com/]);
+
+    // no address of one's own left: the menu goes rather than offer Hide My Email alone
+    await page.locator("#email").press("x");
+    await expect(page.locator("app-autofill-menu")).toBeHidden();
+
+    // the Hide My Email address is an address too
+    await page.locator("#email").selectText();
+    await page.locator("#email").pressSequentially("kep");
+    await expect(menu.getByText("kept@icloud.com")).toBeVisible();
+    await expect(menu.getByText("jane@example.com")).toHaveCount(0);
+  });
 });
 
 test.describe("when the companion may not read Contacts", () => {

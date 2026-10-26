@@ -21,6 +21,7 @@ bindToMenu(nonce);
 const kind = params.get("kind") ?? "login";
 /** Whether the menu is on a password field, rather than a username one. */
 const onPasswordField = params.get("field") === "password";
+const mode = params.get("mode");
 const panel = document.getElementById("menu") as HTMLElement;
 
 // --- clickjacking guard ------------------------------------------------------------------------
@@ -64,6 +65,12 @@ function reportSize() {
 
 function close() {
   void send({ type: "menu-close", nonce }).catch(() => {});
+}
+
+/** Out of the way, like Safari: hidden but still open, back once the field is emptied or asks again. */
+function hide() {
+  panel.replaceChildren();
+  void send({ type: "menu-resize", nonce, height: 0 }).catch(() => {});
 }
 
 function render(...children: (Node | null)[]) {
@@ -137,12 +144,8 @@ function renderLogins() {
   const { logins, hostname, chosen, error } = loginsView;
   const prefix = query.trim().toLowerCase();
   const matches = logins.filter(({ username }) => username.toLowerCase().startsWith(prefix));
-  // nothing starts with what's typed (a new username, probably): out of the way, like Safari
-  if (matches.length === 0) {
-    panel.replaceChildren();
-    void send({ type: "menu-resize", nonce, height: 0 }).catch(() => {});
-    return;
-  }
+  // nothing starts with what's typed (a new username, probably)
+  if (matches.length === 0) return hide();
   // the password step after one where a login was chosen: just that one (listed first), the others
   // a click away. Back on the username step, the user may well be after another one: all of them.
   const focused = onPasswordField && chosen !== undefined && !prefix && !showOthers && matches.length > 1;
@@ -182,6 +185,8 @@ browser.runtime.onMessage.addListener((request: MenuMessage, sender) => {
       reportSize();
     }
     renderLogins();
+    // while iCloud is asked something, its answer redraws the menu, filtered by then
+    if (mode === "email" && asking === 0) renderEmail(lastSuggestions);
   }
   // typing a password of one's own: out of the way, like Safari; back once the field is emptied
   if (request.type === "menu-typing" && nonce && request.nonce === nonce && onPasswordField) {
@@ -275,11 +280,23 @@ function showGeneratedDone(saved: boolean) {
 
 // --- sign-up email fields: Hide My Email ---------------------------------------------------------
 
+/** How many requests to iCloud are under way; typing in the field waits for their answers. */
+let asking = 0;
+
+async function whileAsking<T>(request: Promise<T>): Promise<T> {
+  asking++;
+  try {
+    return await request;
+  } finally {
+    asking--;
+  }
+}
+
 async function showEmail() {
   // asking iCloud can take a second or two: show that something is happening, unless it's quick
   const loading = setTimeout(() => render(loadingRow(ENVELOPE, "Hide My Email")), 150);
   try {
-    renderEmail(await send({ type: "email-suggestions", nonce }));
+    renderEmail(await whileAsking(send({ type: "email-suggestions", nonce })));
   } catch (e) {
     render(message(messageOf(e), true));
   } finally {
@@ -309,56 +326,71 @@ let lastSuggestions: EmailSuggestions = { hideMyEmail: { state: "off" }, contact
 function renderEmail(suggestions: EmailSuggestions, error?: string) {
   lastSuggestions = suggestions;
   const { hideMyEmail: hme, contacts } = suggestions;
-  const rows: (Node | null)[] = [];
+  // typing an address of one's own: only the addresses it starts, and doesn't already complete,
+  // are left, with Hide My Email below them for a change of mind; the hints step aside
+  const prefix = query.trim().toLowerCase();
+  const typing = prefix !== "";
+  const completes = (address: string) => {
+    const lower = address.toLowerCase();
+    return lower.startsWith(prefix) && lower !== prefix;
+  };
+
+  // below Hide My Email: the user's own emails, from their contact card
+  const own: Node[] = [];
+  if (contacts.state === "ready") {
+    for (const email of contacts.emails.filter(completes)) {
+      own.push(row(PERSON, email, "From your contact card", () => void fillOwnEmail(email)));
+    }
+  } else if (!typing && contacts.state === "hint") {
+    own.push(companionHintRow());
+  } else if (!typing && contacts.state === "needs-contacts") {
+    own.push(message("To suggest your email addresses, allow Contacts in the companion app."));
+  }
+
+  const rows: Node[] = [];
   if (hme.state === "hint") {
-    rows.push(hintRow());
+    if (!typing) rows.push(hintRow());
   } else if (hme.state === "ready") {
     const { address } = hme;
-    rows.push(
-      address
-        ? row(ENVELOPE, address, "Hide My Email for this site", () => void useAddress(address, false))
-        : row(
-            ENVELOPE,
-            "Hide My Email…",
-            "Create a unique, random address that forwards to your inbox",
-            () => void showProposal(),
-          ),
-    );
-  } else if (hme.state === "signed-out") {
+    // while typing, not on its own: that would keep a menu open with nothing that matches
+    if (!typing || own.length > 0 || (address && completes(address))) {
+      rows.push(
+        address
+          ? row(ENVELOPE, address, "Hide My Email for this site", () => void useAddress(address, false))
+          : row(
+              ENVELOPE,
+              "Hide My Email…",
+              "Create a unique, random address that forwards to your inbox",
+              () => void showProposal(),
+            ),
+      );
+    }
+  } else if (!typing && hme.state === "signed-out") {
     rows.push(
       row(ENVELOPE, "Sign In to iCloud for Hide My Email", "Opens icloud.com in a new tab", async () => {
         await send({ type: "open-icloud" }).catch(() => {});
         close();
       }),
     );
-  } else if (hme.state === "needs-icloud-plus") {
+  } else if (!typing && hme.state === "needs-icloud-plus") {
     rows.push(
       row(ENVELOPE, "Hide My Email needs iCloud+", "Learn about iCloud+", async () => {
         await send({ type: "open-icloud-plus" }).catch(() => {});
         close();
       }),
     );
-  } else if (hme.state === "error") {
+  } else if (!typing && hme.state === "error") {
     rows.push(message(hme.message, true));
   }
   if (error) rows.push(message(error, true));
+  // while typing, the addresses it starts come first (nearest the field, first on ↓), Hide My Email after
+  const [first, then] = typing ? [own, rows] : [rows, own];
+  const all =
+    first.length > 0 && then.length > 0 ? [...first, h("hr", { class: "separator" }), ...then] : [...first, ...then];
 
-  // below Hide My Email: the user's own emails, from their contact card
-  const own: Node[] = [];
-  if (contacts.state === "ready") {
-    for (const email of contacts.emails) {
-      own.push(row(PERSON, email, "From your contact card", () => void fillOwnEmail(email)));
-    }
-  } else if (contacts.state === "hint") {
-    own.push(companionHintRow());
-  } else if (contacts.state === "needs-contacts") {
-    own.push(message("To suggest your email addresses, allow Contacts in the companion app."));
-  }
-  if (rows.length > 0 && own.length > 0) rows.push(h("hr", { class: "separator" }));
-  rows.push(...own);
-
-  if (rows.length === 0) return close();
-  render(...rows);
+  // nothing to offer at all: closed; nothing left for what's typed: hidden until it's emptied
+  if (all.length === 0) return typing ? hide() : close();
+  render(...all);
 }
 
 /** A row with a ✕ that dismisses it for good (without choosing the row). */
@@ -420,7 +452,7 @@ async function enableHideMyEmail() {
       renderEmail(lastSuggestions);
       return;
     }
-    renderEmail(await send({ type: "enable-hide-my-email", nonce }));
+    renderEmail(await whileAsking(send({ type: "enable-hide-my-email", nonce })));
   } catch (e) {
     render(message(messageOf(e), true));
   }
@@ -429,7 +461,7 @@ async function enableHideMyEmail() {
 async function showProposal() {
   render(message("Creating an address…"));
   try {
-    const { address } = await send({ type: "generate-hide-my-email", nonce });
+    const { address } = await whileAsking(send({ type: "generate-hide-my-email", nonce }));
     render(
       row(ENVELOPE, address, "Use This Address", () => void useAddress(address, true)),
       row(REFRESH, "Try Another", "", () => void showProposal()),
@@ -450,7 +482,7 @@ function afterICloudError(error: unknown): [EmailSuggestions, string?] {
 async function useAddress(address: string, reserve: boolean) {
   render(message(reserve ? "Setting up the address…" : "Filling it in…"));
   try {
-    const { result } = await send({ type: "use-hide-my-email", nonce, address, reserve });
+    const { result } = await whileAsking(send({ type: "use-hide-my-email", nonce, address, reserve }));
     // when filled, the content script closes the menu
     if (result !== "filled") {
       renderEmail({ ...lastSuggestions, hideMyEmail: { state: "ready", address } }, fillError(result));
@@ -609,7 +641,6 @@ function messageOf(error: unknown): string {
   return text || "Something went wrong.";
 }
 
-const mode = params.get("mode");
 if (mode === "locked") void showLocked();
 else if (mode === "setup") showSetup();
 else if (mode === "generate") void showGenerate();

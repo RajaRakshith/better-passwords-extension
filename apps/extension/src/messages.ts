@@ -249,8 +249,8 @@ export type SignInState = "moved-on" | "watching" | "failed";
 export type MenuMessage =
   /**
    * Sent by the content script straight to the menu (the background ignores it): what the user
-   * typed into the username field, so the menu lists only the logins it starts. Only the text goes
-   * this way; usernames never reach the content script.
+   * typed into the username (or sign-up email) field, so the menu lists only the logins (or
+   * addresses) it starts. Only the text goes this way; usernames never reach the content script.
    */
   | { type: "menu-filter"; nonce: string; query: string }
   /**
