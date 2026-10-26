@@ -11,7 +11,14 @@ const SIGNUP_HINT = /sign[\s_-]?up|regist|create[\s_-]?(an[\s_-]?)?account|join|
 const LOGIN_HINT = /sign[\s_-]?in|log[\s_-]?in/i;
 
 function textOf(el: HTMLInputElement): string {
-  return [el.name, el.id, el.getAttribute("aria-label") ?? "", el.placeholder].join(" ");
+  // the label too: some fields say what they are nowhere else (no name, a generated id)
+  const labels = Array.from(el.labels ?? [], (label) => label.textContent ?? "");
+  return [el.name, el.id, el.getAttribute("aria-label") ?? "", el.placeholder, ...labels].join(" ");
+}
+
+/** Typed as an email, or asking for the email keyboard (a text field that takes an email). */
+function asksForEmail(el: HTMLInputElement): boolean {
+  return el.type === "email" || el.getAttribute("inputmode")?.toLowerCase() === "email";
 }
 
 function isTextLike(el: HTMLInputElement): boolean {
@@ -68,7 +75,7 @@ function hasPasswordFieldNearby(el: HTMLInputElement): boolean {
 
 function isEmailLike(el: HTMLInputElement): boolean {
   const autocomplete = tokens(el);
-  return el.type === "email" || autocomplete.includes("email") || EMAIL_HINT.test(textOf(el));
+  return asksForEmail(el) || autocomplete.includes("email") || EMAIL_HINT.test(textOf(el));
 }
 
 /** A username field: explicitly marked, or username-like and next to a password field. */
@@ -78,7 +85,7 @@ export function isUsernameField(el: HTMLInputElement): boolean {
   if (/one-time-code|new-password|cc-|address|search/.test(autocomplete)) return false;
   if (tokens(el).includes("username")) return true;
   if (!hasPasswordFieldNearby(el)) return false;
-  return autocomplete.includes("email") || el.type === "email" || USERNAME_HINT.test(textOf(el));
+  return autocomplete.includes("email") || asksForEmail(el) || USERNAME_HINT.test(textOf(el));
 }
 
 export function fieldKind(target: EventTarget | null): FieldKind | undefined {

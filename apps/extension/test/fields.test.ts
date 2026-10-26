@@ -14,6 +14,8 @@ describe("isLoginField", () => {
     ["email next to a password", `<form><input id="f" type="email"><input type="password"></form>`],
     ["login-named text field", `<form><input id="f" name="login"><input type="password"></form>`],
     ["username-first step", `<form><input id="f" type="email" autocomplete="username webauthn"></form>`],
+    ["text field with the email keyboard", `<form><input id="f" inputmode="email"><input type="password"></form>`],
+    ["field named by its label", `<form><label for="f">Login</label><input id="f"><input type="password"></form>`],
   ])("accepts a %s", (_, html) => {
     expect(isLoginField(field(html))).toBe(true);
   });
@@ -82,6 +84,18 @@ describe("fieldKind", () => {
       "signup-email",
     ],
     ["login email", `<form><input id="f" type="email"><input type="password"><button>Log in</button></form>`, "login"],
+    [
+      "sign-up email with the email keyboard",
+      `<form><input id="f" type="text" inputmode="email"><input type="password" autocomplete="new-password"></form>`,
+      "signup-email",
+    ],
+    [
+      // no form, no name, a generated id: only the label says what it is (a Salesforce sign-up)
+      "sign-up email named by its label",
+      `<div><label for="f">*E-Mail-Adresse (Login)</label><input id="f" type="text"></div>
+       <input type="password"><input type="password"><button>REGISTRIEREN</button>`,
+      "signup-email",
+    ],
   ])("classifies a %s", (_, html, kind) => {
     expect(fieldKind(field(html))).toBe(kind);
   });
