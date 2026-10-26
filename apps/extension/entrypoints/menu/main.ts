@@ -47,8 +47,15 @@ function deliberate(event: Event): boolean {
 
 // --- rendering ---------------------------------------------------------------------------------
 
+/** The user is typing their own password into the field: the menu stays hidden until asked for. */
+let typingOwn = false;
+
 /** Asks for room for the whole list (the host caps it; beyond that the list scrolls). */
 function reportSize() {
+  if (typingOwn) {
+    void send({ type: "menu-resize", nonce, height: 0 }).catch(() => {});
+    return;
+  }
   const borders = panel.offsetHeight - panel.clientHeight;
   // scrollHeight is rounded, the content may be a fraction taller: one spare pixel keeps a list
   // that fits from scrolling by that fraction
@@ -167,9 +174,21 @@ function othersRow(count: number) {
 browser.runtime.onMessage.addListener((request: MenuMessage, sender) => {
   if (sender.id !== browser.runtime.id) return false;
   // sent straight here by our content script as the user types in the field
+  // (an empty query, on a click or ↓ in the field: everything again, even over a typed password)
   if (request.type === "menu-filter" && nonce && request.nonce === nonce) {
     query = request.query;
+    if (typingOwn && !query) {
+      typingOwn = false;
+      reportSize();
+    }
     renderLogins();
+  }
+  // typing a password of one's own: out of the way, like Safari; back once the field is emptied
+  if (request.type === "menu-typing" && nonce && request.nonce === nonce && onPasswordField) {
+    if (typingOwn !== request.typing) {
+      typingOwn = request.typing;
+      reportSize();
+    }
   }
   // the menu sits above its field: listed bottom-up, the first item nearest the field
   if (request.type === "menu-placement" && nonce && request.nonce === nonce) {

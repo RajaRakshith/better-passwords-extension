@@ -253,6 +253,11 @@ export type MenuMessage =
    * this way; usernames never reach the content script.
    */
   | { type: "menu-filter"; nonce: string; query: string }
+  /**
+   * Also from the content script: the user is typing a password of their own into the sign-in's
+   * password field (or emptied it again). Only whether it's empty goes this way, never the text.
+   */
+  | { type: "menu-typing"; nonce: string; typing: boolean }
   /** Also from the content script: the menu sits above its field, so it lists its items bottom-up. */
   | { type: "menu-placement"; nonce: string; above: boolean }
   /** Sent by the background to every extension page when the session unlocks or locks (say, from the popup). */

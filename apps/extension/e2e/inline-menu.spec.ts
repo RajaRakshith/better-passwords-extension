@@ -408,6 +408,35 @@ test.describe("typing a username", () => {
     await expect(menu.getByText("alice@example.com")).toBeVisible();
     await expect(menu.getByText("bob@example.com")).toBeVisible();
   });
+
+  test("typing a password of one's own hides the logins until asked for again", async ({ context, siteUrl }) => {
+    const page = await context.newPage();
+    const first = await unlockedMenu(page, siteUrl);
+    // Tab, not a click: the email field's menu covers the password field
+    await page.keyboard.press("Tab");
+    await expect.poll(() => page.frames().some((f) => f.url().includes("/menu.html#") && f !== first)).toBe(true);
+    const menu = await menuFrame(page);
+    await expect(menu.getByText("alice@example.com")).toBeVisible();
+
+    await page.locator("#pass").pressSequentially("hunter2");
+    await expect(page.locator("app-autofill-menu")).toBeHidden();
+    // emptied: back by itself
+    await page.locator("#pass").press("ControlOrMeta+a");
+    await page.locator("#pass").press("Backspace");
+    await expect(page.locator("app-autofill-menu")).toBeVisible();
+
+    // a click brings it back over the typed password, and the next key hides it again
+    await page.locator("#pass").pressSequentially("hunter2");
+    await expect(page.locator("app-autofill-menu")).toBeHidden();
+    await page.locator("#pass").click();
+    await expect(page.locator("app-autofill-menu")).toBeVisible();
+    await expect(menu.getByText("bob@example.com")).toBeVisible();
+    await page.locator("#pass").press("x");
+    await expect(page.locator("app-autofill-menu")).toBeHidden();
+    await page.locator("#pass").press("ArrowDown");
+    await expect(page.locator("app-autofill-menu")).toBeVisible();
+    await expect(menu.getByRole("option", { name: /alice@example.com/ })).toBeFocused();
+  });
 });
 
 test.describe("a sign-in in two steps", () => {
