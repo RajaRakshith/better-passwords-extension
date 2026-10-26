@@ -67,6 +67,10 @@ export class MenuHost {
   /** What the menu page was last told of that (see onPlacement); it can't hear before it has loaded. */
   #toldAbove: boolean | undefined;
   readonly #watch = new VisibilityWatch(() => isMenuGenuinelyVisible(this.#host));
+  /** The pending frame of the loop that keeps the menu on its field (see #follow). */
+  #followFrame: number | undefined;
+  /** Where the field and viewport were when the menu was last placed. */
+  #placedFor = "";
 
   /** `onPlacement` tells the menu page when it moves above its field, or back under it. */
   constructor(
@@ -133,6 +137,31 @@ export class MenuHost {
     this.#host.showPopover();
     this.position();
     this.#watch.start();
+    this.#follow();
+  }
+
+  /**
+   * Re-places the menu whenever its field moves without a scroll or resize: a dialog sliding or
+   * fading in, an error message pushing the form down, a step of the form animating away.
+   */
+  #follow(): void {
+    if (this.#followFrame !== undefined) cancelAnimationFrame(this.#followFrame);
+    const tick = () => {
+      if (!this.isOpen) {
+        this.#followFrame = undefined;
+        return;
+      }
+      if (this.#placement() !== this.#placedFor) this.position();
+      this.#followFrame = requestAnimationFrame(tick);
+    };
+    this.#followFrame = requestAnimationFrame(tick);
+  }
+
+  #placement(): string {
+    const rect = this.#anchor?.getBoundingClientRect();
+    return rect
+      ? `${rect.left},${rect.top},${rect.width},${rect.height},${window.innerWidth},${window.innerHeight}`
+      : "";
   }
 
   /**
@@ -161,6 +190,7 @@ export class MenuHost {
       return;
     }
     const rect = anchor.getBoundingClientRect();
+    this.#placedFor = this.#placement();
     const width = Math.min(Math.max(rect.width, WIDTH), window.innerWidth - 2 * GAP);
     const left = Math.min(Math.max(GAP, rect.left), window.innerWidth - width - GAP);
     const below = rect.bottom + GAP;
@@ -190,6 +220,8 @@ export class MenuHost {
 
   close(): void {
     this.#watch.stop();
+    if (this.#followFrame !== undefined) cancelAnimationFrame(this.#followFrame);
+    this.#followFrame = undefined;
     this.#nonce = undefined;
     this.#anchor = undefined;
     if (this.#host.matches(":popover-open")) this.#host.hidePopover();
