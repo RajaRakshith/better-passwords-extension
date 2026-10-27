@@ -225,7 +225,10 @@ private struct Step: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.headline)
-                Text(LocalizedStringKey(detail)).foregroundStyle(.secondary).font(.callout).fixedSize(horizontal: false, vertical: true)
+                Text(LocalizedStringKey(detail))
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
             if !done, let actionTitle {

@@ -3,6 +3,10 @@ pre-commit:
     biome:
       glob: "*.{js,ts,json,jsonc,css,html}"
       run: bunx biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+    swift-format:
+      root: "apps/companion/"
+      glob: "*.swift"
+      run: swift format lint --strict {staged_files}
 commit-msg:
   commands:
     commitlint:
