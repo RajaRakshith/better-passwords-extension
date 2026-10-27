@@ -55,7 +55,7 @@ export default defineContentScript({
         } else {
           menu.close();
         }
-      } else if (show === "email" && kind === "signup-email") {
+      } else if (show === "email" && kind === "email") {
         menu.open(field, "email", kind, nonce);
       } else if (show === "logins" || show === "generate" || show === "locked" || show === "setup") {
         // "locked" and "setup" too: login fields include guessed usernames, but only next to a
@@ -146,7 +146,7 @@ export default defineContentScript({
         if (!event.isTrusted || !menu.isOpen || event.target !== menu.anchor) return;
         const kind = fieldKind(event.target);
         if (kind === "login" && menu.anchor.type !== "password") filterMenu(menu.anchor.value);
-        if (kind === "signup-email") filterMenu(menu.anchor.value);
+        if (kind === "email") filterMenu(menu.anchor.value);
         if (kind === "login" && menu.anchor.type === "password") {
           tellMenu({ type: "menu-typing", typing: menu.anchor.value !== "" });
         }

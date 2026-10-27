@@ -45,11 +45,7 @@ async function render() {
       "ul",
       { class: "features" },
       feature(LOCK, "Skip the 6-digit code", "Confirm with Touch ID, and the code your Mac shows is entered for you."),
-      feature(
-        PERSON,
-        "Suggest my emails",
-        "Sign-up forms offer the email addresses on your contact card, like Safari.",
-      ),
+      feature(PERSON, "Suggest my emails", "Email fields offer the email addresses on your contact card, like Safari."),
     ),
     h(
       "section",

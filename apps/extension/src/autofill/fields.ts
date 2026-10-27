@@ -1,11 +1,13 @@
 // Decides which inputs get the inline menu, and which kind. Conservative on purpose: a menu on a
-// search box or a newsletter field is noise, and suggesting saved logins on a sign-up form, or a
-// new password on a login form, would be wrong.
+// search box is noise, and suggesting saved logins on a sign-up form, or a new password on a login
+// form, would be wrong. Any other email field (a newsletter, a contact form) gets email suggestions.
 
-/** "login": fill a saved login. "new-password": suggest a strong password. "signup-email": suggest an email. */
-export type FieldKind = "login" | "new-password" | "signup-email";
+/** "login": fill a saved login. "new-password": suggest a strong password. "email": suggest an email. */
+export type FieldKind = "login" | "new-password" | "email";
 
 const USERNAME_HINT = /user|login|e-?mail|account|identifier|signin/i;
+/** A whole name or id for the account, not just an email (a forgot-password form's `name="username"`). */
+const ACCOUNT_NAME = /^(user([_-]?(name|id))?|login([_-]?(name|id))?|identifier|sign[_-]?in)$/i;
 const EMAIL_HINT = /e-?mail/i;
 const SIGNUP_HINT = /sign[\s_-]?up|regist|create[\s_-]?(an[\s_-]?)?account|join|enrol/i;
 const LOGIN_HINT = /sign[\s_-]?in|log[\s_-]?in/i;
@@ -33,15 +35,27 @@ function passwordFields(scope: ParentNode): HTMLInputElement[] {
   return Array.from(scope.querySelectorAll("input")).filter((input) => input.type === "password");
 }
 
+function ownText(form: HTMLFormElement): string {
+  return [form.id, form.name, form.getAttribute("action") ?? "", form.className].join(" ");
+}
+
+function buttonText(form: HTMLFormElement): string {
+  return Array.from(form.querySelectorAll<HTMLElement>("button, input[type=submit]"))
+    .map((b) => (b instanceof HTMLInputElement ? b.value : (b.textContent ?? "")))
+    .join(" ");
+}
+
 /** A form that creates an account, judged by its own attributes and its submit buttons. */
 function looksLikeSignup(form: HTMLFormElement | null): boolean {
   if (!form) return false;
-  const own = [form.id, form.name, form.getAttribute("action") ?? "", form.className].join(" ");
-  const buttons = Array.from(form.querySelectorAll<HTMLElement>("button, input[type=submit]"))
-    .map((b) => (b instanceof HTMLInputElement ? b.value : (b.textContent ?? "")))
-    .join(" ");
-  const text = `${own} ${buttons}`;
-  return SIGNUP_HINT.test(text) && !LOGIN_HINT.test(buttons);
+  const buttons = buttonText(form);
+  return SIGNUP_HINT.test(`${ownText(form)} ${buttons}`) && !LOGIN_HINT.test(buttons);
+}
+
+/** A form that signs in, judged the same way (a sign-in's first step, before the password). */
+function looksLikeLogin(form: HTMLFormElement | null): boolean {
+  if (!form) return false;
+  return LOGIN_HINT.test(`${ownText(form)} ${buttonText(form)}`);
 }
 
 /** A password field that should get a new password: sign-up, confirmation or change-password. */
@@ -78,13 +92,20 @@ function isEmailLike(el: HTMLInputElement): boolean {
   return asksForEmail(el) || autocomplete.includes("email") || EMAIL_HINT.test(textOf(el));
 }
 
-/** A username field: explicitly marked, or username-like and next to a password field. */
+/**
+ * A username field: explicitly marked, username-like and next to a password field, or on its own
+ * (a sign-in's first step, a forgot-password form) when it's named for the account or its form signs in.
+ */
 export function isUsernameField(el: HTMLInputElement): boolean {
   if (!isTextLike(el)) return false;
   const autocomplete = el.autocomplete.toLowerCase();
   if (/one-time-code|new-password|cc-|address|search/.test(autocomplete)) return false;
   if (tokens(el).includes("username")) return true;
-  if (!hasPasswordFieldNearby(el)) return false;
+  if (!hasPasswordFieldNearby(el)) {
+    // the whole name or id only: "user[first_name]" or a label saying "Username" is no account field
+    if (ACCOUNT_NAME.test(el.name) || ACCOUNT_NAME.test(el.id)) return true;
+    return isEmailLike(el) && looksLikeLogin(el.form);
+  }
   return autocomplete.includes("email") || asksForEmail(el) || USERNAME_HINT.test(textOf(el));
 }
 
@@ -94,8 +115,10 @@ export function fieldKind(target: EventTarget | null): FieldKind | undefined {
   if (!isTextLike(target)) return undefined;
   if (/one-time-code|cc-|address|search/.test(target.autocomplete.toLowerCase())) return undefined;
   // on a sign-up form, the email field gets email suggestions instead of saved logins
-  if (inSignupForm(target)) return isEmailLike(target) ? "signup-email" : undefined;
-  return isUsernameField(target) ? "login" : undefined;
+  if (inSignupForm(target)) return isEmailLike(target) ? "email" : undefined;
+  if (isUsernameField(target)) return "login";
+  // any other email field (a newsletter, a contact form): the user's own emails, or Hide My Email
+  return isEmailLike(target) ? "email" : undefined;
 }
 
 export function isLoginField(target: EventTarget | null): target is HTMLInputElement {

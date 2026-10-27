@@ -10,7 +10,7 @@ import Foundation
     /// Replies with the six digits, or with one of `CompanionError`'s raw values.
     func readPairingCode(reply: @escaping @Sendable (_ code: String?, _ error: String?) -> Void)
 
-    /// The email addresses on the user's own contact card ("Me" in Contacts), for sign-up forms.
+    /// The email addresses on the user's own contact card ("Me" in Contacts), for email fields.
     /// Replies with them, or with one of `CompanionError`'s raw values.
     func myEmails(reply: @escaping @Sendable (_ emails: [String]?, _ error: String?) -> Void)
 

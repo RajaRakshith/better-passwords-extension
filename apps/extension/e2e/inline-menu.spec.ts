@@ -123,12 +123,14 @@ test("Escape closes the menu and keeps it closed until the user asks again", asy
   await expect.poll(() => page.locator("app-autofill-menu").count()).toBe(1);
 });
 
-test("stays away from fields that aren't for logging in", async ({ context, siteUrl }) => {
+test("offers no logins in fields that aren't for logging in", async ({ context, siteUrl }) => {
   const page = await context.newPage();
   await page.goto(`${siteUrl}/login.html`);
+  // a newsletter's email field gets email suggestions instead (see hide-my-email.spec.ts)
   await page.locator("#newsletter-email").click();
-  await page.waitForTimeout(500);
-  expect(page.frames().some((f) => f.url().includes("/menu.html"))).toBe(false);
+  const menu = await menuFrame(page);
+  await expect(menu.getByText("Use Hide My Email")).toBeVisible();
+  await expect(menu.getByText("Unlock to fill passwords")).toHaveCount(0);
 });
 
 test("refuses to fill when the page makes the menu transparent", async ({ context, siteUrl }) => {

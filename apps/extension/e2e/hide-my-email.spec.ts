@@ -77,9 +77,19 @@ test("advertises Hide My Email on sign-up email fields until dismissed", async (
 test("never on login forms", async ({ context, siteUrl }) => {
   const page = await context.newPage();
   await page.goto(`${siteUrl}/login.html`);
+  await page.locator("#user").click();
+  const menu = await menuFrame(page);
+  await expect(menu.getByText("Unlock to fill passwords")).toBeVisible();
+  await expect(menu.getByText("Use Hide My Email")).toHaveCount(0);
+});
+
+test("on other email fields too, such as a newsletter's", async ({ context, siteUrl }) => {
+  const page = await context.newPage();
+  await page.goto(`${siteUrl}/login.html`);
   await page.locator("#newsletter-email").click();
-  await page.waitForTimeout(800);
-  expect(await page.locator("app-autofill-menu").count()).toBe(0);
+  const menu = await menuFrame(page);
+  await expect(menu.getByText("Use Hide My Email")).toBeVisible();
+  await expect(menu.getByText("Unlock to fill passwords")).toHaveCount(0);
 });
 
 test("turned on from the hint, creates an address for the site and fills it in", async ({ context, siteUrl }) => {
@@ -195,6 +205,16 @@ test.describe("with the companion app", () => {
     await expect(menu.getByText("Suggest Your Email Addresses")).toHaveCount(0);
     await choose(menu, "jane@example.com");
     await expect(page.locator("#email")).toHaveValue("jane@example.com");
+  });
+
+  test("fills one into a newsletter's email field", async ({ context, siteUrl }) => {
+    const page = await context.newPage();
+    await page.goto(`${siteUrl}/login.html`);
+    await page.locator("#newsletter-email").click();
+    const menu = await menuFrame(page);
+    await choose(menu, "jane@example.com");
+    await expect(page.locator("#newsletter-email")).toHaveValue("jane@example.com");
+    await expect(page.locator("#user")).toHaveValue("");
   });
 
   test("typing an address narrows them down; the hints step aside", async ({ context, siteUrl }) => {

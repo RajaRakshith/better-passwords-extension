@@ -29,7 +29,7 @@ export type Request =
   | { type: "generate-passwords"; nonce: string }
   /** Fills the chosen password; Apple Passwords is asked to save it when the form is submitted. */
   | { type: "use-generated-password"; nonce: string; style: PasswordStyle }
-  // Hide My Email, on sign-up email fields (the menu is bound to its tab)
+  // Hide My Email, on email fields (the menu is bound to its tab)
   | { type: "email-suggestions"; nonce: string }
   /** The user clicked the hint: turn Hide My Email on. */
   | { type: "enable-hide-my-email"; nonce: string }
@@ -86,13 +86,13 @@ export interface Settings {
   touchId: boolean;
   /** Suggestions when signing up: strong passwords, and the user's emails in email fields. */
   generatePasswords: boolean;
-  /** Offer Hide My Email addresses on sign-up email fields (opt-in: uses icloud.com's web service). */
+  /** Offer Hide My Email addresses on email fields (opt-in: uses icloud.com's web service). */
   hideMyEmail: boolean;
-  /** Advertise Hide My Email in sign-up email fields until the user turns it on or dismisses it. */
+  /** Advertise Hide My Email in email fields until the user turns it on or dismisses it. */
   hideMyEmailHint: boolean;
   /** Advertise the companion app (for contact-card emails) until it's installed or dismissed. */
   companionEmailsHint: boolean;
-  /** With the Mac app: suggest the emails on the user's contact card in sign-up email fields. */
+  /** With the Mac app: suggest the emails on the user's contact card in email fields. */
   suggestEmails: boolean;
   /** Mention the companion app under the code box (it skips typing the code) until dismissed. */
   companionCodeHint: boolean;
@@ -153,7 +153,7 @@ export interface GeneratedPasswords {
 }
 
 /**
- * Hide My Email for a sign-up email field. "hint": not turned on yet, offer it; "ready": on, with
+ * Hide My Email for an email field. "hint": not turned on yet, offer it; "ready": on, with
  * the address made for this site before, if any; "signed-out": no icloud.com sign-in in this browser.
  */
 export type HideMyEmailState =
@@ -249,7 +249,7 @@ export type SignInState = "moved-on" | "watching" | "failed";
 export type MenuMessage =
   /**
    * Sent by the content script straight to the menu (the background ignores it): what the user
-   * typed into the username (or sign-up email) field, so the menu lists only the logins (or
+   * typed into the username (or email) field, so the menu lists only the logins (or
    * addresses) it starts. Only the text goes this way; usernames never reach the content script.
    */
   | { type: "menu-filter"; nonce: string; query: string }

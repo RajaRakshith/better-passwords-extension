@@ -90,7 +90,7 @@ export function fillNewPassword(expectedOrigin: string, password: string, anchor
   return "filled";
 }
 
-/** Fills an email address into the field the menu was opened on (sign-up email fields). */
+/** Fills an email address into the field the menu was opened on (email fields). */
 export function fillEmail(expectedOrigin: string, email: string, field: HTMLInputElement): FillResult {
   if (window.location.origin !== expectedOrigin) return "origin-mismatch";
   if (!field.isConnected || !isFillable(field)) return "no-fields";

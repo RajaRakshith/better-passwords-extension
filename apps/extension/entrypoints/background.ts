@@ -227,7 +227,7 @@ export default defineBackground(() => {
     if (!url) return { show: "none" };
     // "when signing in" covers login fields, "when signing up" new-password and email fields
     if (kind === "login" ? !settings.inlineMenu : !settings.generatePasswords) return { show: "none" };
-    if (kind === "signup-email") {
+    if (kind === "email") {
       // Hide My Email works without Apple Passwords, so no unlocking is needed
       const offered =
         settings.hideMyEmail ||
@@ -500,7 +500,7 @@ export default defineBackground(() => {
     });
   }
 
-  /** What sign-up email fields offer: Hide My Email above, the user's own emails below. */
+  /** What email fields offer: Hide My Email above, the user's own emails below. */
   async function emailSuggestions(tabId: number): Promise<EmailSuggestions> {
     const settings = await getSettings();
     const [hme, contacts] = await Promise.all([hideMyEmailState(tabId, settings), contactEmailsState(settings)]);
@@ -549,7 +549,7 @@ export default defineBackground(() => {
     }
   }
 
-  /** No iCloud+: turn Hide My Email and its hint off, so sign-up forms stop offering it. */
+  /** No iCloud+: turn Hide My Email and its hint off, so email fields stop offering it. */
   async function withoutICloudPlus() {
     await saveSettings({ hideMyEmail: false, hideMyEmailHint: false });
   }

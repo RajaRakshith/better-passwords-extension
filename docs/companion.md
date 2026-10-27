@@ -67,7 +67,7 @@ In the window:
 1. Click **Connect**. This writes the bridge manifest (the same one as `scripts/setup-mac.sh`) and the companion's manifest for every installed browser.
 2. Click **Turn On** for the background agent. macOS may ask you to allow it in Login Items.
 3. Click **Allow…**, then turn on Better Passwords under Accessibility.
-4. Optionally, click **Allow…** for Contacts. The extension then suggests the emails on your contact card ("Me") in sign-up forms. They are read when the extension asks, kept in the extension's memory for ten minutes, and never stored.
+4. Optionally, click **Allow…** for Contacts. The extension then suggests the emails on your contact card ("Me") in email fields. They are read when the extension asks, kept in the extension's memory for ten minutes, and never stored.
 
 Reload the extension. Its popup now unlocks with Touch ID, and so does the inline menu ("Unlock with Touch ID").
 

@@ -2,7 +2,7 @@ import CompanionCore
 import Contacts
 
 /// The email addresses on the user's own card ("Me" in Contacts), which the extension suggests
-/// on sign-up forms, as Safari does.
+/// in email fields, as Safari does.
 enum ContactCard {
     static var allowed: Bool {
         CNContactStore.authorizationStatus(for: .contacts) == .authorized

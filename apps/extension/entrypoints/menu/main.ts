@@ -278,7 +278,7 @@ function showGeneratedDone(saved: boolean) {
   );
 }
 
-// --- sign-up email fields: Hide My Email ---------------------------------------------------------
+// --- email fields: Hide My Email --------------------------------------------------------------
 
 /** How many requests to iCloud are under way; typing in the field waits for their answers. */
 let asking = 0;

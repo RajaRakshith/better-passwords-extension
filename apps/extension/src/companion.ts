@@ -123,7 +123,7 @@ export class Companion {
   #emails: { value: string[]; at: number } | undefined;
 
   /**
-   * The emails on the user's contact card, for sign-up forms. Cached for ten minutes: the card
+   * The emails on the user's contact card, for email fields. Cached for ten minutes: the card
    * rarely changes, and each call starts the host. Throws "needs-contacts" while the app may not
    * read Contacts, "not-installed" without the app, and "outdated" for an app from before this.
    */
