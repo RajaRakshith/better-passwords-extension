@@ -12,10 +12,10 @@
 
 set -eu
 
-HOST="io.github.fanckush.betterpasswords.bridge"
+HOST="io.github.rajarakshith.betterpasswords.bridge"
 HELPER="/System/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper"
 CHROMIUM_IDS="ocongmkplhijgajnipnhhggfcjfdilgj"
-FIREFOX_ID="better-passwords@fanckush.github.io"
+FIREFOX_ID="{7d0b52af-a0f7-45cf-b477-ac53c89a5765}"
 SUPPORT="$HOME/Library/Application Support"
 
 # Chromium-based browsers: the path of their user data directory under Application Support, and
@@ -32,7 +32,7 @@ Vivaldi|Vivaldi
 Arc/User Data|Arc
 net.imput.helium|Helium
 Crest/Chromium|Crest"
-REQUEST_URL="https://github.com/fanckush/better-passwords-extension/issues/new?template=browser.yml"
+REQUEST_URL="https://github.com/RajaRakshith/better-passwords-extension/issues/new?template=browser.yml"
 
 uninstall=0
 user_data_dir=""
@@ -161,7 +161,7 @@ if [ -n "$unknown" ]; then
     echo "Ask for it here: $REQUEST_URL"
     echo "Until then you can try connecting it with --user-data-dir, for example:"
     printf '%s' "$unknown" | sort -u | head -n 1 | while IFS= read -r data; do
-        echo "  curl -fsSL https://github.com/fanckush/better-passwords-extension/raw/main/scripts/setup-mac.sh | sh -s -- --user-data-dir \"$data\""
+        echo "  curl -fsSL https://github.com/RajaRakshith/better-passwords-extension/raw/fix/security-hardening/scripts/setup-mac.sh | sh -s -- --user-data-dir \"$data\""
     done
 fi
 

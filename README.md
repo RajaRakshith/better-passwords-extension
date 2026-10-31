@@ -66,6 +66,31 @@ The setup connects Chrome, Brave, Edge, Vivaldi, Arc, Helium, Crest, Chromium, F
 
 Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup (Bun), tests, and how to try changes against the real helper. Please report security issues privately, as described in [SECURITY.md](SECURITY.md).
 
+## Reproduce the Firefox submission (Mozilla reviewers)
+
+The submitted extension was built on **macOS 27.0.1, Apple Silicon (arm64), Node.js 22.15.0 and Bun 1.4.4**. A POSIX shell and network access to the npm registry are required. No Apple account, password helper, Swift compiler, signing credentials, browser installation or native setup is needed to build it. Other build operating systems have not been verified for this submission; running the extension requires macOS 14 or later.
+
+1. Install **Node.js 22.15.0** using the macOS installer linked from the [official release page](https://nodejs.org/en/blog/release/v22.15.0), or extract its matching binary archive and add its `bin` directory to PATH. Confirm `node --version` prints `v22.15.0`. npm is included with Node; it is used only to install Bun in the next step.
+2. Extract this source ZIP and open a terminal at its root (the folder containing this README, `package.json` and `bun.lock`). Install **Bun 1.4.4** locally using npm, an [officially supported Bun installation method](https://bun.com/docs/installation):
+
+   ```sh
+   npm install --prefix .review-tools bun@1.4.4
+   export PATH="$PWD/.review-tools/node_modules/.bin:$PATH"
+   bun --version
+   ```
+
+   The last command must print `1.4.4`. The build uses Bun and the submitted `bun.lock`; do not run `npm install` on the workspace or substitute an npm lockfile.
+3. Run the complete build script:
+
+   ```sh
+   sh scripts/build-firefox-review.sh
+   ```
+
+   It verifies the runtime versions, installs the frozen dependencies with lifecycle scripts disabled, then builds the Firefox extension using the workspace's pinned WXT/Vite tooling. It does not register a native host or access passwords. All build inputs and workspace protocol sources are included in this archive; there are no private dependencies or environment secrets.
+4. Compare **every file** under `apps/extension/.output/firefox-mv2/` with the contents of the uploaded `better-passwords-1.0.0-firefox.zip`. The paths and file bytes must match; ZIP timestamps/compression metadata are not extension code. No generated output or installed dependencies are included in the source archive.
+
+Additional runtime test instructions and the personal fork's add-on ID are in [docs/reviewer-build.md](docs/reviewer-build.md).
+
 ## Credits
 
 Thanks to the authors of the following projects for inspiring me to build this:

@@ -27,7 +27,7 @@ Apple Passwords / iCloud Keychain
 
 ## One identity, separate browser packages
 
-Better Passwords uses its own extension identity whether installed from a browser store or loaded unpacked from GitHub. Both use `io.github.fanckush.betterpasswords.bridge`, registered once by `scripts/setup-mac.sh` or the optional companion app. The manifest points at Apple's unmodified helper; the browser still launches that helper directly.
+This fork's Firefox extension ID is `{7d0b52af-a0f7-45cf-b477-ac53c89a5765}`. Its direct native bridge is `io.github.rajarakshith.betterpasswords.bridge`, registered once by this fork's `scripts/setup-mac.sh`. The manifest points at Apple's unmodified helper; the browser still launches that helper directly. The upstream companion does not register this bridge or authorize the fork's Firefox ID; core pairing works without it. Chromium retains the upstream public-key identity for local testing; this package establishes a separate Firefox distribution only.
 
 macOS's preinstalled `com.apple.passwordmanager` manifest allows only Apple's extension IDs. Better Passwords does not reuse those IDs or alter Apple's registration, and can be installed alongside Apple's extension.
 
