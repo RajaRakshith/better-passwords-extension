@@ -82,7 +82,7 @@ The inline menu fills the same way, through the content script.
 
 ## New passwords (sign-up and change-password forms)
 
-Password fields on sign-up and change-password forms get a menu with two generated passwords: Apple's style (`xxxxxx-xxxxxx-xxxxxx`) and one without special characters. Both follow the field's `minlength`, `maxlength` and `passwordrules`. They are generated in the background worker, and shown masked until the user hovers the eye.
+Password fields on sign-up and change-password forms offer local Apple-style and alphanumeric suggestions when the supported rules permit strong output. The default distribution exceeds 71 bits; constrained output is uniformly sampled from a counted space of at least 2^64 valid strings. Weak, contradictory or unsupported rules produce an explicit menu error, never a weak candidate labelled strong. Each style succeeds or fails independently, so a symbol requirement can leave the strong option available while disabling alphanumeric generation. See [password-generation.md](password-generation.md) for grammar, bounds and distribution reasoning. Suggestions stay masked until the user hovers the eye.
 
 Like Safari, the chosen password is filled right away, and Apple Passwords is asked to save it once the page moves on with it. Apple's helper shows macOS's "Save password?" prompt but never reports the outcome, so the background then looks the login up until it appears.
 

@@ -148,8 +148,9 @@ export interface AutofillStatus {
 }
 
 export interface GeneratedPasswords {
-  strong: string;
-  alphanumeric: string;
+  strong?: string;
+  alphanumeric?: string;
+  errors?: Partial<Record<PasswordStyle, string>>;
   /**
    * The account they'd be saved for when the form has no username (a password reset): the login
    * just chosen on this site, or its only one. macOS's save prompt has the final say.

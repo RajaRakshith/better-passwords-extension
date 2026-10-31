@@ -6,8 +6,9 @@ import { bindToMenu, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { bindCodeInput } from "@/src/ui/code-input.ts";
 import { companionPitch } from "@/src/ui/companion-pitch.ts";
+import { generationRows } from "@/src/ui/generation-rows.ts";
 import { h } from "@/src/ui/h.ts";
-import { CANCEL, CHECK, ENVELOPE, EYE, icon, KEY, LOCK, OPEN, PERSON, REFRESH } from "@/src/ui/icons.ts";
+import { CANCEL, CHECK, ENVELOPE, icon, KEY, LOCK, OPEN, PERSON, REFRESH } from "@/src/ui/icons.ts";
 
 // The inline menu, shown in an iframe under a login field. It is an extension page, so the web
 // page can't read the usernames shown here or listen to keys typed into the code field.
@@ -221,36 +222,11 @@ async function showGenerate(error?: string) {
   render(
     // a form that doesn't say whose password this is (a reset): say who we'll save it for
     passwords.account ? message(`For ${passwords.account}`) : null,
-    passwordRow("Strong Password", passwords.strong, () => void useGenerated("strong")),
-    passwordRow("Without Special Characters", passwords.alphanumeric, () => void useGenerated("alphanumeric")),
+    ...generationRows(passwords, (style) => void useGenerated(style), deliberate),
     error ? message(error, true) : null,
     h("hr", { class: "separator" }),
     openPasswordsRow(false),
   );
-}
-
-/** Shows the first characters only (and the hyphens), so a shared screen doesn't give it away. */
-function masked(password: string): string {
-  return [...password].map((c, i) => (i < 3 || c === "-" ? c : "•")).join("");
-}
-
-/**
- * A generated password, partly hidden. Hovering the eye shows it. The eye sits inside the row,
- * so a click on it is a click on the row.
- */
-function passwordRow(title: string, password: string, onChoose: () => void): HTMLElement {
-  const choice = row(KEY, title, masked(password), onChoose, "detail password");
-  const detail = choice.querySelector(".password") as HTMLElement;
-  const eye = h("span", { class: "reveal", title: "Show password" }, icon(EYE));
-  // every move over the eye shows it (sturdier than relying on a single enter event)
-  eye.addEventListener("pointermove", () => {
-    if (detail.textContent !== password) detail.textContent = password;
-  });
-  eye.addEventListener("pointerleave", () => {
-    detail.textContent = masked(password);
-  });
-  choice.append(eye);
-  return choice;
 }
 
 /** Fills the password in now; Apple Passwords asks to save it when the form is submitted. */

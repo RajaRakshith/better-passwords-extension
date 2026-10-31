@@ -24,7 +24,7 @@ import {
 } from "@/src/messages.ts";
 import { PortTransport } from "@/src/native/port-transport.ts";
 import { fillLogin as performFillLogin } from "@/src/passwords/fill-login.ts";
-import { generatePassword } from "@/src/passwords/generate.ts";
+import { passwordForStyle, passwordSuggestions } from "@/src/passwords/suggestions.ts";
 import { waitForLogin } from "@/src/passwords/wait-for-login.ts";
 import { idleDetectionSeconds, updateBreakState } from "@/src/session/idle-integration.ts";
 import { IdleLock } from "@/src/session/idle-lock.ts";
@@ -706,8 +706,7 @@ export default defineBackground(() => {
         const guess = !context.username && !context.asksForUsername && url;
         const account = guess ? await accountFor(url.hostname).catch(() => undefined) : undefined;
         const passwords: GeneratedPasswords = {
-          strong: generatePassword("strong", context.rules),
-          alphanumeric: generatePassword("alphanumeric", context.rules),
+          ...passwordSuggestions(context.rules),
           ...(account ? { account } : {}),
         };
         if (!session.isCurrent(epoch)) throw new Error("The password session ended. Unlock again.");
@@ -718,7 +717,14 @@ export default defineBackground(() => {
         const tabId = tabOf(caller);
         const passwords = generatedForMenu.get(`${tabId}:${request.nonce}`);
         if (!passwords) throw new Error("That password expired. Try again.");
-        return { result: await fillGenerated(tabId, request.nonce, passwords[request.style], passwords.account) };
+        return {
+          result: await fillGenerated(
+            tabId,
+            request.nonce,
+            passwordForStyle(passwords, request.style),
+            passwords.account,
+          ),
+        };
       }
       case "unconfirmed-passwords": {
         await idleLock.beforeAccess();
