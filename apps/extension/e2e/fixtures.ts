@@ -39,13 +39,14 @@ function writeHost(dir: string, name: string, script: string) {
 const bun = () => execSync("command -v bun", { encoding: "utf8" }).trim();
 
 /** What the setup script does, for the fake helper: registers it in the profile at `dir`. */
-export function registerFakeHelper(dir: string, declineSaves = false): void {
+export function registerFakeHelper(dir: string, declineSaves = false, holdPasswordReplies = false): void {
   const vault = join(dir, "vault.json");
   const log = join(dir, "helper.log");
+  const gate = holdPasswordReplies ? ` FAKE_HELPER_REPLY_GATE="${join(dir, "release-passwords")}"` : "";
   writeHost(
     dir,
     BRIDGE_HOST,
-    `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}" FAKE_HELPER_LOG="${log}"${declineSaves ? " FAKE_HELPER_SAVE=decline" : ""}\nexec "${bun()}" "${fakeHelper}"\n`,
+    `#!/bin/sh\nexport FAKE_HELPER_CODE=${PAIRING_CODE} FAKE_HELPER_VAULT="${vault}" FAKE_HELPER_LOG="${log}"${declineSaves ? " FAKE_HELPER_SAVE=decline" : ""}${gate}\nexec "${bun()}" "${fakeHelper}"\n`,
   );
 }
 
@@ -59,11 +60,12 @@ export function profileWithFakeHelper(
   companionEmails: string,
   vaultEntries: VaultEntry[] = [{ hostname: "localhost", username: "e2e-user", password: "e2e-pass" }],
   setUp = true,
+  holdPasswordReplies = false,
 ): string {
   const dir = mkdtempSync(join(tmpdir(), "app-e2e-"));
   writeFileSync(join(dir, "vault.json"), JSON.stringify(vaultEntries));
   mkdirSync(join(dir, "profile", "NativeMessagingHosts"), { recursive: true });
-  if (setUp) registerFakeHelper(dir, declineSaves);
+  if (setUp) registerFakeHelper(dir, declineSaves, holdPasswordReplies);
   if (companion !== "none") {
     writeHost(
       dir,
@@ -94,6 +96,8 @@ export async function menuFrame(page: Page): Promise<Frame> {
 const profileDirs = new WeakMap<BrowserContext, string>();
 
 type Fixtures = {
+  holdPasswordReplies: boolean;
+  releasePasswordReplies: () => void;
   companion: CompanionMode;
   /** The user answers every "Save password?" prompt with Not Now. */
   declineSaves: boolean;
@@ -176,19 +180,37 @@ export const test = base.extend<Fixtures, { siteUrl: string }>({
   browserArgs: [[], { option: true }],
   setUp: [true, { option: true }],
   vaultEntries: [undefined, { option: true }],
-  context: async ({ companion, declineSaves, companionEmails, browserArgs, setUp, vaultEntries }, use) => {
-    const dir = profileWithFakeHelper(companion, declineSaves, companionEmails, vaultEntries, setUp);
+  holdPasswordReplies: [false, { option: true }],
+  context: async (
+    { companion, declineSaves, companionEmails, browserArgs, setUp, vaultEntries, holdPasswordReplies },
+    use,
+  ) => {
+    const dir = profileWithFakeHelper(
+      companion,
+      declineSaves,
+      companionEmails,
+      vaultEntries,
+      setUp,
+      holdPasswordReplies,
+    );
     const context = await chromium.launchPersistentContext(join(dir, "profile"), {
       channel: "chromium",
       args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`, ...browserArgs],
     });
     profileDirs.set(context, dir);
-    await use(context);
-    await context.close();
-    rmSync(dir, { recursive: true, force: true });
+    try {
+      await use(context);
+    } finally {
+      if (holdPasswordReplies) writeFileSync(join(dir, "release-passwords"), "");
+      await context.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
   },
-  runSetup: async ({ context, declineSaves }, use) => {
-    await use(() => registerFakeHelper(profileDirs.get(context) ?? "", declineSaves));
+  releasePasswordReplies: async ({ context }, use) => {
+    await use(() => writeFileSync(join(profileDirs.get(context) ?? "", "release-passwords"), ""));
+  },
+  runSetup: async ({ context, declineSaves, holdPasswordReplies }, use) => {
+    await use(() => registerFakeHelper(profileDirs.get(context) ?? "", declineSaves, holdPasswordReplies));
   },
   passwordsAppLaunches: async ({ context }, use) => {
     await use(() => helperLog(context, "launch").map((entry) => entry.url as string));

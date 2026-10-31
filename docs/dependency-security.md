@@ -22,7 +22,7 @@ No major-version overrides were used. Installation suppressed lifecycle scripts;
 
 ## Remaining findings
 
-The post-update scan at 2026-10-31T03:29:14Z checked 736 package names and returned:
+The post-update scan, reconfirmed at 2026-10-31T04:47:56Z, checked 736 package names and returned:
 
 - deepmerge 4.3.1: low, [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4). Add-ons lint tooling pins this version; the published latest is also 4.3.1.
 - glob 13.0.6: moderate, [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4). The release tool's npm dependency requires the 13.x line; no compatible update was returned.
