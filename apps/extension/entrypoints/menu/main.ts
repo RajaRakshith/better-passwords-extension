@@ -6,8 +6,9 @@ import { bindToMenu, send } from "@/src/messages.ts";
 import { applySystemAccent } from "@/src/ui/accent.ts";
 import { bindCodeInput } from "@/src/ui/code-input.ts";
 import { companionPitch } from "@/src/ui/companion-pitch.ts";
+import { generationRows } from "@/src/ui/generation-rows.ts";
 import { h } from "@/src/ui/h.ts";
-import { CANCEL, CHECK, ENVELOPE, EYE, icon, KEY, LOCK, OPEN, PERSON, REFRESH } from "@/src/ui/icons.ts";
+import { CANCEL, CHECK, ENVELOPE, icon, KEY, LOCK, OPEN, PERSON, REFRESH } from "@/src/ui/icons.ts";
 
 // The inline menu, shown in an iframe under a login field. It is an extension page, so the web
 // page can't read the usernames shown here or listen to keys typed into the code field.
@@ -110,9 +111,16 @@ function message(text: string, isError = false) {
 
 /** What the menu shows: what needs an unlocked session ("unlocked"), the way to unlock, or neither. */
 let view: "unlocked" | "locked" | "other" = "other";
+let viewGeneration = 0;
+
+function currentUnlocked(generation: number): boolean {
+  return view === "unlocked" && generation === viewGeneration;
+}
 
 // the logins shown, so typing in the field can narrow them down without asking again
-let loginsView: { logins: { username: string }[]; hostname: string; chosen?: string; error?: string } | undefined;
+let loginsView:
+  | { logins: { username: string }[]; hostname: string; origin: string; chosen?: string; error?: string }
+  | undefined;
 /** What the user typed into the username field: only logins starting with it are listed. */
 let query = "";
 /** Whether the user asked for the logins besides the one chosen on the sign-in's previous step. */
@@ -120,17 +128,21 @@ let showOthers = false;
 
 async function showLogins(error?: string) {
   view = "unlocked";
+  const generation = ++viewGeneration;
   let result: Awaited<ReturnType<typeof send<{ type: "list-logins" }>>>;
   try {
     result = await send({ type: "list-logins" });
   } catch (e) {
+    if (!currentUnlocked(generation)) return;
     return render(message(messageOf(e), true));
   }
+  if (!currentUnlocked(generation)) return;
   if (result.logins.length === 0) {
     loginsView = undefined;
     return render(message(`No saved passwords for ${result.hostname ?? "this site"}.`), openPasswordsRow(true));
   }
   loginsView = {
+    origin: result.origin ?? "",
     logins: result.logins,
     hostname: result.hostname ?? "",
     ...(result.chosen !== undefined ? { chosen: result.chosen } : {}),
@@ -140,8 +152,8 @@ async function showLogins(error?: string) {
 }
 
 function renderLogins() {
-  if (!loginsView) return;
-  const { logins, hostname, chosen, error } = loginsView;
+  if (view !== "unlocked" || !loginsView) return;
+  const { logins, hostname, origin, chosen, error } = loginsView;
   const prefix = query.trim().toLowerCase();
   const matches = logins.filter(({ username }) => username.toLowerCase().startsWith(prefix));
   // nothing starts with what's typed (a new username, probably)
@@ -151,7 +163,7 @@ function renderLogins() {
   const focused = onPasswordField && chosen !== undefined && !prefix && !showOthers && matches.length > 1;
   const shown = focused ? matches.slice(0, 1) : matches;
   render(
-    ...shown.map(({ username }) => row(KEY, username || "(no username)", hostname, () => void fill(username))),
+    ...shown.map(({ username }) => row(KEY, username || "(no username)", hostname, () => void fill(username, origin))),
     focused ? othersRow(matches.length - 1) : null,
     error ? message(error, true) : null,
     h("hr", { class: "separator" }),
@@ -209,51 +221,31 @@ browser.runtime.onMessage.addListener((request: MenuMessage, sender) => {
 
 async function showGenerate(error?: string) {
   view = "unlocked";
+  const generation = ++viewGeneration;
   let passwords: GeneratedPasswords;
   try {
     passwords = await send({ type: "generate-passwords", nonce });
   } catch (e) {
+    if (!currentUnlocked(generation)) return;
     return render(message(messageOf(e), true));
   }
+  if (!currentUnlocked(generation)) return;
   render(
     // a form that doesn't say whose password this is (a reset): say who we'll save it for
     passwords.account ? message(`For ${passwords.account}`) : null,
-    passwordRow("Strong Password", passwords.strong, () => void useGenerated("strong")),
-    passwordRow("Without Special Characters", passwords.alphanumeric, () => void useGenerated("alphanumeric")),
+    ...generationRows(passwords, (style) => void useGenerated(style), deliberate),
     error ? message(error, true) : null,
     h("hr", { class: "separator" }),
     openPasswordsRow(false),
   );
 }
 
-/** Shows the first characters only (and the hyphens), so a shared screen doesn't give it away. */
-function masked(password: string): string {
-  return [...password].map((c, i) => (i < 3 || c === "-" ? c : "•")).join("");
-}
-
-/**
- * A generated password, partly hidden. Hovering the eye shows it. The eye sits inside the row,
- * so a click on it is a click on the row.
- */
-function passwordRow(title: string, password: string, onChoose: () => void): HTMLElement {
-  const choice = row(KEY, title, masked(password), onChoose, "detail password");
-  const detail = choice.querySelector(".password") as HTMLElement;
-  const eye = h("span", { class: "reveal", title: "Show password" }, icon(EYE));
-  // every move over the eye shows it (sturdier than relying on a single enter event)
-  eye.addEventListener("pointermove", () => {
-    if (detail.textContent !== password) detail.textContent = password;
-  });
-  eye.addEventListener("pointerleave", () => {
-    detail.textContent = masked(password);
-  });
-  choice.append(eye);
-  return choice;
-}
-
 /** Fills the password in now; Apple Passwords asks to save it when the form is submitted. */
 async function useGenerated(style: "strong" | "alphanumeric") {
+  const generation = viewGeneration;
   try {
     const { result } = await send({ type: "use-generated-password", nonce, style });
+    if (!currentUnlocked(generation)) return;
     // when filled, the content script closes the menu
     if (result === "filled") return;
     await showGenerate(
@@ -262,12 +254,15 @@ async function useGenerated(style: "strong" | "alphanumeric") {
         : "Couldn't fill in this page.",
     );
   } catch (e) {
+    if (!currentUnlocked(generation)) return;
     await showGenerate(messageOf(e));
   }
 }
 
 /** The field already holds a strong password we generated. */
 function showGeneratedDone(saved: boolean) {
+  view = "unlocked";
+  viewGeneration++;
   render(
     saved
       ? row(CHECK, "Strong Password Saved", "In Apple Passwords", () => close())
@@ -505,9 +500,11 @@ function openPasswordsRow(withDetail: boolean) {
   });
 }
 
-async function fill(username: string) {
+async function fill(username: string, expectedOrigin: string) {
+  const generation = viewGeneration;
   try {
-    const { result } = await send({ type: "fill-from-menu", nonce, username });
+    const { result } = await send({ type: "fill-from-menu", nonce, username, expectedOrigin });
+    if (!currentUnlocked(generation)) return;
     if (result !== "filled") {
       await showLogins(
         result === "menu-hidden"
@@ -516,6 +513,7 @@ async function fill(username: string) {
       );
     }
   } catch (e) {
+    if (!currentUnlocked(generation)) return;
     // chosen again (say, after dismissing Touch ID): that newer choice carries on
     if ((e as { code?: string }).code === "superseded") return;
     await showLogins(messageOf(e));
@@ -524,7 +522,12 @@ async function fill(username: string) {
 
 async function showLocked(error?: string) {
   view = "locked";
+  const generation = ++viewGeneration;
+  loginsView = undefined;
+  // Remove password reveal handlers before the asynchronous companion/status lookup.
+  render(message(unlockTitle()));
   const status = await send({ type: "get-status" }).catch(() => undefined);
+  if (viewGeneration !== generation || view !== "locked") return;
   const touchId = status?.touchId === true;
   render(
     // with the companion app, Touch ID replaces typing the code; the row says so underneath
@@ -539,6 +542,8 @@ async function showLocked(error?: string) {
 function showSetup() {
   // set up and unlocked from the popup or the setup page: this menu shows the logins then
   view = "locked";
+  viewGeneration++;
+  loginsView = undefined;
   render(
     row(KEY, "Set Up Better Passwords", "One quick step to reach Apple Passwords", async () => {
       await send({ type: "open-setup-page" }).catch(() => {});

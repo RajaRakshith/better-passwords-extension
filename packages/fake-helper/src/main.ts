@@ -7,7 +7,7 @@
 //                        each code shown, each password read and each save
 //      FAKE_HELPER_SAVE  "decline" answers every "Save password?" prompt with Don't Save
 
-import { appendFileSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
 import { Command, type HelperMessage } from "@app/protocol";
 import { FakeHelper, type VaultEntry } from "./fake-helper.ts";
 import { encodeFrame, FrameDecoder } from "./native-messaging.ts";
@@ -42,6 +42,15 @@ for (;;) {
       appendFileSync(logPath, `${JSON.stringify({ type: "password-read" })}\n`);
     }
     for (const reply of await helper.handle(message as HelperMessage)) {
+      // Test-host-only gate: no production extension build imports this entrypoint.
+      const gate = process.env.FAKE_HELPER_REPLY_GATE;
+      if (gate && (message as HelperMessage).cmd === Command.GetPasswordForLoginName) {
+        const deadline = Date.now() + 10_000;
+        while (!existsSync(gate)) {
+          if (Date.now() >= deadline) throw new Error("Test password reply gate was not released");
+          await Bun.sleep(10);
+        }
+      }
       await Bun.write(Bun.stdout, encodeFrame(reply));
     }
     if (logPath) {

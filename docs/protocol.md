@@ -4,7 +4,9 @@ Apple doesn't document this protocol. What follows was learned from earlier open
 
 ## Transport
 
-Chrome native messaging: every message is a 32-bit little-endian length followed by UTF-8 JSON. Replies echo the request's `cmd` and carry **no correlation id**, so the client never has two requests with the same `cmd` waiting at once: listing logins, pairing and saving each queue on their own, and a new password read replaces one still waiting (a dismissed Touch ID prompt leaves it unanswered). A password reply is used only if its `USR` is the login asked for, in case a replaced read's answer arrives late.
+Chrome native messaging: every message is a 32-bit little-endian length followed by UTF-8 JSON. Replies echo the request's `cmd` and carry **no correlation id**. Listing, pairing and saving each queue on their own. One password read exclusively owns its response path through encryption, native authentication, decryption and validation. A competing read receives a recoverable busy error; it cannot replace the older native operation.
+
+A password read expires after 120 seconds. Lock explicitly cancels it; cancellation and ambiguous request timeouts close the native connection, invalidating pending work and requiring fresh pairing. Normal sequential reads reuse the connection. Returned usernames and present site metadata must match the requested credential: site matching uses exact normalized hostnames, not suffix guesses. Missing site metadata is accepted for helper compatibility only because request ownership remains unambiguous. This stricter metadata handling still needs validation with Apple's live helper.
 
 ## Commands
 

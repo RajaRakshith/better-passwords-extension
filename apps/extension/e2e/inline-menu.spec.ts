@@ -171,12 +171,18 @@ test("refuses to fill when the page reveals a hidden menu only as the click land
   // Where the menu page can't track its own visibility (Firefox), the click itself would count,
   // so send the request it would send. The content script saw the menu hidden moments ago, so it
   // refuses, and closes the menu.
-  await menu.evaluate(() => {
+  await menu.evaluate((expectedOrigin) => {
     type Runtime = { runtime: { sendMessage(message: unknown): Promise<unknown> } };
     const { chrome } = globalThis as unknown as { chrome: Runtime };
     const nonce = new URLSearchParams(location.hash.slice(1)).get("nonce");
-    void chrome.runtime.sendMessage({ type: "fill-from-menu", nonce, username: "e2e-user", menuNonce: nonce });
-  });
+    void chrome.runtime.sendMessage({
+      type: "fill-from-menu",
+      nonce,
+      username: "e2e-user",
+      menuNonce: nonce,
+      expectedOrigin,
+    });
+  }, new URL(page.url()).origin);
   await expect.poll(() => page.locator("app-autofill-menu").count()).toBe(0);
   await expect(page.locator("#pass")).toHaveValue("");
 });

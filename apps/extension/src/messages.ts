@@ -14,14 +14,14 @@ export type Request =
   | { type: "unlock-with-touch-id" }
   /** `tabId` is required from the popup; the inline menu is always bound to its own tab. */
   | { type: "list-logins"; tabId?: number }
-  | { type: "fill"; tabId: number; username: string }
+  | { type: "fill"; tabId: number; username: string; expectedOrigin: string }
   | { type: "lock" }
   /** Ends the session and restarts the extension, installing the version the browser downloaded. */
   | { type: "install-update" }
   | { type: "get-settings" }
   | { type: "set-settings"; settings: Partial<Settings> }
   // inline menu → background → content script of the same tab
-  | { type: "fill-from-menu"; nonce: string; username: string }
+  | { type: "fill-from-menu"; nonce: string; username: string; expectedOrigin: string }
   | { type: "menu-resize"; nonce: string; height: number }
   | { type: "menu-close"; nonce: string }
   | { type: "menu-focus-field"; nonce: string }
@@ -77,7 +77,10 @@ export const CONTENT_SCRIPT_REQUESTS: ReadonlySet<Request["type"]> = new Set([
   "login-form-gone",
 ]);
 
+export type IdleTimeoutMinutes = 0 | 5 | 15 | 30 | 60;
+
 export interface Settings {
+  idleTimeoutMinutes: IdleTimeoutMinutes;
   /** End the session when the Mac locks or sleeps. */
   lockOnScreenLock: boolean;
   /** Suggestions when signing in: saved logins in login fields. */
@@ -99,7 +102,8 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  lockOnScreenLock: false,
+  idleTimeoutMinutes: 15,
+  lockOnScreenLock: true,
   inlineMenu: true,
   touchId: true,
   generatePasswords: true,
@@ -124,6 +128,7 @@ export interface Status extends SessionStatus {
 }
 
 export interface LoginsResult {
+  origin?: string;
   /** Undefined when the tab is not a page we fill (e.g. chrome:// or plain http). */
   hostname?: string;
   logins: { username: string }[];
@@ -143,8 +148,9 @@ export interface AutofillStatus {
 }
 
 export interface GeneratedPasswords {
-  strong: string;
-  alphanumeric: string;
+  strong?: string;
+  alphanumeric?: string;
+  errors?: Partial<Record<PasswordStyle, string>>;
   /**
    * The account they'd be saved for when the form has no username (a password reset): the login
    * just chosen on this site, or its only one. macOS's save prompt has the final say.

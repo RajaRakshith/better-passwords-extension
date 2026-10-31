@@ -7,16 +7,26 @@ import { bindCodeInput } from "@/src/ui/code-input.ts";
 import { companionPitch } from "@/src/ui/companion-pitch.ts";
 import { h } from "@/src/ui/h.ts";
 import { CHECK, icon, OPEN } from "@/src/ui/icons.ts";
+import { PopupView } from "@/src/ui/popup-view.ts";
 import { reportProblem } from "@/src/ui/report.ts";
+import { sessionSettings } from "@/src/ui/session-settings.ts";
 import { setupFlow } from "@/src/ui/setup.ts";
 
 applySystemAccent();
 
 const app = document.getElementById("app") as HTMLElement;
+const popupView = new PopupView(app, () => window.close());
 
 function show(...children: (Node | false | null | undefined)[]) {
-  app.replaceChildren(...children.filter((c): c is Node => Boolean(c)));
+  popupView.show(...children.filter((c): c is Node => Boolean(c)));
 }
+
+browser.runtime.onMessage.addListener((message, sender) => {
+  if (sender.id === browser.runtime.id && message?.type === "session-changed" && message.unlocked === false) {
+    popupView.endSession();
+  }
+  return false;
+});
 
 function errorLine(message: string | undefined) {
   return message ? h("p", { class: "error", textContent: message }) : null;
@@ -183,7 +193,7 @@ async function showLogins(status: Status, error?: string) {
   } else if (result.logins.length === 0) {
     body = h("p", {}, `No saved passwords for ${result.hostname}.`);
   } else {
-    body = loginList(tabId as number, result.logins, result.chosen);
+    body = loginList(tabId as number, result.logins, result.origin ?? "", result.chosen);
   }
 
   const openApp = h("button", { class: "link with-icon" }, icon(OPEN), "Open Passwords App");
@@ -239,7 +249,7 @@ const COLLAPSED = 3;
 const SEARCH_AFTER = 10;
 
 /** `chosen`: the login picked on the sign-in's previous step (listed first), shown alone at first. */
-function loginList(tabId: number, logins: LoginsResult["logins"], chosen?: string) {
+function loginList(tabId: number, logins: LoginsResult["logins"], expectedOrigin: string, chosen?: string) {
   const items = logins.map(({ username }) => {
     const name = username || "(no username)";
     const button = h(
@@ -248,7 +258,7 @@ function loginList(tabId: number, logins: LoginsResult["logins"], chosen?: strin
       h("span", { class: "avatar", textContent: (username[0] ?? "?").toUpperCase() }),
       h("span", { class: "name", textContent: name }),
     );
-    button.addEventListener("click", () => void fill(tabId, username));
+    button.addEventListener("click", () => void fill(tabId, username, expectedOrigin));
     return { name: name.toLowerCase(), username, li: h("li", {}, button) };
   });
 
@@ -286,7 +296,7 @@ function loginList(tabId: number, logins: LoginsResult["logins"], chosen?: strin
   });
   search?.addEventListener("input", update);
   search?.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && matches[0]) void fill(tabId, matches[0].username);
+    if (event.key === "Enter" && matches[0]) void fill(tabId, matches[0].username, expectedOrigin);
   });
   update();
 
@@ -326,9 +336,9 @@ async function unconfirmedPasswords(tabId: number | undefined) {
   );
 }
 
-async function fill(tabId: number, username: string) {
+async function fill(tabId: number, username: string, expectedOrigin: string) {
   try {
-    const { result } = await send({ type: "fill", tabId, username });
+    const { result } = await send({ type: "fill", tabId, username, expectedOrigin });
     if (result === "filled") return window.close();
     await refresh(result === "no-fields" ? "No login fields found on this page." : "The page changed, try again.");
   } catch (e) {
@@ -338,7 +348,12 @@ async function fill(tabId: number, username: string) {
   }
 }
 
-type Option = (key: keyof Settings, label: string, detail?: string, disabled?: boolean) => HTMLElement;
+type Option = (
+  key: Exclude<keyof Settings, "idleTimeoutMinutes">,
+  label: string,
+  detail?: string,
+  disabled?: boolean,
+) => HTMLElement;
 
 async function footer(status: Status) {
   const settings: Settings = await send({ type: "get-settings" });
@@ -363,11 +378,6 @@ async function footer(status: Status) {
       h("span", { class: "text" }, label, detail ? h("span", { class: "detail", textContent: detail }) : null),
     );
   };
-  const lock = h("button", { class: "secondary", textContent: "Lock" });
-  lock.addEventListener("click", async () => {
-    await send({ type: "lock" });
-    window.close();
-  });
   return h(
     "div",
     { class: "settings" },
@@ -378,12 +388,15 @@ async function footer(status: Status) {
     h("hr"),
     macAppSection(status, option),
     h("hr"),
-    // Firefox's idle API never reports "locked", so the option would do nothing there
-    h(
-      "div",
-      { class: "actions" },
-      import.meta.env.FIREFOX ? h("span") : option("lockOnScreenLock", "Lock when my Mac locks"),
-      lock,
+    sessionSettings(
+      settings,
+      import.meta.env.FIREFOX,
+      (changes) => send({ type: "set-settings", settings: changes }),
+      () => {
+        void send({ type: "lock" })
+          .then(() => window.close())
+          .catch((e) => refresh(messageOf(e)));
+      },
     ),
   );
 }

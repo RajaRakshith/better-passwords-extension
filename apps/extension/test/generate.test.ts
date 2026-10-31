@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { generatePassword, parseRules } from "../src/passwords/generate.ts";
+import {
+  applePasswordSpace,
+  generatePassword,
+  PasswordGenerationError,
+  parseRules,
+} from "../src/passwords/generate.ts";
 
 const repeat = (n: number, fn: () => void) => {
   for (let i = 0; i < n; i++) fn();
@@ -50,25 +55,40 @@ describe("generatePassword", () => {
     });
   });
 
-  it("respects allowed-only character sets", () => {
-    repeat(50, () => {
-      expect(generatePassword("strong", { passwordRules: "allowed: digit; minlength: 8; maxlength: 8" })).toMatch(
-        /^[2-9]{8}$/,
-      );
-    });
-  });
-
-  it("respects max-consecutive", () => {
-    repeat(50, () => {
-      const password = generatePassword("strong", { passwordRules: "allowed: [ab]; max-consecutive: 1" });
-      expect(password).not.toMatch(/aa|bb/);
-    });
-  });
-
-  it("ignores rules it can't read", () => {
-    expect(generatePassword("strong", { passwordRules: "nonsense; required: ; maxlength: -3" })).toMatch(
-      /^[a-zA-Z0-9]{6}-[a-zA-Z0-9]{6}-[a-zA-Z0-9]{6}$/,
+  it("refuses numeric rules with less than 64 bits of possible output", () => {
+    expect(() => generatePassword("strong", { passwordRules: "allowed: digit; minlength: 8; maxlength: 8" })).toThrow(
+      PasswordGenerationError,
     );
+  });
+
+  it("rejects alternating binary passwords despite their length", () => {
+    expect(() =>
+      generatePassword("strong", { passwordRules: "allowed: [ab]; max-consecutive: 1; minlength: 64" }),
+    ).toThrow(PasswordGenerationError);
+  });
+
+  it("rejects malformed restrictions rather than silently ignoring them", () => {
+    expect(() => generatePassword("strong", { passwordRules: "nonsense; required: ; maxlength: -3" })).toThrow(
+      PasswordGenerationError,
+    );
+  });
+
+  it("increases digit-only length enough to provide 64 bits", () => {
+    const password = generatePassword("strong", { passwordRules: "allowed: digit" });
+    expect(password).toMatch(/^[0-9]{20}$/);
+    expect(10n ** BigInt(password.length)).toBeGreaterThanOrEqual(1n << 64n);
+  });
+
+  it("rejects a predictable one-character suggestion", () => {
+    expect(() => generatePassword("strong", { passwordRules: "allowed: [a]; maxlength: 1" })).toThrow(
+      PasswordGenerationError,
+    );
+  });
+
+  it("has the independently counted default distribution", () => {
+    const support = 24n ** 16n * 24n * 8n * 18n * 17n;
+    expect(applePasswordSpace("strong")).toBe(support);
+    expect(support).toBeGreaterThanOrEqual(1n << 71n);
   });
 });
 
