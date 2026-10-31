@@ -15,7 +15,7 @@ set -eu
 HOST="io.github.rajarakshith.betterpasswords.bridge"
 HELPER="/System/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper"
 CHROMIUM_IDS="ocongmkplhijgajnipnhhggfcjfdilgj"
-FIREFOX_ID="better-passwords@rajarakshith.github.io"
+FIREFOX_ID="{7d0b52af-a0f7-45cf-b477-ac53c89a5765}"
 SUPPORT="$HOME/Library/Application Support"
 
 # Chromium-based browsers: the path of their user data directory under Application Support, and

@@ -16,7 +16,7 @@ Outputs are `apps/extension/.output/chrome-mv3` and `apps/extension/.output/fire
 
 ## Personal fork distribution
 
-The Firefox package uses `better-passwords@rajarakshith.github.io` and the native bridge `io.github.rajarakshith.betterpasswords.bridge`. Run this fork's `scripts/setup-mac.sh` once to register that bridge; the upstream setup or companion's Connect button registers a different bridge. This setup does not overwrite the upstream bridge registration. The in-extension setup command targets this fork's `fix/security-hardening` branch, where the changes currently live.
+The Firefox package uses `{7d0b52af-a0f7-45cf-b477-ac53c89a5765}` and the native bridge `io.github.rajarakshith.betterpasswords.bridge`. Run this fork's `scripts/setup-mac.sh` once to register that bridge; the upstream setup or companion's Connect button registers a different bridge. This setup does not overwrite the upstream bridge registration. The in-extension setup command targets this fork's `fix/security-hardening` branch, where the changes currently live.
 
 Upload `better-passwords-1.0.0-firefox.zip` as the add-on package for unlisted Mozilla signing. If asked for source, upload `better-passwords-1.0.0-sources.zip`; this contains the TypeScript sources, workspace dependencies, lockfile and build instructions, not installed dependencies. Install the signed `.xpi` returned by Mozilla for persistence across browser restarts. This fork has no automatic update feed configured.
 
