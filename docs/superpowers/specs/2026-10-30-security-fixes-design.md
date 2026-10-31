@@ -1,6 +1,6 @@
 # Security fixes for BetterPasswordsClone
 
-Status: proposed design, awaiting user approval.
+Status: approved by the user on 2026-10-30; implementation planning authorized.
 
 Builder check: an independent security-focused extension reviewer reported “nothing important left” before implementation planning. This checks whether the design is actionable; it is not a review of implemented fixes.
 
