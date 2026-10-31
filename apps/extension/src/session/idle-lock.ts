@@ -77,7 +77,13 @@ export class IdleLock {
   }
 
   async beforeAccess(): Promise<void> {
-    await this.check();
+    // A configuration/unlock can supersede the observation we are awaiting.
+    // Join the current policy's check before treating any observation as permission.
+    let generation: number;
+    do {
+      generation = this.#generation;
+      await this.check();
+    } while (generation !== this.#generation);
     if (!this.deps.isUnlocked()) throw new ProtocolError("The password session ended. Unlock again.", "closed");
   }
 }

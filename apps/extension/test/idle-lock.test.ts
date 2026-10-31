@@ -111,6 +111,40 @@ describe("system inactivity locking", () => {
     expect(unlocked).toBe(true);
   });
 
+  it("waits for the current inactivity policy before granting access", async () => {
+    const answers: Array<(state: "active" | "idle") => void> = [];
+    let unlocked = true;
+    const policy = new IdleLock({
+      now: () => 0,
+      isUnlocked: () => unlocked,
+      lock: () => {
+        unlocked = false;
+      },
+      queryState: () => new Promise((resolve) => answers.push(resolve)),
+    });
+    const oldCheck = policy.check();
+    let outcome = "pending";
+    const access = policy.beforeAccess().then(
+      () => {
+        outcome = "granted";
+      },
+      () => {
+        outcome = "denied";
+      },
+    );
+    const reconfigure = policy.configure(5);
+    expect(answers).toHaveLength(2);
+    answers[0]?.("idle");
+    await oldCheck;
+    await Promise.resolve();
+    const outcomeBeforeCurrentAnswer = outcome;
+    answers[1]?.("idle");
+    await Promise.all([reconfigure, access]);
+    expect(outcomeBeforeCurrentAnswer).toBe("pending");
+    expect(outcome).toBe("denied");
+    expect(unlocked).toBe(false);
+  });
+
   it("refuses access if the wall clock moves backwards", async () => {
     const { state, policy } = setup();
     state.now = 1000;
