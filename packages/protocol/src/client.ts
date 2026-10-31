@@ -4,6 +4,7 @@
 // so when the transport closes the session is gone and a new client must pair again.
 
 import { bigIntToBytes, bytesToBigInt, randomBytes } from "./bytes.ts";
+import { credentialSitesMatch } from "./credential-site.ts";
 import {
   Action,
   BinaryCodec,
@@ -40,12 +41,13 @@ export class ProtocolError extends Error {
     message: string,
     readonly code:
       | "timeout"
+      | "busy"
       | "closed"
       | "incorrect-code"
       | "challenge-expired"
       | "unsupported"
       | "invalid-reply"
-      /** A newer request of the same kind replaced this one (see getPassword). */
+      /** Retained for compatibility with older callers; new reads are never superseded. */
       | "superseded"
       | "server-proof-mismatch"
       | "query-failed",
@@ -70,6 +72,8 @@ export interface ClientOptions {
   browserName?: string;
   /** Default timeout for replies, in ms. */
   timeoutMs?: number;
+  /** Password authentication may wait longer than ordinary queries. */
+  passwordTimeoutMs?: number;
   /** How long a shown code stays usable before a new challenge is needed. */
   challengeTtlMs?: number;
   now?: () => number;
@@ -92,7 +96,7 @@ interface Waiter {
 
 type Tab = { tabId: number; frameId?: number };
 
-const DEFAULTS = { browserName: "Chrome", timeoutMs: 8_000, challengeTtlMs: 3 * 60_000 };
+const DEFAULTS = { browserName: "Chrome", timeoutMs: 8_000, passwordTimeoutMs: 120_000, challengeTtlMs: 3 * 60_000 };
 
 export class ApplePasswordsClient {
   #state: ClientState = "locked";
@@ -105,6 +109,8 @@ export class ApplePasswordsClient {
   /** One queue per kind of request (see #serialized). */
   #queues = new Map<string, Promise<unknown>>();
   #stateListeners = new Set<(state: ClientState) => void>();
+  #passwordPending = false;
+  #generation = 0;
 
   readonly #options: Required<ClientOptions>;
 
@@ -121,6 +127,7 @@ export class ApplePasswordsClient {
   static async connect(transport: Transport, options: ClientOptions = {}) {
     const client = new ApplePasswordsClient(transport, options);
     const reply = await client.#request({ cmd: Command.GetCapabilities });
+    client.#assertOpen();
     const capabilities = reply.capabilities ?? {};
     if (
       capabilities.secretSessionVersion !== undefined &&
@@ -157,6 +164,8 @@ export class ApplePasswordsClient {
   requestChallenge(): Promise<void> {
     return this.#serialized("pairing", async () => {
       this.#assertOpen();
+      if (this.#passwordPending) throw new ProtocolError("Finish the pending password request or press Lock.", "busy");
+      const generation = this.#generation;
       const username = this.#codec.encode(randomBytes(16));
       const srp = new SrpClient(username);
       const reply = await this.#request({
@@ -175,6 +184,7 @@ export class ApplePasswordsClient {
       });
 
       const exchange = pake.decode<ServerKeyExchange>(requireString(reply.payload?.PAKE));
+      this.#assertCurrent(generation);
       if (exchange.TID !== username) throw invalid("challenge for another session");
       if (exchange.ErrCode !== undefined) throw invalid(`helper refused pairing (${exchange.ErrCode})`);
       if (exchange.MSG !== PakeMessage.ServerKeyExchange) throw invalid("unexpected handshake message");
@@ -198,6 +208,7 @@ export class ApplePasswordsClient {
   verifyCode(code: string): Promise<void> {
     return this.#serialized("pairing", async () => {
       this.#assertOpen();
+      const generation = this.#generation;
       const challenge = this.#challenge;
       if (!challenge || !this.hasLiveChallenge) {
         throw new ProtocolError("the code expired, request a new one", "challenge-expired");
@@ -207,6 +218,7 @@ export class ApplePasswordsClient {
       this.#setState("locked");
 
       const handshake = await challenge.srp.handshake(code, challenge.B, challenge.salt);
+      this.#assertCurrent(generation);
       const reply = await this.#request({
         cmd: Command.Handshake,
         msg: {
@@ -232,7 +244,9 @@ export class ApplePasswordsClient {
         throw new ProtocolError("helper's proof did not match", "server-proof-mismatch");
       }
 
-      this.#channel = await SecureChannel.fromSessionKey(handshake.sessionKey);
+      const channel = await SecureChannel.fromSessionKey(handshake.sessionKey);
+      this.#assertCurrent(generation);
+      this.#channel = channel;
       this.#setState("unlocked");
     });
   }
@@ -250,31 +264,36 @@ export class ApplePasswordsClient {
   }
 
   /**
-   * Reads one password. No timeout: macOS may ask for Touch ID or the login password before the
-   * helper answers. With that prompt dismissed, the helper never answers, so a newer read replaces
-   * one still waiting instead of queueing behind it.
+   * Owns the password response path through decryption. Competing reads cannot replace it.
+   * A cancelled prompt can remain unanswered; Lock or the two-minute timeout closes the host.
    */
-  getPassword(
+  async getPassword(
     hostname: string,
     username: string,
     tab: { tabId: number; frameId?: number },
   ): Promise<Credential | undefined> {
-    // not serialized: a new read replaces one still waiting (see #request)
-    return (async () => {
+    this.#assertOpen();
+    if (this.#passwordPending)
+      throw new ProtocolError("A password request is pending. Finish it or press Lock to cancel.", "busy");
+    this.#passwordPending = true;
+    try {
       const reply = await this.#query(
         Command.GetPasswordForLoginName,
         hostname,
         tab,
         { ACT: Action.Search, URL: hostname, USR: username },
-        null,
+        this.#options.passwordTimeoutMs,
       );
       const entry = reply.Entries?.[0];
       if (!entry || typeof entry.PWD !== "string") return undefined;
       // Replies carry no id: a late answer to a replaced read could arrive now. Use only the
       // password of the login asked for.
       if ((entry.USR ?? "") !== username) throw new ProtocolError("reply for another login", "invalid-reply");
+      if (!credentialSitesMatch(hostname, entry.sites)) throw invalid("reply for another website");
       return { username, password: entry.PWD };
-    })();
+    } finally {
+      this.#passwordPending = false;
+    }
   }
 
   /**
@@ -328,8 +347,11 @@ export class ApplePasswordsClient {
     timeoutMs?: number | null,
     alsoAccept: readonly number[] = [],
   ): Promise<QueryReply> {
+    const generation = this.#generation;
     const message = { ...(await this.#secureMessage(cmd, tab, body)), url: hostname };
+    this.#assertCurrent(generation);
     const result = await this.#openReply(await this.#request(message, timeoutMs));
+    this.#assertCurrent(generation);
 
     if (result.STATUS === QueryStatus.Success || alsoAccept.includes(result.STATUS)) return result;
     if (result.STATUS === QueryStatus.NoResults) return { STATUS: result.STATUS, Entries: [] };
@@ -379,6 +401,8 @@ export class ApplePasswordsClient {
   #request(message: { cmd: number } & Record<string, unknown>, timeoutMs?: number | null) {
     return new Promise<HelperMessage>((resolve, reject) => {
       if (this.#state === "closed") return reject(new ProtocolError("connection closed", "closed"));
+      if (this.#waiters.has(message.cmd))
+        return reject(new ProtocolError("A helper request is already pending.", "busy"));
       const ms = timeoutMs === undefined ? this.#options.timeoutMs : timeoutMs;
       const tab =
         typeof message.tabId === "number"
@@ -393,15 +417,10 @@ export class ApplePasswordsClient {
             ? undefined
             : setTimeout(() => {
                 if (this.#waiters.get(message.cmd) === waiter) this.#waiters.delete(message.cmd);
-                reject(new ProtocolError("the helper did not answer in time", "timeout"));
+                reject(new ProtocolError("The helper did not answer in time. Unlock again to retry.", "timeout"));
+                this.close();
               }, ms),
       };
-      // only serialized requests' commands can't overlap; any other one replaces its predecessor
-      const previous = this.#waiters.get(message.cmd);
-      if (previous) {
-        clearTimeout(previous.timer);
-        previous.reject(new ProtocolError("replaced by a newer request", "superseded"));
-      }
       this.#waiters.set(message.cmd, waiter);
       try {
         this.transport.send(message);
@@ -409,11 +428,13 @@ export class ApplePasswordsClient {
         clearTimeout(waiter.timer);
         if (this.#waiters.get(message.cmd) === waiter) this.#waiters.delete(message.cmd);
         reject(error instanceof Error ? error : new Error(String(error)));
+        this.close();
       }
     });
   }
 
   #dispatch(message: HelperMessage): void {
+    if (this.#state === "closed") return;
     const waiter = this.#waiters.get(message.cmd);
     const forWaiter =
       waiter &&
@@ -430,12 +451,14 @@ export class ApplePasswordsClient {
   }
 
   #lock(): void {
+    this.#generation++;
     this.#channel = undefined;
     this.#challenge = undefined;
     if (this.#state !== "closed") this.#setState("locked");
   }
 
   #closed(error?: string): void {
+    this.#generation++;
     this.#channel = undefined;
     this.#challenge = undefined;
     for (const waiter of this.#waiters.values()) {
@@ -450,7 +473,13 @@ export class ApplePasswordsClient {
     if (this.#state === "closed") throw new ProtocolError("connection closed", "closed");
   }
 
+  #assertCurrent(generation: number): void {
+    this.#assertOpen();
+    if (generation !== this.#generation) throw new ProtocolError("The password session ended.", "closed");
+  }
+
   #setState(state: ClientState): void {
+    if (this.#state === "closed") return;
     if (this.#state === state) return;
     this.#state = state;
     for (const listener of this.#stateListeners) listener(state);

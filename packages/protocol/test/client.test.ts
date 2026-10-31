@@ -262,17 +262,15 @@ describe("ApplePasswordsClient", () => {
       expect(await password).toMatchObject({ code: "closed" });
     });
 
-    it("lets a new read replace it, keeping the session", async () => {
+    it("refuses a competing read until Lock ends an unanswered request", async () => {
       const helper = silentOnce();
       const client = await ApplePasswordsClient.connect(new MemoryTransport(helper));
       await pair(helper, client);
       const first = client.getPassword("example.com", "bob", tab).catch((error: unknown) => error);
-      expect(await client.getPassword("example.com", "bob", tab)).toEqual({
-        username: "bob",
-        password: "battery staple",
-      });
-      expect(await first).toMatchObject({ code: "superseded" });
+      await expect(client.getPassword("example.com", "bob", tab)).rejects.toMatchObject({ code: "busy" });
       expect(client.state).toBe("unlocked");
+      client.close();
+      expect(await first).toMatchObject({ code: "closed" });
     });
 
     it("refuses its late answer when another login was asked for since", async () => {
@@ -290,13 +288,14 @@ describe("ApplePasswordsClient", () => {
       await pair(helper, client);
       const first = client.getPassword("example.com", "bob", tab).catch((error: unknown) => error);
       await expect(client.getPassword("example.com", "alice@example.com", tab)).rejects.toMatchObject({
-        code: "invalid-reply",
+        code: "busy",
       });
-      expect(await first).toMatchObject({ code: "superseded" });
+      client.close();
+      expect(await first).toMatchObject({ code: "closed" });
     });
   });
 
-  it("gives up on a reply that never comes, and keeps working after", async () => {
+  it("closes after an ambiguous query timeout rather than reusing its reply context", async () => {
     let dropped = false;
     const helper = new TamperingHelper((request, reply) => {
       if (request.cmd !== Command.GetLoginNamesForUrl || dropped) return reply;
@@ -306,6 +305,7 @@ describe("ApplePasswordsClient", () => {
     const client = await ApplePasswordsClient.connect(new MemoryTransport(helper), { timeoutMs: 50 });
     await pair(helper, client);
     await expect(client.getLogins("example.com", tab)).rejects.toMatchObject({ code: "timeout" });
-    expect(await client.getLogins("example.com", tab)).toHaveLength(2);
+    expect(client.state).toBe("closed");
+    await expect(client.getLogins("example.com", tab)).rejects.toMatchObject({ code: "closed" });
   });
 });
