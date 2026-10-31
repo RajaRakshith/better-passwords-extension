@@ -4,15 +4,15 @@ This source archive contains the extension and its workspace dependencies. It do
 
 ## Build
 
-Use Bun 1.4.4 (the validated build runtime). From the archive root:
+See the root [README](../README.md#reproduce-the-firefox-submission-mozilla-reviewers) for step-by-step runtime installation, environment requirements and exact file comparison. With Node.js 22.15.0 and Bun 1.4.4 on PATH, from the source archive root:
 
 ```sh
-bun install --frozen-lockfile --ignore-scripts
-bun run --filter @app/extension build:chrome
-bun run --filter @app/extension build:firefox
+sh scripts/build-firefox-review.sh
 ```
 
-Outputs are `apps/extension/.output/chrome-mv3` and `apps/extension/.output/firefox-mv2`. To reproduce the submitted ZIPs, run `bun run --filter @app/extension zip:all`. The submitted Chrome ZIP is `.output/store/better-passwords-<version>-chrome.zip`, which omits the manifest `key` field that only unpacked installs need.
+The Firefox output is `apps/extension/.output/firefox-mv2`. To produce the packaged extension and source ZIPs, run `bun run --filter @app/extension zip:all` after the build script. That optional command also produces a Chromium build, which is not part of this Firefox submission.
+
+Reproduction verification (2026-10-31): extracted the source archive into a fresh temporary directory with no installed dependencies or generated output, ran `sh scripts/build-firefox-review.sh`, and compared every output path and byte with the submitted Firefox ZIP. All 24 extension files matched exactly. The uploaded extension ZIP SHA-256 is `cba379093a12b02cdbdbe7ba32045edd01cef2dca5f22a96caba47eab7d842a8`; this identifies the original upload, whose ZIP-container metadata need not be reproduced.
 
 ## Personal fork distribution
 
