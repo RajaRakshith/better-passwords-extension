@@ -77,7 +77,10 @@ export const CONTENT_SCRIPT_REQUESTS: ReadonlySet<Request["type"]> = new Set([
   "login-form-gone",
 ]);
 
+export type IdleTimeoutMinutes = 0 | 5 | 15 | 30 | 60;
+
 export interface Settings {
+  idleTimeoutMinutes: IdleTimeoutMinutes;
   /** End the session when the Mac locks or sleeps. */
   lockOnScreenLock: boolean;
   /** Suggestions when signing in: saved logins in login fields. */
@@ -99,7 +102,8 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  lockOnScreenLock: false,
+  idleTimeoutMinutes: 15,
+  lockOnScreenLock: true,
   inlineMenu: true,
   touchId: true,
   generatePasswords: true,
