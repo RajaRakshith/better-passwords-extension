@@ -7,6 +7,7 @@ import { bindCodeInput } from "@/src/ui/code-input.ts";
 import { companionPitch } from "@/src/ui/companion-pitch.ts";
 import { h } from "@/src/ui/h.ts";
 import { CHECK, icon, OPEN } from "@/src/ui/icons.ts";
+import { PopupView } from "@/src/ui/popup-view.ts";
 import { reportProblem } from "@/src/ui/report.ts";
 import { sessionSettings } from "@/src/ui/session-settings.ts";
 import { setupFlow } from "@/src/ui/setup.ts";
@@ -14,10 +15,18 @@ import { setupFlow } from "@/src/ui/setup.ts";
 applySystemAccent();
 
 const app = document.getElementById("app") as HTMLElement;
+const popupView = new PopupView(app, () => window.close());
 
 function show(...children: (Node | false | null | undefined)[]) {
-  app.replaceChildren(...children.filter((c): c is Node => Boolean(c)));
+  popupView.show(...children.filter((c): c is Node => Boolean(c)));
 }
+
+browser.runtime.onMessage.addListener((message, sender) => {
+  if (sender.id === browser.runtime.id && message?.type === "session-changed" && message.unlocked === false) {
+    popupView.endSession();
+  }
+  return false;
+});
 
 function errorLine(message: string | undefined) {
   return message ? h("p", { class: "error", textContent: message }) : null;
