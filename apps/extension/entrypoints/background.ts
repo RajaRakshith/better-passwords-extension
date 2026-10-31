@@ -10,7 +10,6 @@ import {
   CONTENT_SCRIPT_REQUESTS,
   type ContactEmailsState,
   type ContentMessage,
-  DEFAULT_SETTINGS,
   type EmailSuggestions,
   type Envelope,
   type GeneratedPasswords,
@@ -27,7 +26,10 @@ import { PortTransport } from "@/src/native/port-transport.ts";
 import { fillLogin as performFillLogin } from "@/src/passwords/fill-login.ts";
 import { generatePassword } from "@/src/passwords/generate.ts";
 import { waitForLogin } from "@/src/passwords/wait-for-login.ts";
+import { idleDetectionSeconds, updateBreakState } from "@/src/session/idle-integration.ts";
+import { IdleLock } from "@/src/session/idle-lock.ts";
 import { Session } from "@/src/session/session.ts";
+import { normalizeSettings, validateSettingsChanges } from "@/src/settings.ts";
 import { PendingUpdate } from "@/src/updates.ts";
 import { fillableUrl } from "@/src/url-policy.ts";
 
@@ -69,18 +71,36 @@ interface SentLogin {
 const SENT_LOGIN_MS = 60_000;
 
 export default defineBackground(() => {
-  const session = new Session({
+  const session: Session = new Session({
     openTransport: () => new PortTransport(BRIDGE_HOST),
     browserName: import.meta.env.FIREFOX ? "Firefox" : "Chrome",
+    beforeAccess: () => idleLock.beforeAccess(),
   });
+  const idleLock: IdleLock = new IdleLock({
+    queryState: (seconds) => browser.idle.queryState(seconds),
+    lock: () => session.lock(),
+    isUnlocked: () => session.isUnlocked,
+    now: Date.now,
+  });
+  async function configureIdle(settings: Settings) {
+    browser.idle.setDetectionInterval(idleDetectionSeconds(settings.idleTimeoutMinutes));
+    await idleLock.configure(settings.idleTimeoutMinutes);
+  }
+  void getSettings()
+    .then(configureIdle)
+    .catch(() => session.lock());
 
   // An open native port keeps the worker alive in Chrome 105+; the alarm is a fallback that
   // wakes it if the browser suspends it anyway. Nothing to do on wake: state lives in memory.
   session.onChange(({ state }) => {
-    if (state === "unlocked") void browser.alarms.create(KEEP_ALIVE, { periodInMinutes: 0.5 });
-    else if (state === "closed" || state === "disconnected") void browser.alarms.clear(KEEP_ALIVE);
+    if (state === "unlocked") {
+      void browser.alarms.create(KEEP_ALIVE, { periodInMinutes: 0.5 });
+      void idleLock.onUnlocked().catch(() => session.lock());
+    } else if (state === "closed" || state === "disconnected") void browser.alarms.clear(KEEP_ALIVE);
   });
-  browser.alarms.onAlarm.addListener(() => {});
+  browser.alarms.onAlarm.addListener(({ name }) => {
+    if (name === KEEP_ALIVE) void idleLock.check().catch(() => session.lock());
+  });
 
   // Open menus asked before an unlock (or a lock) elsewhere, e.g. the code typed into the popup:
   // tell them, so they show what they would now
@@ -127,12 +147,17 @@ export default defineBackground(() => {
   });
   browser.runtime.onUpdateAvailable.addListener(({ version }) => updates.available(version));
   session.onChange(() => updates.applyIfHarmless());
-  browser.idle.setDetectionInterval(60 * 60);
-
-  browser.idle.onStateChanged.addListener(async (state) => {
-    if (state === "active") return;
-    if (updates.overdue) session.lock();
-    else if (state === "locked" && (await getSettings()).lockOnScreenLock) session.lock();
+  browser.idle.onStateChanged.addListener((state) => {
+    void (async () => {
+      if (
+        state !== "active" &&
+        updates.overdue &&
+        (state === "locked" || (await updateBreakState((seconds) => browser.idle.queryState(seconds))))
+      )
+        session.lock();
+      else if (state === "locked" && (await getSettings()).lockOnScreenLock) session.lock();
+      await idleLock.onStateChanged(state);
+    })().catch(() => session.lock());
   });
 
   // Chromium leaves open tabs without the content script after an update; Firefox injects it itself.
@@ -321,13 +346,17 @@ export default defineBackground(() => {
     password: string,
     account: string | undefined,
   ): Promise<NewPasswordResult> {
+    await idleLock.beforeAccess();
+    const epoch = session.epoch;
     const context = await newPasswordContext(tabId, nonce);
     if (!context.visible) return "menu-hidden";
     const url = await tabUrl(tabId);
+    if (!session.isCurrent(epoch)) throw new Error("The password session ended. Unlock again.");
     if (!url) throw new Error("this page can't be filled");
     const fill = { type: "menu-fill-new-password", nonce, origin: url.origin, password } as const;
     const reply = (await relay(tabId, fill).catch(() => undefined)) as { result: NewPasswordResult } | undefined;
     const result = reply?.result ?? "no-fields";
+    if (!session.isCurrent(epoch)) throw new Error("The password session ended. Unlock again.");
     if (result !== "filled") return result;
     const previous = generatedByTab.get(tabId);
     if (previous) forget(previous.password);
@@ -566,12 +595,14 @@ export default defineBackground(() => {
   }
 
   async function saveSettings(changes: Partial<Settings>): Promise<Settings> {
+    changes = validateSettingsChanges(changes);
     if (changes.hideMyEmail && !(await hasHideMyEmailConsent())) {
       throw new Error("Allow Hide My Email's data permissions before turning it on.");
     }
     const before = await getSettings();
     const settings = { ...before, ...changes };
     await browser.storage.local.set({ settings });
+    if (settings.idleTimeoutMinutes !== before.idleTimeoutMinutes) await configureIdle(settings);
     if (settings.hideMyEmail !== before.hideMyEmail) await syncHideMyEmail(settings.hideMyEmail);
     return settings;
   }
@@ -665,6 +696,8 @@ export default defineBackground(() => {
         return { result };
       }
       case "generate-passwords": {
+        await idleLock.beforeAccess();
+        const epoch = session.epoch;
         const tabId = tabOf(caller);
         const context = await newPasswordContext(tabId, request.nonce);
         const url = await tabUrl(tabId);
@@ -677,6 +710,7 @@ export default defineBackground(() => {
           alphanumeric: generatePassword("alphanumeric", context.rules),
           ...(account ? { account } : {}),
         };
+        if (!session.isCurrent(epoch)) throw new Error("The password session ended. Unlock again.");
         generatedForMenu.set(`${tabId}:${request.nonce}`, passwords);
         return passwords;
       }
@@ -687,7 +721,10 @@ export default defineBackground(() => {
         return { result: await fillGenerated(tabId, request.nonce, passwords[request.style], passwords.account) };
       }
       case "unconfirmed-passwords": {
+        await idleLock.beforeAccess();
+        const epoch = session.epoch;
         const url = await tabUrl(tabOf(caller, request.tabId));
+        if (!session.isCurrent(epoch)) throw new Error("The password session ended. Unlock again.");
         return unconfirmed
           .filter((entry) => entry.hostname === url?.hostname)
           .map(({ username, password }) => ({ username, password }));
@@ -866,5 +903,5 @@ async function tabUrl(tabId: number): Promise<URL | undefined> {
 
 async function getSettings(): Promise<Settings> {
   const { settings } = await browser.storage.local.get("settings");
-  return { ...DEFAULT_SETTINGS, ...(settings as Partial<Settings> | undefined) };
+  return normalizeSettings(settings);
 }

@@ -8,6 +8,7 @@ import { companionPitch } from "@/src/ui/companion-pitch.ts";
 import { h } from "@/src/ui/h.ts";
 import { CHECK, icon, OPEN } from "@/src/ui/icons.ts";
 import { reportProblem } from "@/src/ui/report.ts";
+import { sessionSettings } from "@/src/ui/session-settings.ts";
 import { setupFlow } from "@/src/ui/setup.ts";
 
 applySystemAccent();
@@ -338,7 +339,12 @@ async function fill(tabId: number, username: string, expectedOrigin: string) {
   }
 }
 
-type Option = (key: keyof Settings, label: string, detail?: string, disabled?: boolean) => HTMLElement;
+type Option = (
+  key: Exclude<keyof Settings, "idleTimeoutMinutes">,
+  label: string,
+  detail?: string,
+  disabled?: boolean,
+) => HTMLElement;
 
 async function footer(status: Status) {
   const settings: Settings = await send({ type: "get-settings" });
@@ -363,11 +369,6 @@ async function footer(status: Status) {
       h("span", { class: "text" }, label, detail ? h("span", { class: "detail", textContent: detail }) : null),
     );
   };
-  const lock = h("button", { class: "secondary", textContent: "Lock" });
-  lock.addEventListener("click", async () => {
-    await send({ type: "lock" });
-    window.close();
-  });
   return h(
     "div",
     { class: "settings" },
@@ -378,12 +379,15 @@ async function footer(status: Status) {
     h("hr"),
     macAppSection(status, option),
     h("hr"),
-    // Firefox's idle API never reports "locked", so the option would do nothing there
-    h(
-      "div",
-      { class: "actions" },
-      import.meta.env.FIREFOX ? h("span") : option("lockOnScreenLock", "Lock when my Mac locks"),
-      lock,
+    sessionSettings(
+      settings,
+      import.meta.env.FIREFOX,
+      (changes) => send({ type: "set-settings", settings: changes }),
+      () => {
+        void send({ type: "lock" })
+          .then(() => window.close())
+          .catch((e) => refresh(messageOf(e)));
+      },
     ),
   );
 }

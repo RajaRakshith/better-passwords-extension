@@ -45,7 +45,11 @@ Until the bridge is registered, connecting fails with the browser's "host not fo
 
 Apple's helper keeps the pairing key only in its own memory. When the native port closes, the helper exits and the key is gone, and the next connection needs a new 6-digit code. Apple's extension lets that happen whenever its background worker goes idle, which is why it asks so often.
 
-Our background worker keeps the port open. Chrome keeps an extension's worker alive while it has an open native-messaging port (Chrome 105+), and a 30-second `chrome.alarms` fallback is armed while unlocked. The result is one pairing per browser launch. Optionally, the session also ends when the Mac locks (`idle.onStateChanged`).
+Our background worker keeps the port open. Chrome keeps an extension's worker alive while it has an open native-messaging port (Chrome 105+), and a 30-second alarm checks expiry while unlocked. Sessions lock after 15 minutes of system input inactivity by default, configurable to 5, 15, 30 or 60 minutes or Never. Activity in any app counts, not only extension interaction. Existing explicit screen-lock preferences survive migration; fresh Chromium settings enable screen-lock locking.
+
+Zen/Firefox does not report Mac screen locks, so its setting describes inactivity rather than immediate screen-lock detection. The policy checks at unlock, configuration changes, idle transitions, periodic alarms and before credential access. A missed observation interval as long as the timeout (for example, sleep) conservatively locks on the next check, even if input has resumed. An unavailable idle API or backwards clock change also fails closed. Never disables the inactivity/gap policy, not manual locking or the separate overdue-update policy.
+
+Locking disconnects the helper and clears temporary password buffers, including generated passwords not confirmed saved. Read cancellation and unanswered password requests also end the connection (120-second read limit). Fresh pairing is required; fills are never replayed automatically. Ordinary sequential reads still reuse pairing.
 
 ## Updates
 
