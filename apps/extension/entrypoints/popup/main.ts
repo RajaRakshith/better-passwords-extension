@@ -183,7 +183,7 @@ async function showLogins(status: Status, error?: string) {
   } else if (result.logins.length === 0) {
     body = h("p", {}, `No saved passwords for ${result.hostname}.`);
   } else {
-    body = loginList(tabId as number, result.logins, result.chosen);
+    body = loginList(tabId as number, result.logins, result.origin ?? "", result.chosen);
   }
 
   const openApp = h("button", { class: "link with-icon" }, icon(OPEN), "Open Passwords App");
@@ -239,7 +239,7 @@ const COLLAPSED = 3;
 const SEARCH_AFTER = 10;
 
 /** `chosen`: the login picked on the sign-in's previous step (listed first), shown alone at first. */
-function loginList(tabId: number, logins: LoginsResult["logins"], chosen?: string) {
+function loginList(tabId: number, logins: LoginsResult["logins"], expectedOrigin: string, chosen?: string) {
   const items = logins.map(({ username }) => {
     const name = username || "(no username)";
     const button = h(
@@ -248,7 +248,7 @@ function loginList(tabId: number, logins: LoginsResult["logins"], chosen?: strin
       h("span", { class: "avatar", textContent: (username[0] ?? "?").toUpperCase() }),
       h("span", { class: "name", textContent: name }),
     );
-    button.addEventListener("click", () => void fill(tabId, username));
+    button.addEventListener("click", () => void fill(tabId, username, expectedOrigin));
     return { name: name.toLowerCase(), username, li: h("li", {}, button) };
   });
 
@@ -286,7 +286,7 @@ function loginList(tabId: number, logins: LoginsResult["logins"], chosen?: strin
   });
   search?.addEventListener("input", update);
   search?.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && matches[0]) void fill(tabId, matches[0].username);
+    if (event.key === "Enter" && matches[0]) void fill(tabId, matches[0].username, expectedOrigin);
   });
   update();
 
@@ -326,9 +326,9 @@ async function unconfirmedPasswords(tabId: number | undefined) {
   );
 }
 
-async function fill(tabId: number, username: string) {
+async function fill(tabId: number, username: string, expectedOrigin: string) {
   try {
-    const { result } = await send({ type: "fill", tabId, username });
+    const { result } = await send({ type: "fill", tabId, username, expectedOrigin });
     if (result === "filled") return window.close();
     await refresh(result === "no-fields" ? "No login fields found on this page." : "The page changed, try again.");
   } catch (e) {

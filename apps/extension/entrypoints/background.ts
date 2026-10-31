@@ -24,6 +24,7 @@ import {
   type Status,
 } from "@/src/messages.ts";
 import { PortTransport } from "@/src/native/port-transport.ts";
+import { fillLogin as performFillLogin } from "@/src/passwords/fill-login.ts";
 import { generatePassword } from "@/src/passwords/generate.ts";
 import { waitForLogin } from "@/src/passwords/wait-for-login.ts";
 import { Session } from "@/src/session/session.ts";
@@ -645,6 +646,7 @@ export default defineBackground(() => {
         const current = chosenLogin(url.hostname, tabId);
         const first = logins.filter(({ username }) => username === current);
         return {
+          origin: url.origin,
           hostname: url.hostname,
           logins: [...first, ...logins.filter((login) => !first.includes(login))],
           ...(first.length > 0 ? { chosen: current } : {}),
@@ -652,7 +654,7 @@ export default defineBackground(() => {
       }
       case "fill": {
         const tabId = tabOf(caller, request.tabId);
-        const result = await fillLogin(tabId, request.username, async (origin, password) => {
+        const result = await fillLogin(tabId, request.username, request.expectedOrigin, async (origin, password) => {
           const [injection] = await browser.scripting.executeScript({
             target: { tabId, frameIds: [0] },
             func: fillCredentials,
@@ -698,7 +700,7 @@ export default defineBackground(() => {
         throw new Error("content scripts only");
       case "fill-from-menu": {
         const tabId = tabOf(caller);
-        const result = await fillLogin(tabId, request.username, async (origin, password) => {
+        const result = await fillLogin(tabId, request.username, request.expectedOrigin, async (origin, password) => {
           const reply = (await relay(tabId, {
             type: "menu-fill",
             nonce: request.nonce,
@@ -801,28 +803,22 @@ export default defineBackground(() => {
   async function fillLogin(
     tabId: number,
     username: string,
+    expectedOrigin: string,
     fill: (origin: string, password: string | null) => Promise<string>,
   ): Promise<string> {
-    const url = await tabUrl(tabId);
-    if (!url) throw new Error("this page can't be filled");
-    const result = await fill(url.origin, null);
-    if (result === "filled") chosenLogins.set(url.hostname, { username, tabId, at: Date.now() });
-    if (result !== "needs-password") return result;
-    // the tab may have moved on meanwhile: the password is for the site it's on now, and only fills there
-    const { url: now, credential } = await credentialFor(tabId, username);
-    const filled = await fill(now.origin, credential.password);
-    // signed in: no reset to save for
-    if (filled === "filled") chosenLogins.delete(now.hostname);
-    return filled;
-  }
-
-  async function credentialFor(tabId: number, username: string) {
-    const url = await tabUrl(tabId);
-    if (!url) throw new Error("this page can't be filled");
-    const client = await session.unlockedClient();
-    const credential = await client.getPassword(url.hostname, username, { tabId });
-    if (!credential) throw new Error("that login is no longer saved");
-    return { url, credential };
+    return performFillLogin(
+      {
+        session,
+        tabUrl,
+        rememberChoice: (hostname, name, tab) =>
+          chosenLogins.set(hostname, { username: name, tabId: tab, at: Date.now() }),
+        forgetChoice: (hostname) => {
+          chosenLogins.delete(hostname);
+        },
+      },
+      { tabId, username, expectedOrigin },
+      fill,
+    );
   }
 
   browser.runtime.onMessage.addListener((request: Request & { menuNonce?: unknown }, sender, sendResponse) => {

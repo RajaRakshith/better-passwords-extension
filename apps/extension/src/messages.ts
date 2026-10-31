@@ -14,14 +14,14 @@ export type Request =
   | { type: "unlock-with-touch-id" }
   /** `tabId` is required from the popup; the inline menu is always bound to its own tab. */
   | { type: "list-logins"; tabId?: number }
-  | { type: "fill"; tabId: number; username: string }
+  | { type: "fill"; tabId: number; username: string; expectedOrigin: string }
   | { type: "lock" }
   /** Ends the session and restarts the extension, installing the version the browser downloaded. */
   | { type: "install-update" }
   | { type: "get-settings" }
   | { type: "set-settings"; settings: Partial<Settings> }
   // inline menu → background → content script of the same tab
-  | { type: "fill-from-menu"; nonce: string; username: string }
+  | { type: "fill-from-menu"; nonce: string; username: string; expectedOrigin: string }
   | { type: "menu-resize"; nonce: string; height: number }
   | { type: "menu-close"; nonce: string }
   | { type: "menu-focus-field"; nonce: string }
@@ -124,6 +124,7 @@ export interface Status extends SessionStatus {
 }
 
 export interface LoginsResult {
+  origin?: string;
   /** Undefined when the tab is not a page we fill (e.g. chrome:// or plain http). */
   hostname?: string;
   logins: { username: string }[];

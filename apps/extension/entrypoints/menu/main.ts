@@ -112,7 +112,9 @@ function message(text: string, isError = false) {
 let view: "unlocked" | "locked" | "other" = "other";
 
 // the logins shown, so typing in the field can narrow them down without asking again
-let loginsView: { logins: { username: string }[]; hostname: string; chosen?: string; error?: string } | undefined;
+let loginsView:
+  | { logins: { username: string }[]; hostname: string; origin: string; chosen?: string; error?: string }
+  | undefined;
 /** What the user typed into the username field: only logins starting with it are listed. */
 let query = "";
 /** Whether the user asked for the logins besides the one chosen on the sign-in's previous step. */
@@ -131,6 +133,7 @@ async function showLogins(error?: string) {
     return render(message(`No saved passwords for ${result.hostname ?? "this site"}.`), openPasswordsRow(true));
   }
   loginsView = {
+    origin: result.origin ?? "",
     logins: result.logins,
     hostname: result.hostname ?? "",
     ...(result.chosen !== undefined ? { chosen: result.chosen } : {}),
@@ -141,7 +144,7 @@ async function showLogins(error?: string) {
 
 function renderLogins() {
   if (!loginsView) return;
-  const { logins, hostname, chosen, error } = loginsView;
+  const { logins, hostname, origin, chosen, error } = loginsView;
   const prefix = query.trim().toLowerCase();
   const matches = logins.filter(({ username }) => username.toLowerCase().startsWith(prefix));
   // nothing starts with what's typed (a new username, probably)
@@ -151,7 +154,7 @@ function renderLogins() {
   const focused = onPasswordField && chosen !== undefined && !prefix && !showOthers && matches.length > 1;
   const shown = focused ? matches.slice(0, 1) : matches;
   render(
-    ...shown.map(({ username }) => row(KEY, username || "(no username)", hostname, () => void fill(username))),
+    ...shown.map(({ username }) => row(KEY, username || "(no username)", hostname, () => void fill(username, origin))),
     focused ? othersRow(matches.length - 1) : null,
     error ? message(error, true) : null,
     h("hr", { class: "separator" }),
@@ -505,9 +508,9 @@ function openPasswordsRow(withDetail: boolean) {
   });
 }
 
-async function fill(username: string) {
+async function fill(username: string, expectedOrigin: string) {
   try {
-    const { result } = await send({ type: "fill-from-menu", nonce, username });
+    const { result } = await send({ type: "fill-from-menu", nonce, username, expectedOrigin });
     if (result !== "filled") {
       await showLogins(
         result === "menu-hidden"
