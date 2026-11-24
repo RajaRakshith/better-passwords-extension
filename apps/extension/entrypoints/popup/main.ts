@@ -51,7 +51,7 @@ async function refresh(error?: string) {
   if (status.state === "unlocked") return showLogins(status, error);
   // locked or disconnected: start unlocking right away, saving the user a click
   const awaitingCode = status.state === "awaiting-code";
-  if (status.touchId && !error && !awaitingCode) return unlockWithTouchId(status);
+  if (status.touchId && !error) return unlockWithTouchId(status);
   // a fresh code even if one is still valid: the user may have closed Apple's window since, and
   // nothing tells us
   codeRequest = popupSettled().then(() => send({ type: "request-code", fresh: true }));
