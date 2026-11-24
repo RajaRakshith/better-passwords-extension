@@ -31,7 +31,4 @@ public enum Identity {
     public static let helperRequirement =
         #"anchor apple and identifier "com.apple.PasswordManagerBrowserExtensionHelper""#
 
-    /// Info.plist key holding the native host's cdhash in ad-hoc (development) builds, written by
-    /// scripts/bundle.sh. Signed release builds check the team ID instead.
-    public static let hostCDHashKey = "BPHostCDHash"
 }

@@ -14,16 +14,10 @@ enum Agent {
         withExtendedLifetime((listener, delegate)) { dispatchMain() }
     }
 
-    /// What the native host must satisfy. Release builds: signed by our team. Development builds
-    /// (ad-hoc): the exact host binary built alongside this app, pinned by cdhash in Info.plist.
+    /// The native host must be signed by the same team as this app.
     static func clientRequirement() -> String? {
-        if let team = CodeSigning.ownTeamID() {
-            return CodeSigning.sameTeam(team, identifier: Identity.hostSigningID)
-        }
-        guard let cdhash = Bundle.main.object(forInfoDictionaryKey: Identity.hostCDHashKey) as? String else {
-            return nil
-        }
-        return CodeSigning.pinned(identifier: Identity.hostSigningID, cdhash: cdhash)
+        guard let team = CodeSigning.ownTeamID() else { return nil }
+        return CodeSigning.sameTeam(team, identifier: Identity.hostSigningID)
     }
 }
 

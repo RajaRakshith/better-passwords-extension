@@ -9,13 +9,10 @@ public final class XPCAgentClient: HostRelay.Agent, @unchecked Sendable {
 
     public init() {}
 
-    /// The agent must be our own app. Release builds check the team; ad-hoc development builds can
-    /// only check the identifier, because the app is signed after the host.
-    static func agentRequirement() -> String {
-        if let team = CodeSigning.ownTeamID() {
-            return CodeSigning.sameTeam(team, identifier: Identity.appBundleID)
-        }
-        return #"identifier "\#(Identity.appBundleID)""#
+    /// The agent must be our own app, signed by the same team as the host.
+    static func agentRequirement() -> String? {
+        guard let team = CodeSigning.ownTeamID() else { return nil }
+        return CodeSigning.sameTeam(team, identifier: Identity.appBundleID)
     }
 
     typealias Finish<T> = @Sendable (Result<T, CompanionError>) -> Void
@@ -24,9 +21,10 @@ public final class XPCAgentClient: HostRelay.Agent, @unchecked Sendable {
         timeout: Duration,
         _ body: @escaping @Sendable (CompanionAgentProtocol, @escaping Finish<T>) -> Void
     ) async -> Result<T, CompanionError> {
+        guard let requirement = Self.agentRequirement() else { return .failure(.agentUnavailable) }
         let connection = NSXPCConnection(machServiceName: Identity.agentService, options: [])
         connection.remoteObjectInterface = AgentInterface.make()
-        connection.setCodeSigningRequirement(Self.agentRequirement())
+        connection.setCodeSigningRequirement(requirement)
         connection.resume()
         defer { connection.invalidate() }
 

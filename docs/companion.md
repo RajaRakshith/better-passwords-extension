@@ -30,9 +30,8 @@ The setup window and the agent are one executable with one signature. That's why
 The host sends no arguments. The agent works everything out from what the kernel tells it:
 
 1. **Who is asking.** The XPC connection must come from our signed host.
-   - Release builds require our Developer ID team.
-   - Ad-hoc development builds pin the host's exact cdhash, which `scripts/bundle.sh` writes into `Info.plist`.
-   - With neither, the agent refuses every connection.
+   - Local builds use an Apple Development identity; releases use our Developer ID identity.
+   - Both sides require the same signing team. Without a team-signed identity, the agent refuses every connection.
 2. **Which browser.** It looks up the browser as the parent of the connecting host process.
 3. **Which helper.** It accepts only processes that:
    - are children of that browser,
@@ -42,23 +41,23 @@ The host sends no arguments. The agent works everything out from what the kernel
 
 Steps 1 to 3 also guard the contact card: the agent reads it only for a browser running Apple's helper. Any program can run our signed host itself and so pass step 1, but macOS lets only browsers start Apple's helper, so step 3 stops it. Without that, any program could read the "Me" card's emails without Contacts permission.
 
-The host checks the agent too: release builds require our team, and development builds require our identifier. The host sends nothing secret to the agent. A fake agent could at worst supply a wrong code, which fails the SRP handshake.
+The host checks that the agent is signed by the same team. It sends nothing secret to the agent. A fake agent could at worst supply a wrong code, which fails the SRP handshake.
 
 ## Building and trying it
 
-Sign local builds with an Apple Development certificate and install them in /Applications:
+Local builds automatically use an Apple Development identity from the sole team represented in your keychain. The script selects it by certificate fingerprint, so duplicate display names are fine. If identities from multiple teams are present, pass the chosen SHA-1 fingerprint with `--sign`. Create a certificate in Xcode under **Settings → Accounts → Manage Certificates → + → Apple Development**, then build and install:
 
 ```sh
 cd apps/companion
 swift test
-scripts/bundle.sh --sign "Apple Development: Your Name (XXXXXXXXXX)"
+scripts/bundle.sh
 ditto "dist/Better Passwords.app" "/Applications/Better Passwords.app" && rm -rf dist/*.app
 open "/Applications/Better Passwords.app"
 ```
 
 Why both:
 
-- **The certificate:** macOS ties the background agent's registration and the Accessibility and Contacts permissions to the app's signature. A team-signed build keeps them across rebuilds. An ad-hoc build (`scripts/bundle.sh` without `--sign`) is a new app every time: the old registration then fails with "Launch Constraint Violation", and the permissions must be granted again.
+- **The certificate:** macOS ties the background agent's registration and the Accessibility and Contacts permissions to the app's signing identity. Rebuilding with the same Apple Development team keeps that identity stable. The build script refuses to fall back to ad-hoc signing; if there is no valid Apple Development identity, or identities from multiple teams, it prints instructions instead.
 - **/Applications:** a single copy in a fixed place. Replacing an app in place, or having two copies with the same identity, can leave macOS checking the agent against an older build.
 
 In the window:
@@ -72,10 +71,27 @@ Reload the extension. Its popup and inline menu then enter the pairing code for 
 
 If the agent won't start, `launchctl print gui/$(id -u)/io.github.fanckush.betterpasswords.agent` shows why. "Launch Constraint Violation" in a crash report means a stale registration: click **Remove Setup**, then **Turn On** again. A rebuilt app also re-registers by itself when its window opens.
 
+### If Zen still asks for the pairing code
+
+First distinguish a waiting-for-code screen from a companion failure. If the popup shows a code field without an error and the **Enter it for me** button, the extension is already in `awaiting-code`. It deliberately skips auto-entry in this state to avoid starting a second pairing request. Click **Enter it for me** once; if that unlocks, Zen, native messaging, the signed helper, and Accessibility are communicating correctly. The issue was the extension's current session state, not signing or permissions.
+
+Use the visible error only if **Enter it for me** fails. The companion's `hello` check only verifies that the native host can reach the agent and that Accessibility is trusted; it does not test reading the code. Reinstalling the extension or changing Accessibility cannot fix a request that succeeds when retried from the button.
+
+When diagnosing this flow, don't use a stale browser screenshot or the Zen DevTools pairing as proof of the popup state. Zen 1.24.3b reported a Firefox 160.0.1 runtime mismatch in `about:debugging`, and its DevTools accessibility tree/screenshots did not reliably reflect the active page. Check the actual popup UI and its error, then use the agent's launch state only to confirm the host reached macOS.
+
+An ad-hoc build can leave macOS authorizations attached to the previous signed copy. The companion window may show the agent as enabled while launchd refuses to start it, or System Settings may show Accessibility enabled while the companion still shows **Allow…**. Check both layers:
+
+1. In the companion, click **Remove Setup**, then **Connect** and **Turn On** again. Approve Better Passwords in **System Settings → General → Login Items** if prompted. This replaces the stale launchd registration and reconnects browser manifests.
+2. If the companion still shows **Allow…**, remove the old Better Passwords entry from **System Settings → Privacy & Security → Device Control and Data Access** (Accessibility), then use **Allow…** in the companion to add the copy in `/Applications/Better Passwords.app` and enable it. macOS may ask you to authenticate.
+3. Confirm the companion says **You're all set**. Check `launchctl print gui/$(id -u)/io.github.fanckush.betterpasswords.agent` for a current registration; a team-identifier constraint from an older signed copy or a `Launch Constraint Violation` means the registration is still stale.
+4. Reload the extension in Zen/Firefox and open its popup again. If you restarted the browser, its temporarily loaded add-on is gone; load `apps/extension/.output/firefox-mv2/manifest.json` again from `about:debugging`.
+
+The first team-signed build may need Accessibility approval again if it replaces an older ad-hoc copy. After approving that build, keep using the same Apple Development team identity so macOS can recognize it across rebuilds.
+
 Signed releases: `scripts/bundle.sh --version 1.2.3 --sign "Developer ID Application: …"`, then notarize. See [release.md](release.md).
 
 ## Known limits
 
 - macOS reports Apple's helper at its real location (`/System/Volumes/Preboot/Cryptexes/…`), behind the `/System/Cryptexes` link. Both are accepted; the code-signature check is what matters.
 - The agent finds the browser through its parent process. A browser that launches native hosts through an intermediate process would not work. Chromium browsers and Firefox launch hosts directly.
-`- Accessibility can be removed only in System Settings. **Remove Setup** in the app removes the browser connections and the agent.
+- Accessibility can be removed only in System Settings. **Remove Setup** in the app removes the browser connections and the agent.

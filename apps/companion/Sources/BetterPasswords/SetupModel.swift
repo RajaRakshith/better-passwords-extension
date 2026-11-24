@@ -28,9 +28,8 @@ final class SetupModel {
     var agentEnabled: Bool { agentStatus == .enabled }
     var ready: Bool { browsersConnected && agentEnabled && accessibilityTrusted }
 
-    /// macOS ties a registered background agent to the exact build that registered it (for ad-hoc
-    /// signed builds, by code hash), and to where that build was. After a rebuild, an update or a
-    /// move, the old registration can no longer start the agent, so the app re-registers it.
+    /// macOS ties a registered background agent to the build and location that registered it.
+    /// After a rebuild, update or move, the app re-registers it when its window opens.
     func reRegisterIfRebuilt() {
         let key = "registeredBuild"
         guard let build = registeredBuild else { return }

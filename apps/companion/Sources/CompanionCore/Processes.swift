@@ -78,7 +78,7 @@ public enum CodeSigning {
         return SecCodeCheckValidity(code, [], compiled) == errSecSuccess
     }
 
-    /// The team ID this process is signed with, or nil for ad-hoc and unsigned builds.
+    /// The team ID this process is signed with, or nil if it has no team-signed identity.
     public static func ownTeamID() -> String? {
         var code: SecCode?
         guard SecCodeCopySelf([], &code) == errSecSuccess, let code else { return nil }
@@ -105,14 +105,13 @@ public enum CodeSigning {
         return unique.map { String(format: "%02x", $0) }.joined()
     }
 
-    /// What a peer signed by the same developer as us must satisfy. Release builds are signed with a
-    /// Developer ID, so we require the same team. Ad-hoc development builds have no team, so the
-    /// caller must pin something else (see `pinned`).
+    /// What a peer signed by the same developer as us must satisfy. Local development and release
+    /// builds both use team-signed identities, so the host and app can verify each other by team.
     public static func sameTeam(_ teamID: String, identifier: String) -> String {
         #"anchor apple generic and certificate leaf[subject.OU] = "\#(teamID)" and identifier "\#(identifier)""#
     }
 
-    /// A requirement pinned to one exact build (for ad-hoc development builds).
+    /// A requirement pinned to one exact build, useful for restricted development configurations.
     public static func pinned(identifier: String, cdhash: String) -> String? {
         guard cdhash.count == 40, cdhash.allSatisfy(\.isHexDigit) else { return nil }
         return #"identifier "\#(identifier)" and cdhash H"\#(cdhash.lowercased())""#
