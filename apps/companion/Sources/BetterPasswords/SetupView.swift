@@ -81,7 +81,7 @@ struct SetupView: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
             HStack(spacing: 18) {
-                Label("Touch ID unlock", systemImage: "touchid")
+                Label("Automatic unlock", systemImage: "lock.open")
                 Label(
                     model.contactsAllowed ? "Your email addresses" : "Email suggestions off",
                     systemImage: model.contactsAllowed ? "person.crop.circle" : "person.crop.circle.badge.xmark")
@@ -106,7 +106,7 @@ struct SetupView: View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Better Passwords").font(.title2.bold())
-                Text("Unlock the browser extension with Touch ID instead of typing the code from your Mac.")
+                Text("Unlock the browser extension by entering the code from your Mac for you.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -129,7 +129,7 @@ struct SetupView: View {
                 number: 3,
                 title: "Allow reading the pairing code",
                 detail: "macOS calls this Accessibility. Better Passwords uses it only to read the code in "
-                    + "Apple's own pairing window, and only after you confirm with Touch ID.",
+                    + "Apple's own pairing window.",
                 done: model.accessibilityTrusted,
                 actionTitle: "Allow…"
             ) { model.requestAccessibility() }

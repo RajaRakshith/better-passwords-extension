@@ -529,11 +529,12 @@ async function showLocked(error?: string) {
   const status = await send({ type: "get-status" }).catch(() => undefined);
   if (viewGeneration !== generation || view !== "locked") return;
   const touchId = status?.touchId === true;
+  if (touchId && !error) {
+    void unlockWithTouchId();
+    return;
+  }
   render(
-    // with the companion app, Touch ID replaces typing the code; the row says so underneath
-    row(LOCK, unlockTitle(), touchId ? "Touch ID enters the code for you" : DISPLAY_NAME, () =>
-      touchId ? void unlockWithTouchId() : void startPairing(),
-    ),
+    row(LOCK, unlockTitle(), DISPLAY_NAME, () => void startPairing()),
     error ? message(error, true) : null,
   );
 }
@@ -567,7 +568,7 @@ async function startPairing() {
 }
 
 async function unlockWithTouchId() {
-  render(message("Confirm with Touch ID…"));
+  render(message("Entering the pairing code…"));
   try {
     await send({ type: "unlock-with-touch-id" });
     await unlocked();

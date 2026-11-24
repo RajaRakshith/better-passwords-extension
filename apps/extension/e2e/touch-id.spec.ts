@@ -18,8 +18,6 @@ test.describe("with the companion app", () => {
     await page.goto(`${siteUrl}/login.html`);
     await page.locator("#pass").click();
     const menu = await menuFrame(page);
-    await expect(menu.getByText("Touch ID enters the code for you")).toBeVisible();
-    await choose(menu, "Unlock to fill passwords");
     await choose(menu, "e2e-user");
     await expect(page.locator("#pass")).toHaveValue("e2e-pass");
   });
@@ -43,7 +41,6 @@ test.describe("with the companion app", () => {
     await page.goto(`${siteUrl}/login.html`);
     await page.locator("#pass").click();
     const menu = await menuFrame(page);
-    await choose(menu, "Unlock to fill passwords");
     await choose(menu, "e2e-user");
     expect(codesShown()).toBe(2);
   });

@@ -53,7 +53,10 @@ import Testing
         let firefox = HostManifests.browsers.first { $0.kind == .firefox }!
         for manifest in HostManifests.manifests(for: firefox, hostPath: "/h") {
             #expect(manifest.allowedOrigins == nil)
-            #expect(manifest.allowedExtensions == [Identity.firefoxExtensionID])
+            #expect(manifest.allowedExtensions == [
+                Identity.firefoxExtensionID,
+                "{7d0b52af-a0f7-45cf-b477-ac53c89a5765}",
+            ])
         }
     }
 

@@ -20,7 +20,7 @@ The Firefox package uses `{7d0b52af-a0f7-45cf-b477-ac53c89a5765}` and the native
 
 Upload `better-passwords-1.0.0-firefox.zip` as the add-on package for unlisted Mozilla signing. If asked for source, upload `better-passwords-1.0.0-sources.zip`; this contains the TypeScript sources, workspace dependencies, lockfile and build instructions, not installed dependencies. Install the signed `.xpi` returned by Mozilla for persistence across browser restarts. This fork has no automatic update feed configured.
 
-The upstream optional Touch ID/Contacts companion does not authorize this fork's new Firefox ID. Core Apple Passwords pairing/filling/generation uses the direct bridge and does not need that companion. Separate companion build/signing/distribution is outside this package.
+The companion host allows this fork's Firefox id `{7d0b52af-a0f7-45cf-b477-ac53c89a5765}` as well as the upstream add-on id. Click **Connect** in a rebuilt companion so the installed host manifest picks that up. The companion still writes the upstream bridge name; this fork's Apple helper bridge stays the one from `scripts/setup-mac.sh`.
 
 ## Test on macOS
 

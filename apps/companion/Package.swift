@@ -1,5 +1,5 @@
 // swift-tools-version: 6.0
-// The optional Mac companion: fills in Apple's pairing code after Touch ID.
+// The optional Mac companion: fills in Apple's pairing code from the helper window.
 // Build the app bundle with scripts/bundle.sh; `swift build` and `swift test` work as usual.
 
 import PackageDescription

@@ -47,7 +47,7 @@ What we protect: the user's passwords in Apple Passwords, and the session that c
 ## Touch ID companion
 
 Reading the code automatically needs Accessibility access. That permission lives in the separate companion app, never in the browser. The app:
-- requires Touch ID (or the login password) before every read
+- reads the pairing code without a Touch ID prompt
 - reads only windows of Apple's signed helper that the asking browser launched
 - returns only the six digits
 - accepts XPC connections only from its own signed native host
@@ -56,7 +56,7 @@ The full design is in [companion.md](companion.md).
 
 | Risk | Mitigation |
 |---|---|
-| Another program asks the agent for the code | The XPC connection must come from our signed host (team ID in releases, exact cdhash in development builds), and the user must confirm with Touch ID. |
+| Another program asks the agent for the code | The XPC connection must come from our signed host (team ID in releases, exact cdhash in development builds). Reading the code does not ask for Touch ID. |
 | A fake window shows a code | Only windows of processes signed by Apple as the helper, and launched by the asking browser, are read. A wrong code would fail the SRP handshake anyway. |
 | The companion is used to read other apps | It reads nothing but the helper's windows, and it returns only a 6-digit code, never other text. |
 | A tampered update, or an appcast pointing elsewhere | Sparkle installs only disk images signed with our EdDSA key, verifies them before unpacking, and requires the appcast to be signed by the same key. The update is offered, never installed without asking (unless the user turns that on). |

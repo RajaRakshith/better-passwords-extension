@@ -84,7 +84,10 @@ function popupSettled(): Promise<void> {
 }
 
 async function unlockWithTouchId(status: Status) {
-  show(h("h1", { textContent: "Confirm with Touch ID" }), h("p", {}, "The code your Mac shows is entered for you."));
+  show(
+    h("h1", { textContent: "Entering the pairing code" }),
+    h("p", {}, "The code your Mac shows is entered for you."),
+  );
   try {
     await send({ type: "unlock-with-touch-id" });
     await refresh();
@@ -415,7 +418,7 @@ function macAppSection(status: Status, option: Option) {
   const options = h(
     "div",
     { class: "options" },
-    option("touchId", "Enter the 6-digit code for me", "after Touch ID", !ready),
+    option("touchId", "Enter the 6-digit code for me", "from the code on your Mac", !ready),
     option("suggestEmails", "Suggest my emails", "from your contact card", !ready),
   );
   if (ready) {

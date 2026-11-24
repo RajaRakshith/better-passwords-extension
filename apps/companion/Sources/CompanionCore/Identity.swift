@@ -21,6 +21,9 @@ public enum Identity {
     /// Our Chromium extension ID, shared by store and unpacked installations.
     public static let extensionID = "ocongmkplhijgajnipnhhggfcjfdilgj"
     public static let firefoxExtensionID = "better-passwords@fanckush.github.io"
+    /// This fork's Zen/Firefox add-on id. Both ids may message the companion host.
+    public static let forkFirefoxExtensionID = "{7d0b52af-a0f7-45cf-b477-ac53c89a5765}"
+    public static let firefoxExtensionIDs = [firefoxExtensionID, forkFirefoxExtensionID]
 
     public static let helperPath =
         "/System/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/Contents/MacOS/PasswordManagerBrowserExtensionHelper"

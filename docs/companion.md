@@ -1,8 +1,8 @@
 # Touch ID companion
 
-The companion is an optional Mac app (`apps/companion`, Swift). With it, the extension unlocks with Touch ID instead of asking you to type the 6-digit code. Without it, password filling and generation still work through the setup script. Contact email suggestions also need the companion.
+The companion is an optional Mac app (`apps/companion`, Swift). With it, the extension unlocks by reading Apple's 6-digit pairing code for you. Without it, password filling and generation still work through the setup script. Contact email suggestions also need the companion.
 
-Touch ID can't replace the code in Apple's protocol: the code is the pairing password. Instead, after you confirm with Touch ID, the companion reads the code off Apple's own window and hands it to the extension. That needs the Accessibility permission, which the companion holds so that the browser never needs it.
+The code is still the pairing password in Apple's protocol. The companion reads it off Apple's own window and hands it to the extension, without a Touch ID prompt. That needs the Accessibility permission, which the companion holds so that the browser never needs it.
 
 ## Pieces
 
@@ -11,7 +11,7 @@ extension ── sendNativeMessage ──► better-passwords-host      (launche
                                         │ XPC, both sides check code signatures
                                         ▼
                                    BetterPasswords --agent      (launched by launchd on demand)
-                                        │ Touch ID, then Accessibility
+                                        │ Accessibility
                                         ▼
                                    Apple's helper window (the browser's own copy)
 ```
@@ -38,8 +38,7 @@ The host sends no arguments. The agent works everything out from what the kernel
    - are children of that browser,
    - run from Apple's helper path, and
    - satisfy `anchor apple and identifier "com.apple.PasswordManagerBrowserExtensionHelper"`.
-4. **You.** It requires Touch ID, or your login password on Macs without Touch ID.
-5. **What it returns.** It returns only six digits, and only if exactly one code is visible. It re-checks the helpers on every read.
+4. **What it returns.** It returns only six digits, and only if exactly one code is visible. It re-checks the helpers on every read. Reading does not wait for Touch ID.
 
 Steps 1 to 3 also guard the contact card: the agent reads it only for a browser running Apple's helper. Any program can run our signed host itself and so pass step 1, but macOS lets only browsers start Apple's helper, so step 3 stops it. Without that, any program could read the "Me" card's emails without Contacts permission.
 
@@ -69,7 +68,7 @@ In the window:
 3. Click **Allow…**, then turn on Better Passwords under Accessibility.
 4. Optionally, click **Allow…** for Contacts. The extension then suggests the emails on your contact card ("Me") in email fields. They are read when the extension asks, kept in the extension's memory for ten minutes, and never stored.
 
-Reload the extension. Its popup now unlocks with Touch ID, and so does the inline menu ("Unlock with Touch ID").
+Reload the extension. Its popup and inline menu then enter the pairing code for you.
 
 If the agent won't start, `launchctl print gui/$(id -u)/io.github.fanckush.betterpasswords.agent` shows why. "Launch Constraint Violation" in a crash report means a stale registration: click **Remove Setup**, then **Turn On** again. A rebuilt app also re-registers by itself when its window opens.
 

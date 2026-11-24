@@ -94,4 +94,15 @@ describe("inline menu session expiry", () => {
     expect(panel.textContent).not.toContain("private-user");
     expect(panel.textContent).toContain("Unlock to fill");
   });
+
+  it("enters the pairing code without a click when the companion is ready", async () => {
+    send.mockImplementation((request) => {
+      if (request.type === "get-status") return Promise.resolve({ touchId: true });
+      return Promise.resolve({ logins: [] });
+    });
+    window.location.hash = "nonce=test&kind=login&mode=locked";
+    await import("../entrypoints/menu/main.ts");
+    await vi.waitFor(() => expect(send).toHaveBeenCalledWith({ type: "unlock-with-touch-id" }));
+    expect(panel.textContent).not.toContain("Touch ID");
+  });
 });

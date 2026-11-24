@@ -106,9 +106,11 @@ actor PairingCodeService {
         }
         guard AXIsProcessTrusted() else { return .failure(.needsAccessibility) }
 
-        let browserName = NSRunningApplication(processIdentifier: browser)?.localizedName ?? "your browser"
-        guard await UserPresence.confirm(reason: "enter the pairing code in \(browserName)") else {
-            return .failure(.cancelled)
+        if PairingPresence.promptsBeforeRead {
+            let browserName = NSRunningApplication(processIdentifier: browser)?.localizedName ?? "your browser"
+            guard await UserPresence.confirm(reason: "enter the pairing code in \(browserName)") else {
+                return .failure(.cancelled)
+            }
         }
 
         // The code window can take a moment to appear after the extension asks for it. Look up the

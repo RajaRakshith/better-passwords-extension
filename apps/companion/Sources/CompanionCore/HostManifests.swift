@@ -90,12 +90,12 @@ public enum HostManifests {
                     name: Identity.bridgeHost,
                     description: "Better Passwords: Apple's password helper",
                     path: Identity.helperPath,
-                    allowedExtensions: [Identity.firefoxExtensionID]),
+                    allowedExtensions: Identity.firefoxExtensionIDs),
                 HostManifest(
                     name: Identity.companionHost,
                     description: "Better Passwords: Touch ID companion",
                     path: hostPath,
-                    allowedExtensions: [Identity.firefoxExtensionID]),
+                    allowedExtensions: Identity.firefoxExtensionIDs),
             ]
         }
     }

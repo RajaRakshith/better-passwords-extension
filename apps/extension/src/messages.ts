@@ -10,7 +10,7 @@ export type Request =
   | { type: "get-status" }
   | { type: "request-code"; fresh?: boolean }
   | { type: "verify-code"; code: string }
-  /** Shows a code on the Mac, then lets the companion app enter it after Touch ID. */
+  /** Shows a code on the Mac, then lets the companion app enter it. */
   | { type: "unlock-with-touch-id" }
   /** `tabId` is required from the popup; the inline menu is always bound to its own tab. */
   | { type: "list-logins"; tabId?: number }

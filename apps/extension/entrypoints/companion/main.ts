@@ -44,7 +44,7 @@ async function render() {
     h(
       "ul",
       { class: "features" },
-      feature(LOCK, "Skip the 6-digit code", "Confirm with Touch ID, and the code your Mac shows is entered for you."),
+      feature(LOCK, "Skip the 6-digit code", "The code your Mac shows is entered for you."),
       feature(PERSON, "Suggest my emails", "Email fields offer the email addresses on your contact card, like Safari."),
     ),
     h(
@@ -54,7 +54,6 @@ async function render() {
       h(
         "ul",
         {},
-        h("li", { textContent: "Touch ID, every time it enters a code for you." }),
         h("li", {
           textContent: "Accessibility, only to read the code in Apple's own code window. Your browser never gets it.",
         }),
