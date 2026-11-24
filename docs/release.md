@@ -21,19 +21,27 @@ When an extension release is due, CI:
 2. builds and zips the Chromium and Firefox packages, plus reviewer source,
 3. creates the `extension-vX.Y.Z` tag and a GitHub release with notes and the zips,
 4. attests build provenance for the zips (`gh attestation verify <zip> -R fanckush/better-passwords-extension`),
-5. submits to the Chrome Web Store (API v2, service account) and Firefox Add-ons, only once the repository variable `STORE_SUBMIT` is `true` and these secrets exist: `CHROME_PUBLISHER_ID`, `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`, `FIREFOX_JWT_ISSUER`, `FIREFOX_JWT_SECRET`. `bunx wxt submit init` (in `apps/extension`) writes them to the git-ignored `.env.submit`; the non-secret submit settings live in `release.yml`. To upload the secrets from that file:
+5. submits to each browser store independently when its repository variable is `true`:
+   - `CHROME_STORE_SUBMIT` submits to the Chrome Web Store (API v2) and needs `CHROME_PUBLISHER_ID`, `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, and `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`.
+   - `FIREFOX_STORE_SUBMIT` submits to Firefox Add-ons and needs `FIREFOX_JWT_ISSUER` and `FIREFOX_JWT_SECRET`.
+
+   For Firefox-only publishing, set `FIREFOX_STORE_SUBMIT=true` and leave `CHROME_STORE_SUBMIT` unset or `false`. `bunx wxt submit init` (in `apps/extension`) writes the credentials to the git-ignored `.env.submit`; the non-secret submit settings live in `release.yml`. To upload the secrets from that file:
+
+   For Firefox-only publishing, upload just its two secrets:
 
    ```sh
-   for n in CHROME_PUBLISHER_ID CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL CHROME_SERVICE_ACCOUNT_PRIVATE_KEY FIREFOX_JWT_ISSUER FIREFOX_JWT_SECRET; do
+   for n in FIREFOX_JWT_ISSUER FIREFOX_JWT_SECRET; do
      bun --env-file=apps/extension/.env.submit -e "process.stdout.write(process.env.$n)" | gh secret set "$n"
    done
    ```
+
+   Add the three `CHROME_*` secrets only when enabling Chrome publishing.
 
 The Chrome Web Store extension ID is `ocongmkplhijgajnipnhhggfcjfdilgj`. Its public key is in `apps/extension/src/config.ts`; the setup script and companion allow this same ID. The Chrome ZIP attached to GitHub releases keeps the manifest `key` field, so unpacked installs get this ID too; Chrome rejects that field on upload, so the store gets a copy without it from `.output/store/`. If the store identity ever changes, update the extension config, setup script, companion identity and tests, README and website links together.
 
 ## Companion app
 
-The companion job stays off until the repository variable `COMPANION_RELEASE` is `true`. An unsigned app would be blocked by Gatekeeper, so a release needs these secrets:
+The companion job stays off until the repository variable `COMPANION_RELEASE` is `true`. A `feat(companion): …` or `fix(companion): …` commit triggers its semantic-release job and version/tag stream independently of the extension. When enabled, CI builds the universal Mac app, signs it with Developer ID, notarizes it with Apple, packages and notarizes a DMG, then creates a `companion-vX.Y.Z` GitHub release with the DMG and Sparkle appcast attached. An unsigned app would be blocked by Gatekeeper, so a release needs these secrets:
 
 | Secret | What |
 |---|---|

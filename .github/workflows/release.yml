@@ -41,14 +41,12 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: apps/extension/.output/*.zip
-      # Store uploads stay off until the repository variable STORE_SUBMIT is true.
-      - if: steps.release.outputs.version != '' && vars.STORE_SUBMIT == 'true'
+      # Store uploads are independently controlled; either store can publish alone.
+      - if: steps.release.outputs.version != '' && vars.CHROME_STORE_SUBMIT == 'true'
         working-directory: apps/extension
         run: >
           bunx wxt submit
           --chrome-zip .output/store/better-passwords-*-chrome.zip
-          --firefox-zip .output/better-passwords-*-firefox.zip
-          --firefox-sources-zip .output/better-passwords-*-sources.zip
         env:
           CHROME_API_VERSION: v2
           CHROME_EXTENSION_ID: ocongmkplhijgajnipnhhggfcjfdilgj
@@ -58,6 +56,14 @@ jobs:
           CHROME_PUBLISH_TYPE: DEFAULT_PUBLISH
           CHROME_DEPLOY_PERCENTAGE: 100
           CHROME_CANCEL_PENDING: true
+
+      - if: steps.release.outputs.version != '' && vars.FIREFOX_STORE_SUBMIT == 'true'
+        working-directory: apps/extension
+        run: >
+          bunx wxt submit
+          --firefox-zip .output/better-passwords-*-firefox.zip
+          --firefox-sources-zip .output/better-passwords-*-sources.zip
+        env:
           FIREFOX_EXTENSION_ID: better-passwords
           FIREFOX_CHANNEL: listed
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
