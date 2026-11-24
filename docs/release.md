@@ -23,9 +23,9 @@ When an extension release is due, CI:
 4. attests build provenance for the zips (`gh attestation verify <zip> -R fanckush/better-passwords-extension`),
 5. submits to each browser store independently when its repository variable is `true`:
    - `CHROME_STORE_SUBMIT` submits to the Chrome Web Store (API v2) and needs `CHROME_PUBLISHER_ID`, `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, and `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`.
-   - `FIREFOX_STORE_SUBMIT` submits to Firefox Add-ons and needs `FIREFOX_JWT_ISSUER` and `FIREFOX_JWT_SECRET`.
+   - `FIREFOX_STORE_SUBMIT` requests an unlisted, Mozilla-signed Firefox build for self-distribution (not a public AMO listing) and needs `FIREFOX_JWT_ISSUER` and `FIREFOX_JWT_SECRET`.
 
-   For Firefox-only publishing, set `FIREFOX_STORE_SUBMIT=true` and leave `CHROME_STORE_SUBMIT` unset or `false`. `bunx wxt submit init` (in `apps/extension`) writes the credentials to the git-ignored `.env.submit`; the non-secret submit settings live in `release.yml`. To upload the secrets from that file:
+   For Firefox self-distribution, set `FIREFOX_STORE_SUBMIT=true` and leave `CHROME_STORE_SUBMIT` unset or `false`. The signed unlisted XPI can be downloaded from the add-on's AMO developer page and installed from file in Firefox. `bunx wxt submit init` (in `apps/extension`) writes the credentials to the git-ignored `.env.submit`; the non-secret submit settings live in `release.yml`. To upload the secrets from that file:
 
    For Firefox-only publishing, upload just its two secrets:
 
