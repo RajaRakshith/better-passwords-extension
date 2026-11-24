@@ -37,7 +37,7 @@ When an extension release is due, CI:
 
    Add the three `CHROME_*` secrets only when enabling Chrome publishing.
 
-The Chrome Web Store extension ID is `ocongmkplhijgajnipnhhggfcjfdilgj`. Its public key is in `apps/extension/src/config.ts`; the setup script and companion allow this same ID. The Firefox submit target is the AMO listing slug (`cabc627d04414a0086bb`), while the package's Gecko ID is the listing GUID in `apps/extension/src/config.ts`. The Chrome ZIP attached to GitHub releases keeps the manifest `key` field, so unpacked installs get this ID too; Chrome rejects that field on upload, so the store gets a copy without it from `.output/store/`. If the store identity ever changes, update the extension config, setup script, companion identity and tests, README and website links together.
+The Chrome Web Store extension ID is `ocongmkplhijgajnipnhhggfcjfdilgj`. Its public key is in `apps/extension/src/config.ts`; the setup script and companion allow this same ID. The Firefox submit target is the AMO listing slug (`cabc627d04414a0086bb`), while the package's Gecko ID is the listing GUID in `apps/extension/src/config.ts`. Listed AMO versions also receive their MIT license metadata from `apps/extension/amo-metadata.json`, matching the repository's `LICENSE`. The Chrome ZIP attached to GitHub releases keeps the manifest `key` field, so unpacked installs get this ID too; Chrome rejects that field on upload, so the store gets a copy without it from `.output/store/`. If the store identity ever changes, update the extension config, setup script, companion identity and tests, README and website links together.
 
 ## Companion app
 
